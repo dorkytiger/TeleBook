@@ -42,6 +42,11 @@ class SettingView extends GetView<SettingController> {
             decoration: const InputDecoration(
                 icon: Icon(Icons.password), labelText: "书库路径"),
           ),
+          TextFormField(
+            controller: controller.videoPathController,
+            decoration: const InputDecoration(
+                icon: Icon(Icons.password), labelText: "视频路径"),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -50,7 +55,6 @@ class SettingView extends GetView<SettingController> {
                 onPressed: () {
                   controller.saveSetting();
                   Fluttertoast.showToast(
-
                       msg: "保存成功",
                       toastLength: Toast.LENGTH_SHORT,
                       gravity: ToastGravity.BOTTOM,
@@ -64,12 +68,11 @@ class SettingView extends GetView<SettingController> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [Icon(Icons.save), Text("保存")],
                 ),
-
               ),
               ElevatedButton(
-                onPressed: () {
-                  controller.connectTest();
-                  Fluttertoast.showToast(
+                onPressed: () async {
+                  await controller.connectTest();
+                  await Fluttertoast.showToast(
                       msg: controller.test.value,
                       toastLength: Toast.LENGTH_SHORT,
                       gravity: ToastGravity.BOTTOM,
@@ -84,24 +87,6 @@ class SettingView extends GetView<SettingController> {
                   children: [Icon(Icons.save), Text("测试连接")],
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  controller.sftpTest();
-                  Fluttertoast.showToast(
-                      msg: controller.sftpPath.value,
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.black45,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                },
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.save), Text("测试连接")],
-                ),
-              )
             ],
           )
         ],

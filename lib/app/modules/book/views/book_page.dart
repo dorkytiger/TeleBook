@@ -17,7 +17,7 @@ class BookPage extends GetView<BookController> {
             itemBuilder: (BuildContext context, int index) {
               return FutureBuilder<Uint8List>(
                 future: controller
-                    .getCurrentBookPage(controller.bookPageList[index]),
+                    .getCurrentBookPage(controller.bookPageList[index],Get.arguments),
                 builder:
                     (BuildContext context, AsyncSnapshot<Uint8List> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {

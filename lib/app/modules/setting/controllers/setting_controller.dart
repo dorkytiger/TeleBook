@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/cupertino.dart';
@@ -14,6 +12,7 @@ class SettingController extends GetxController {
   TextEditingController userController = TextEditingController();
   TextEditingController passController = TextEditingController();
   TextEditingController bookPathController = TextEditingController();
+  TextEditingController videoPathController=TextEditingController();
   RxString test="".obs;
   RxString sftpPath="".obs;
   @override
@@ -22,15 +21,7 @@ class SettingController extends GetxController {
     super.onInit();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-  }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
 
   Future saveSetting() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
@@ -39,6 +30,7 @@ class SettingController extends GetxController {
     sharedPreferences.setString('user', userController.text);
     sharedPreferences.setString('pass', passController.text);
     sharedPreferences.setString('book', bookPathController.text);
+    sharedPreferences.setString('video', videoPathController.text);
   }
 
   Future getSetting() async {
@@ -48,6 +40,7 @@ class SettingController extends GetxController {
     userController.text = sharedPreferences.getString('user') ?? "";
     passController.text = sharedPreferences.getString('pass') ?? "";
     bookPathController.text = sharedPreferences.getString('book') ?? "";
+    videoPathController.text = sharedPreferences.getString('video') ?? "";
   }
 
   connectTest() async {
@@ -61,15 +54,4 @@ class SettingController extends GetxController {
     print(utf8.decode(uptime));
   }
 
-  sftpTest() async{
-    final client = SSHClient(
-        await SSHSocket.connect(
-            hostController.text,int.parse( portController.text)),
-        username: userController.text,
-        onPasswordRequest: () => passController.text);
-    SharedPreferences sharedPreferences=await SharedPreferences.getInstance();
-    final pathList= await client.run("ls ${sharedPreferences.getString('book') ??""}");
-    sftpPath.value=utf8.decode(pathList);
-    print(utf8.decode(pathList));
-  }
 }

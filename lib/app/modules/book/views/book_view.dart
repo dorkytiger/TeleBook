@@ -25,7 +25,7 @@ class BookView extends GetView<BookController> {
                       onTap: () async {
                         await controller
                             .getBookPageList(controller.bookPathList[index]);
-                        await Get.to(() => const BookPage());
+                        await Get.to(() => const BookPage(),arguments: controller.bookNameList[index]);
                       },
                       child: SizedBox(
                         height: 100,
