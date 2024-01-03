@@ -30,8 +30,17 @@ class BookController extends GetxController {
     super.onInit();
   }
 
+  connectSSh() async {
+    client = SSHClient(
+        await SSHSocket.connect(sharedPreferences.getString('host') ?? "",
+            int.parse(sharedPreferences.getString('port') ?? "")),
+        username: sharedPreferences.getString('user') ?? "",
+        onPasswordRequest: () => sharedPreferences.getString("pass"));
+    getBookList();
+    sftp = await client.sftp();
+  }
+
   getBookList() async {
-    await checkSSH();
     final pathList =
         await client.run("ls ${sharedPreferences.getString('book')} -R");
     var pathString = utf8.decode(pathList).trim();
@@ -58,7 +67,6 @@ class BookController extends GetxController {
   }
 
   Future<Uint8List> getPreview(String filePath) async {
-    await checkSSH();
     try {
       final tmpDirectory = await getApplicationCacheDirectory();
       final tmpFile =
@@ -78,7 +86,6 @@ class BookController extends GetxController {
   }
 
   getBookPageList(String filePath) async {
-    await checkSSH();
     bookPageList.value = [];
     final pathList = await client.run("ls \"$filePath\"");
     var lines = utf8.decode(pathList).split("\n");
@@ -93,7 +100,6 @@ class BookController extends GetxController {
   }
 
   Future<Uint8List> getCurrentBookPage(String filePath,String bookName) async {
-    await checkSSH();
     try {
 
       final tmp = await getApplicationCacheDirectory();
@@ -106,13 +112,15 @@ class BookController extends GetxController {
       if (tmpFile.existsSync()) {
         print(bookPageList.length);
         return await tmpFile.readAsBytes();
+      }else{
+        final file = await sftp.open(filePath);
+        final content = await file.readBytes();
+        tmpFile.writeAsBytesSync(content);
+        update();
+        print(bookPageList.length);
+        return content;
       }
-      final file = await sftp.open(filePath);
-      final content = await file.readBytes();
-      tmpFile.writeAsBytesSync(content);
-      update();
-      print(bookPageList.length);
-      return content;
+
     } catch (e) {
       print("Error in getPreview: $e");
       // Handle the error or rethrow it as needed

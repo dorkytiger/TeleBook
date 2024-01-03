@@ -12,12 +12,13 @@ class BookPage extends GetView<BookController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
         body: Obx(() => PageView.builder(
             itemCount: controller.bookPageList.length,
             itemBuilder: (BuildContext context, int index) {
               return FutureBuilder<Uint8List>(
-                future: controller
-                    .getCurrentBookPage(controller.bookPageList[index],Get.arguments),
+                future: controller.getCurrentBookPage(
+                    controller.bookPageList[index], Get.arguments),
                 builder:
                     (BuildContext context, AsyncSnapshot<Uint8List> snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {

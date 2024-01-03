@@ -14,8 +14,14 @@ class BookView extends GetView<BookController> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('BookView'),
+          title: const Text('书库',style: TextStyle(color: Colors.white),),
           centerTitle: true,
+          backgroundColor: Colors.blue,
+          actions: [
+            IconButton(onPressed: (){
+              controller.connectSSh();
+            }, icon: const Icon(Icons.refresh,color: Colors.white,))
+          ],
         ),
         body: Obx(() => RefreshIndicator(
             child: ListView.builder(
