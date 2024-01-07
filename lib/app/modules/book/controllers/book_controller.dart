@@ -4,43 +4,33 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wo_nas/app/modules/util/SSHUtil.dart';
 
 class BookController extends GetxController {
   RxList<String> bookPreviewList = <String>[].obs;
   RxList<String> bookPathList = <String>[].obs;
   RxList<String> bookNameList = <String>[].obs;
   RxList<String> bookPageList = <String>[].obs;
-  late SSHClient client;
+  RxInt currentPage = 1.obs;
+  RxBool hasMore = true.obs;
+  SSHUtil sshUtil = SSHUtil();
   late SharedPreferences sharedPreferences;
-  late SftpClient sftp;
 
   @override
   void onInit() async {
     sharedPreferences = await SharedPreferences.getInstance();
-    client = SSHClient(
-        await SSHSocket.connect(sharedPreferences.getString('host') ?? "",
-            int.parse(sharedPreferences.getString('port') ?? "")),
-        username: sharedPreferences.getString('user') ?? "",
-        onPasswordRequest: () => sharedPreferences.getString("pass"));
     getBookList();
-    sftp = await client.sftp();
+
     super.onInit();
   }
 
-  connectSSh() async {
-    client = SSHClient(
-        await SSHSocket.connect(sharedPreferences.getString('host') ?? "",
-            int.parse(sharedPreferences.getString('port') ?? "")),
-        username: sharedPreferences.getString('user') ?? "",
-        onPasswordRequest: () => sharedPreferences.getString("pass"));
-    getBookList();
-    sftp = await client.sftp();
-  }
 
   getBookList() async {
+    final client = await SSHUtil().initClient();
     final pathList =
         await client.run("ls ${sharedPreferences.getString('book')} -R");
     var pathString = utf8.decode(pathList).trim();
@@ -74,6 +64,7 @@ class BookController extends GetxController {
       if (tmpFile.existsSync()) {
         return await tmpFile.readAsBytes();
       }
+      final sftp = await sshUtil.initSftp();
       final file = await sftp.open(filePath);
       final content = await file.readBytes();
       tmpFile.writeAsBytesSync(content);
@@ -87,6 +78,7 @@ class BookController extends GetxController {
 
   getBookPageList(String filePath) async {
     bookPageList.value = [];
+    final client = await sshUtil.initClient();
     final pathList = await client.run("ls \"$filePath\"");
     var lines = utf8.decode(pathList).split("\n");
 
@@ -99,20 +91,20 @@ class BookController extends GetxController {
     update();
   }
 
-  Future<Uint8List> getCurrentBookPage(String filePath,String bookName) async {
+  Future<Uint8List> getCurrentBookPage(String filePath, String bookName) async {
     try {
-
       final tmp = await getApplicationCacheDirectory();
-      final tmpDirectory=Directory("${tmp.path}/$bookName");
-      if(!tmpDirectory.existsSync()){
+      final tmpDirectory = Directory("${tmp.path}/$bookName");
+      if (!tmpDirectory.existsSync()) {
         tmpDirectory.create();
       }
-      final tmpFile = File(
-          "${tmp.path}/$bookName/${filePath.replaceAll("/", "")}");
+      final tmpFile =
+          File("${tmp.path}/$bookName/${filePath.replaceAll("/", "")}");
       if (tmpFile.existsSync()) {
         print(bookPageList.length);
         return await tmpFile.readAsBytes();
-      }else{
+      } else {
+        final sftp = await sshUtil.initSftp();
         final file = await sftp.open(filePath);
         final content = await file.readBytes();
         tmpFile.writeAsBytesSync(content);
@@ -120,7 +112,6 @@ class BookController extends GetxController {
         print(bookPageList.length);
         return content;
       }
-
     } catch (e) {
       print("Error in getPreview: $e");
       // Handle the error or rethrow it as needed
@@ -131,16 +122,5 @@ class BookController extends GetxController {
   extractLastFolderName(String filePath) {
     var pathString = filePath.substring(0, filePath.lastIndexOf("/"));
     return pathString.substring(pathString.lastIndexOf("/") + 1);
-  }
-
-  checkSSH() async {
-    if (client.isClosed) {
-      client = SSHClient(
-          await SSHSocket.connect(sharedPreferences.getString('host') ?? "",
-              int.parse(sharedPreferences.getString('port') ?? "")),
-          username: sharedPreferences.getString('user') ?? "",
-          onPasswordRequest: () => sharedPreferences.getString("pass"));
-    }
-    sftp = await client.sftp();
   }
 }

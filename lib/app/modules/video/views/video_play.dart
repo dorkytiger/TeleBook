@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wo_nas/app/modules/video/controllers/video_controller.dart';
 
-class VideoPlayerPage extends StatefulWidget {
+class VideoPlay extends StatefulWidget {
   final File videoFile;
 
-  const VideoPlayerPage({super.key, required this.videoFile});
+  const VideoPlay({super.key, required this.videoFile});
 
   @override
-  _VideoPlayerPageState createState() => _VideoPlayerPageState();
+  _VideoPlayState createState() => _VideoPlayState();
 }
 
-class _VideoPlayerPageState extends State<VideoPlayerPage> {
+class _VideoPlayState extends State<VideoPlay> {
   late VideoPlayerController _videoPlayerController;
   late ChewieController _chewieController;
   VideoController controller = VideoController();

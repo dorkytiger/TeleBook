@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
-import 'package:wo_nas/app/modules/video/views/video_page.dart';
+import 'package:wo_nas/app/modules/video/views/video_play.dart';
+import 'package:wo_nas/app/modules/video/views/video_preview.dart';
 
 import '../controllers/video_controller.dart';
 
@@ -14,60 +15,66 @@ class VideoView extends GetView<VideoController> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('视频'),
+          title: const Text(
+            '视频',
+            style: TextStyle(color: Colors.white),
+          ),
           centerTitle: true,
+          backgroundColor: Colors.blue,
         ),
-        body: Obx(() => RefreshIndicator(
+        body:  RefreshIndicator(
               onRefresh: () async {
                 await controller.getVideoPathList();
               },
               child: ListView.builder(
+
                 itemCount: controller.videoPathList.length,
                 itemBuilder: (context, index) {
-                  return SizedBox(
-                      height: 200,
-                      child: GestureDetector(
-                        onTap: () async {
-                          File video = await controller
-                              .getVideo(controller.videoPathList[index]);
-                          Get.to(VideoPlayerPage(videoFile: video));
-                        },
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: Text(controller.videoNameList[index]),
-                            ),
-                            Expanded(
-                                flex: 1,
-                                child: FutureBuilder<File>(
-                                  future: controller.getVideo(
-                                      controller.videoPathList[index]),
-                                  builder: (BuildContext context,
-                                      AsyncSnapshot<File> snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return const Center(
-                                          child: CircularProgressIndicator());
-                                    } else if (snapshot.hasError) {
-                                      return const Center(child: Text("加载失败"));
-                                    } else if (snapshot.hasData) {
-                                      return Container(
-                                        height: 100,
-                                        child: VideoPlayerPage(
-                                          videoFile: snapshot.data!,
-                                        ),
-                                      );
-                                    } else {
-                                      return const Center(child: Text("空白页"));
-                                    }
-                                  },
-                                ))
-                          ],
-                        ),
-                      ));
+                  return GestureDetector(
+                    onTap: () async {
+                      File video = await controller
+                          .getVideo(controller.videoPathList[index]);
+                      Get.to(VideoPlay(videoFile: video));
+                    },
+                     onLongPress: () async{
+                       await controller
+                          .getVideo(controller.videoPathList[index]);
+                      await controller.getVideoPreview(controller.videoPathList[index]);
+                     },
+                    child:SizedBox(
+                      height: 150,
+                      child:  Row(
+                        children: [
+                          Expanded(
+                              flex: 1,
+                              child: FutureBuilder(
+                                future: controller.getVideoPreview(
+                                    controller.videoPathList[index]),
+                                builder: (BuildContext context,
+                                    AsyncSnapshot snapshot) {
+                                  if (snapshot.connectionState ==
+                                      ConnectionState.waiting) {
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  } else if (snapshot.hasError) {
+                                    return const Center(child: Text("加载失败"));
+                                  } else if (snapshot.hasData) {
+                                    return Image.file(snapshot.data!);
+                                  } else {
+                                    return const Center(child: Text("空白页"));
+                                  }
+                                },
+                              )),
+                          Expanded(
+                            flex: 2,
+                            child: Text(controller.videoNameList[index]),
+                          ),
+                        ],
+                      ),
+                    )
+                  );
                 },
-              ),
-            )));
+              )),
+        );
   }
 }

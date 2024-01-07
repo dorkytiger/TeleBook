@@ -19,7 +19,7 @@ class BookView extends GetView<BookController> {
           backgroundColor: Colors.blue,
           actions: [
             IconButton(onPressed: (){
-              controller.connectSSh();
+              controller.getBookList();
             }, icon: const Icon(Icons.refresh,color: Colors.white,))
           ],
         ),
@@ -34,7 +34,7 @@ class BookView extends GetView<BookController> {
                         await Get.to(() => const BookPage(),arguments: controller.bookNameList[index]);
                       },
                       child: SizedBox(
-                        height: 100,
+                        height: 150,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisAlignment: MainAxisAlignment.center,
