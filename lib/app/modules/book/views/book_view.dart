@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -14,13 +15,60 @@ class BookView extends GetView<BookController> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: const Text('书库',style: TextStyle(color: Colors.white),),
+          title: const Text(
+            '书库',
+            style: TextStyle(color: Colors.white),
+          ),
           centerTitle: true,
           backgroundColor: Colors.blue,
           actions: [
-            IconButton(onPressed: (){
-              controller.getBookList();
-            }, icon: const Icon(Icons.refresh,color: Colors.white,))
+            IconButton(
+                onPressed: () {
+                  controller.getBookList();
+                },
+                icon: const Icon(
+                  Icons.refresh,
+                  color: Colors.white,
+                )),
+            IconButton(
+                onPressed: () {
+                  showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: Text('Enter Text'),
+                          content: TextField(
+                            controller: controller.urlController,
+                            keyboardType: TextInputType.text,
+                            autofocus: true,
+                            textInputAction: TextInputAction.done,
+                            decoration: InputDecoration(
+                              hintText: 'Enter some text...',
+                              labelText: 'Enter text',
+                            ),
+                          ),
+                          actions: <Widget>[
+                            TextButton(
+                              child: Text('Cancel'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('OK'),
+                              onPressed: () {
+                                controller.getBook();
+                                Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
+                              },
+                            ),
+                          ],
+                        );
+                      });
+                },
+                icon: const Icon(
+                  Icons.add,
+                  color: Colors.white,
+                ))
           ],
         ),
         body: Obx(() => RefreshIndicator(
@@ -31,7 +79,8 @@ class BookView extends GetView<BookController> {
                       onTap: () async {
                         await controller
                             .getBookPageList(controller.bookPathList[index]);
-                        await Get.to(() => const BookPage(),arguments: controller.bookNameList[index]);
+                        await Get.to(() => const BookPage(),
+                            arguments: controller.bookNameList[index]);
                       },
                       child: SizedBox(
                         height: 150,
@@ -40,26 +89,9 @@ class BookView extends GetView<BookController> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Expanded(
-                              flex: 1,
-                              child: FutureBuilder<Uint8List>(
-                                future: controller.getPreview(
-                                    controller.bookPreviewList[index]),
-                                builder: (BuildContext context,
-                                    AsyncSnapshot<Uint8List> snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    return const Center(child: Text("加载失败"));
-                                  } else if (snapshot.hasData) {
-                                    return Image.memory(snapshot.data!);
-                                  } else {
-                                    return const Center(child: Text("空白页"));
-                                  }
-                                },
-                              ),
-                            ),
+                                flex: 1,
+                                child: Image.file(
+                                    File(controller.bookPreviewList[index]))),
                             Expanded(
                               flex: 2,
                               child: Center(
@@ -71,7 +103,8 @@ class BookView extends GetView<BookController> {
                       ));
                 }),
             onRefresh: () async {
-              controller.getBookList();
+            await  controller.getBookList();
+
               // controller.getPreview();
             })));
   }

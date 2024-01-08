@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:wo_nas/app/modules/video/views/video_play.dart';
-import 'package:wo_nas/app/modules/video/views/video_preview.dart';
+
 
 import '../controllers/video_controller.dart';
 

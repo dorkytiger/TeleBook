@@ -1,14 +1,11 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:dartssh2/dartssh2.dart';
-import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
+import 'package:html/parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wo_nas/app/modules/util/SSHUtil.dart';
 
 class BookController extends GetxController {
   RxList<String> bookPreviewList = <String>[].obs;
@@ -17,7 +14,8 @@ class BookController extends GetxController {
   RxList<String> bookPageList = <String>[].obs;
   RxInt currentPage = 1.obs;
   RxBool hasMore = true.obs;
-  SSHUtil sshUtil = SSHUtil();
+  RxString url = "".obs;
+  TextEditingController urlController = TextEditingController();
   late SharedPreferences sharedPreferences;
 
   @override
@@ -28,99 +26,66 @@ class BookController extends GetxController {
     super.onInit();
   }
 
-
-  getBookList() async {
-    final client = await SSHUtil().initClient();
-    final pathList =
-        await client.run("ls ${sharedPreferences.getString('book')} -R");
-    var pathString = utf8.decode(pathList).trim();
-
-    List<String> lines = pathString.split("\n");
-    String currentDirectory = "";
-    bookPreviewList.value = [];
-    bookNameList.value = [];
-    for (String line in lines) {
-      if (line.endsWith(":")) {
-        currentDirectory = line.substring(0, line.length - 1);
-      } else if (line.isNotEmpty && currentDirectory.isNotEmpty) {
-        if (line.contains(".jpg")) {
-          var bookPreviewPath = "$currentDirectory/$line";
-          bookNameList.add(extractLastFolderName(bookPreviewPath));
-          bookPathList.add(bookPreviewPath.substring(
-              0, bookPreviewPath.lastIndexOf("/") + 1));
-          bookPreviewList.add(bookPreviewPath);
-          currentDirectory = "";
-        }
-      }
+  getBook() async {
+    String url = urlController.text;
+    var response = await GetConnect().get(url);
+    var htmlString = await response.body;
+    var document = parse(htmlString);
+    final title = document.querySelector("h1");
+    final tmpFile = await getApplicationCacheDirectory();
+    final tmpBooks = Directory("${tmpFile.path}/book");
+    if (!tmpBooks.existsSync()) {
+      tmpBooks.createSync();
     }
-    update();
+    final tmpDirectory = Directory("${tmpFile.path}/book/${title?.text}");
+    tmpDirectory.createSync();
+    final images = document.querySelectorAll("img");
+    var count = 0;
+    for (var element in images) {
+      var url = "https://telegra.ph${element.attributes['src']}";
+      var imageResponse = await Dio()
+          .get(url, options: Options(responseType: ResponseType.bytes));
+      var saveFile = File("${tmpDirectory.path}/image_$count.png");
+      if (imageResponse.data != null) {
+        saveFile.writeAsBytes(imageResponse.data);
+      }
+      count++;
+      print(saveFile);
+    }
   }
 
-  Future<Uint8List> getPreview(String filePath) async {
+  getBookList() async {
     try {
-      final tmpDirectory = await getApplicationCacheDirectory();
-      final tmpFile =
-          File("${tmpDirectory.path}/${filePath.replaceAll("/", "")}");
-      if (tmpFile.existsSync()) {
-        return await tmpFile.readAsBytes();
+      bookPathList.value = [];
+      bookNameList.value = [];
+      bookPreviewList.value = [];
+      final tmpFile = await getApplicationCacheDirectory();
+      List<FileSystemEntity> fileList =
+          Directory("${tmpFile.path}/book").listSync().toList();
+      print(fileList);
+      for (FileSystemEntity fileSystemEntity in fileList) {
+        final book = Directory(fileSystemEntity.path).listSync();
+        print(book);
+        bookPathList.add(fileSystemEntity.path);
+        print(fileSystemEntity.path);
+        bookNameList.add(fileSystemEntity.path
+            .substring(fileSystemEntity.path.lastIndexOf("/") + 1));
+        bookPreviewList.add(book.first.path);
       }
-      final sftp = await sshUtil.initSftp();
-      final file = await sftp.open(filePath);
-      final content = await file.readBytes();
-      tmpFile.writeAsBytesSync(content);
-      return content;
     } catch (e) {
-      print("Error in getPreview: $e");
-      // Handle the error or rethrow it as needed
-      rethrow;
+      print(e.toString());
     }
+    update();
   }
 
   getBookPageList(String filePath) async {
     bookPageList.value = [];
-    final client = await sshUtil.initClient();
-    final pathList = await client.run("ls \"$filePath\"");
-    var lines = utf8.decode(pathList).split("\n");
-
-    for (String line in lines) {
-      if (line.contains(".jpg")) {
-        bookPageList.add("$filePath$line");
+    final pageList = Directory(filePath).listSync();
+    for (var page in pageList) {
+      if (page is File) {
+        bookPageList.add(page.path);
       }
     }
-    print(bookPageList.length);
     update();
-  }
-
-  Future<Uint8List> getCurrentBookPage(String filePath, String bookName) async {
-    try {
-      final tmp = await getApplicationCacheDirectory();
-      final tmpDirectory = Directory("${tmp.path}/$bookName");
-      if (!tmpDirectory.existsSync()) {
-        tmpDirectory.create();
-      }
-      final tmpFile =
-          File("${tmp.path}/$bookName/${filePath.replaceAll("/", "")}");
-      if (tmpFile.existsSync()) {
-        print(bookPageList.length);
-        return await tmpFile.readAsBytes();
-      } else {
-        final sftp = await sshUtil.initSftp();
-        final file = await sftp.open(filePath);
-        final content = await file.readBytes();
-        tmpFile.writeAsBytesSync(content);
-        update();
-        print(bookPageList.length);
-        return content;
-      }
-    } catch (e) {
-      print("Error in getPreview: $e");
-      // Handle the error or rethrow it as needed
-      rethrow;
-    }
-  }
-
-  extractLastFolderName(String filePath) {
-    var pathString = filePath.substring(0, filePath.lastIndexOf("/"));
-    return pathString.substring(pathString.lastIndexOf("/") + 1);
   }
 }

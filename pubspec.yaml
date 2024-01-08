@@ -19,7 +19,8 @@ dependencies:
   path_provider: ^2.1.1
   video_player: ^2.8.1
   chewie: ^1.0.0
-
+  html: ^0.15.0
+  dio: ^5.4.0
 
 dev_dependencies: 
   flutter_lints: ^2.0.0
