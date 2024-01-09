@@ -12,18 +12,69 @@ class BookController extends GetxController {
   RxList<String> bookPathList = <String>[].obs;
   RxList<String> bookNameList = <String>[].obs;
   RxList<String> bookPageList = <String>[].obs;
-  RxInt currentPage = 1.obs;
-  RxBool hasMore = true.obs;
+  RxBool isEditing = false.obs;
+  RxBool isShowTitle = false.obs;
+  RxInt gridCount = 2.obs;
+  RxSet<int> selectedItems = <int>{}.obs;
   RxString url = "".obs;
   TextEditingController urlController = TextEditingController();
-  late SharedPreferences sharedPreferences;
 
   @override
   void onInit() async {
-    sharedPreferences = await SharedPreferences.getInstance();
+    initGridCount();
     getBookList();
-
     super.onInit();
+  }
+
+  // 切换编辑状态
+  void toggleEditing() {
+    isEditing.value = !isEditing.value;
+    selectedItems.clear(); // 清空选中的项
+    update();
+  }
+
+  // 切换选中状态
+  void toggleSelection(int index) {
+    if (selectedItems.contains(index)) {
+      selectedItems.remove(index);
+    } else {
+      selectedItems.add(index);
+    }
+    update();
+  }
+
+  void deleteSelectedItems() {
+    update();
+  }
+
+  void initGridCount() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    var isTwice = sharedPreferences.getBool("isTwice");
+    if (isTwice == null) {
+      sharedPreferences.setBool("isTwice", false);
+      isTwice = sharedPreferences.getBool("isTwice");
+    }
+    print(isTwice);
+    if (isTwice!) {
+      gridCount.value = 2;
+    } else {
+      gridCount.value = 3;
+    }
+    update();
+  }
+
+  // 设置是一行显示两个还是三个
+  void setGridCount() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+    var isTwice = sharedPreferences.getBool("isTwice");
+    sharedPreferences.setBool("isTwice", !isTwice!);
+    print(isTwice);
+    if (isTwice) {
+      gridCount.value = 2;
+    } else {
+      gridCount.value = 3;
+    }
+    update();
   }
 
   getBook() async {
@@ -32,7 +83,7 @@ class BookController extends GetxController {
     var htmlString = await response.body;
     var document = parse(htmlString);
     final title = document.querySelector("h1");
-    final tmpFile = await getApplicationCacheDirectory();
+    final tmpFile = await getApplicationDocumentsDirectory();
     final tmpBooks = Directory("${tmpFile.path}/book");
     if (!tmpBooks.existsSync()) {
       tmpBooks.createSync();
@@ -59,15 +110,13 @@ class BookController extends GetxController {
       bookPathList.value = [];
       bookNameList.value = [];
       bookPreviewList.value = [];
-      final tmpFile = await getApplicationCacheDirectory();
+      final tmpFile = await getApplicationDocumentsDirectory();
       List<FileSystemEntity> fileList =
           Directory("${tmpFile.path}/book").listSync().toList();
-      print(fileList);
+
       for (FileSystemEntity fileSystemEntity in fileList) {
         final book = Directory(fileSystemEntity.path).listSync();
-        print(book);
         bookPathList.add(fileSystemEntity.path);
-        print(fileSystemEntity.path);
         bookNameList.add(fileSystemEntity.path
             .substring(fileSystemEntity.path.lastIndexOf("/") + 1));
         bookPreviewList.add(book.first.path);

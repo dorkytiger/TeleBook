@@ -1,5 +1,7 @@
 import 'package:get/get.dart';
 
+import '../modules/download/bindings/download_binding.dart';
+import '../modules/download/views/download_view.dart';
 import '../modules/home/bindings/home_binding.dart';
 import '../modules/home/views/home_view.dart';
 import '../modules/video/bindings/video_binding.dart';
@@ -22,6 +24,11 @@ class AppPages {
       name: _Paths.VIDEO,
       page: () => const VideoView(),
       binding: VideoBinding(),
+    ),
+    GetPage(
+      name: _Paths.DOWNLOAD,
+      page: () => const DownloadView(),
+      binding: DownloadBinding(),
     ),
   ];
 }

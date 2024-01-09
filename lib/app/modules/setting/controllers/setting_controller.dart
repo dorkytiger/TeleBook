@@ -11,6 +11,7 @@ class SettingController extends GetxController {
   TextEditingController videoPathController=TextEditingController();
   RxString test="".obs;
   RxString sftpPath="".obs;
+  RxBool isTwice=true.obs;
   @override
   void onInit() {
     getSetting();
