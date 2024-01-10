@@ -141,6 +141,66 @@ class BookView extends GetView<BookController> {
               onRefresh: () async {
                 await controller.getBookList();
               }),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AlertDialog(
+                      title: const Text(
+                        '请输入链接',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                      content: SizedBox(
+                        child: TextField(
+                            controller: controller.urlController,
+                            keyboardType: TextInputType.multiline,
+                            autofocus: true,
+                            textInputAction: TextInputAction.done,
+                            maxLines: 5,
+                            minLines: 1,
+                            decoration: const InputDecoration(
+                              hintText: '输入',
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              isDense: true,
+                              border: OutlineInputBorder(
+                                gapPadding: 0,
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(4)),
+                                borderSide: BorderSide(
+                                  width: 1,
+                                  style: BorderStyle.none,
+                                ),
+                              ),
+                            )),
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          child: const Text('取消'),
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                        ),
+                        TextButton(
+                          child: const Text('确定'),
+                          onPressed: () {
+                            controller.getBook();
+                            Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
+                          },
+                        ),
+                      ],
+                    );
+                  });
+            },
+            tooltip: 'Increment',
+            child: Icon(Icons.add),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          // 调整悬浮按钮位置
+
           bottomNavigationBar: controller.isEditing.value
               ? BottomAppBar(
                   color: Colors.white,

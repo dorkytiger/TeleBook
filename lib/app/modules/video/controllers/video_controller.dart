@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:chewie/chewie.dart';
-import 'package:dartssh2/dartssh2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,21 +22,11 @@ class VideoController extends GetxController {
   @override
   void onInit() async {
     sharedPreferences = await SharedPreferences.getInstance();
-    getVideoPathList();
+    if (sharedPreferences.getString("video") != null) {
+      getVideoPathList(sharedPreferences.getString("video")!);
+    }
+
     super.onInit();
-  }
-
-  Future<SSHClient> initClient() async {
-    return SSHClient(
-        await SSHSocket.connect(sharedPreferences.getString('host') ?? "",
-            int.parse(sharedPreferences.getString('port') ?? "")),
-        username: sharedPreferences.getString('user') ?? "",
-        onPasswordRequest: () => sharedPreferences.getString("pass"));
-  }
-
-  Future<SftpClient> initSftp() async {
-    SSHClient sshClient = await initClient();
-    return await sshClient.sftp();
   }
 
   @override
@@ -51,47 +39,29 @@ class VideoController extends GetxController {
     super.onClose();
   }
 
-  getVideoPathList() async {
-    final client = await initClient();
-    final videoSSHPath = sharedPreferences.getString('video');
-    final pathList = await client.run("ls $videoSSHPath -R");
-    var pathString = utf8.decode(pathList).trim();
-    List<String> lines = pathString.split("\n");
-    videoPathList.value = [];
-    for (String line in lines) {
-      if (!line.contains("/")) {
-        videoPathList.add("$videoSSHPath$line");
-        videoNameList.add(line);
-      }
-    }
-  }
-
-  Future<File> getVideo(String filePath) async {
+  getVideoPathList(String path) async {
     try {
-      final videoName = filePath.substring(filePath.lastIndexOf("/") + 1);
-      final tmp = await getApplicationCacheDirectory();
-      final tmpDirectory = Directory("${tmp.path}/video");
-      if (!tmpDirectory.existsSync()) {
-        tmpDirectory.create();
+      Directory videoDirectory = Directory(path);
+      if (!videoDirectory.existsSync()) {
+        return;
       }
-      final tmpFile = File("${tmpDirectory.path}/$videoName");
-      if (tmpFile.existsSync()) {
-        return tmpFile;
+      List<FileSystemEntity> videoList = videoDirectory.listSync();
+      if (videoList.isEmpty) {
+        return;
       }
-      final sftp = await initSftp();
-      final file = await sftp.open(filePath);
-      final content = await file.readBytes();
-      tmpFile.writeAsBytesSync(content);
-      update();
-      return tmpFile;
+      for (FileSystemEntity video in videoList) {
+        if (video.path.endsWith(".mp4")) {
+          videoPathList.add(video.path);
+        }
+      }
     } catch (e) {
-      print(e);
+      if (kDebugMode) {
+        print(e.toString());
+      }
     }
-    return File("");
   }
 
   Future<File> getVideoPreview(String filePath) async {
-    await getVideo(filePath);
     try {
       final videoName = filePath.substring(filePath.lastIndexOf("/") + 1);
       final tmp = await getApplicationCacheDirectory();

@@ -15,14 +15,30 @@ void main() {
               color: Colors.blue,
               iconTheme: IconThemeData(color: Colors.white),
               titleTextStyle: TextStyle(color: Colors.white, fontSize: 20)),
-          buttonTheme: const ButtonThemeData(buttonColor: Colors.blue),
-          colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.blue)
-              .copyWith(background: Colors.white),
-          textTheme: const TextTheme(
-              titleLarge: TextStyle(color: Colors.blue),
-          titleMedium: TextStyle(color: Colors.blue),
-            titleSmall: TextStyle(color: Colors.blue),
-          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+              style: ButtonStyle(
+                  iconColor: MaterialStateProperty.resolveWith((states) {
+            // 根据不同的状态返回不同的颜色
+            if (states.contains(MaterialState.pressed)) {
+              // 按钮被按下时的颜色
+              return Colors.white;
+            } else {
+              // 默认状态下的颜色
+              return Colors.white;
+            }
+          }), backgroundColor: MaterialStateProperty.resolveWith((states) {
+            // 根据不同的状态返回不同的颜色
+            if (states.contains(MaterialState.pressed)) {
+              // 按钮被按下时的颜色
+              return Colors.blueAccent;
+            } else {
+              // 默认状态下的颜色
+              return Colors.blue;
+            }
+          }))),
+          iconTheme: const IconThemeData(color: Colors.white),
+          floatingActionButtonTheme:
+              const FloatingActionButtonThemeData(backgroundColor: Colors.blue),
           bottomNavigationBarTheme: const BottomNavigationBarThemeData(
               backgroundColor: Colors.white)),
     ),

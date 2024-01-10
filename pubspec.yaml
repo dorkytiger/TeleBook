@@ -10,10 +10,8 @@ dependencies:
   get: 4.6.6
   shared_preferences: ^2.0.10
   fluttertoast: ^8.2.4
-  dartssh2: ^2.8.2
   flutter: 
     sdk: flutter
-  sqflite: ^2.3.0
   path: ^1.8.3
   video_thumbnail: ^0.5.3
   path_provider: ^2.1.1

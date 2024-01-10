@@ -14,14 +14,14 @@ class BookController extends GetxController {
   RxList<String> bookPageList = <String>[].obs;
   RxBool isEditing = false.obs;
   RxBool isShowTitle = false.obs;
-  RxInt gridCount = 2.obs;
+  RxInt gridCount = 3.obs;
   RxSet<int> selectedItems = <int>{}.obs;
   RxString url = "".obs;
   TextEditingController urlController = TextEditingController();
 
   @override
   void onInit() async {
-    initGridCount();
+    // initGridCount();
     getBookList();
     super.onInit();
   }

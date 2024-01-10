@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -9,15 +11,17 @@ import 'package:path_provider/path_provider.dart';
 class DownloadController extends GetxController {
   TextEditingController urlController = TextEditingController();
   RxList<String> currentDownLink = <String>[].obs;
-  RxList<double> currentDownLoadProgress = <double>[].obs;
+  RxList<double> currentDownProgress = <double>[].obs;
 
   @override
   void onInit() {
     super.onInit();
   }
 
-  getBook() async {
+  getBook(int index) async {
     String url = urlController.text;
+    currentDownLink.insert(index, url);
+    currentDownProgress.insert(index, 0);
     var response = await GetConnect().get(url);
     var htmlString = await response.body;
     var document = parse(htmlString);
@@ -30,6 +34,7 @@ class DownloadController extends GetxController {
     final tmpDirectory = Directory("${tmpFile.path}/book/${title?.text}");
     tmpDirectory.createSync();
     final images = document.querySelectorAll("img");
+    final imagesSize = images.length;
     var count = 0;
     for (var element in images) {
       var url = "https://telegra.ph${element.attributes['src']}";
@@ -40,7 +45,33 @@ class DownloadController extends GetxController {
         saveFile.writeAsBytes(imageResponse.data);
       }
       count++;
+      currentDownProgress.insert(index, (count / imagesSize).toDouble());
+      update();
       print(saveFile);
     }
+    if (checkIsClean()) {
+      currentDownLink.removeRange(0, currentDownLink.length);
+      currentDownProgress.removeRange(0, currentDownProgress.length);
+    }
+    update();
+  }
+
+  checkIsClean() {
+    if (currentDownProgress.isEmpty) {
+      return false;
+    }
+    for (double currentProgress in currentDownProgress) {
+      if (currentProgress != 1.0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    currentDownProgress.value = [];
+    currentDownLink.value = [];
+    super.dispose();
   }
 }

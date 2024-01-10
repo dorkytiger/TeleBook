@@ -7,9 +7,9 @@ import 'package:video_player/video_player.dart';
 import 'package:wo_nas/app/modules/video/controllers/video_controller.dart';
 
 class VideoPlay extends StatefulWidget {
-  final File videoFile;
+  final String videoPath;
 
-  const VideoPlay({super.key, required this.videoFile});
+  const VideoPlay({super.key, required this.videoPath});
 
   @override
   _VideoPlayState createState() => _VideoPlayState();
@@ -23,7 +23,7 @@ class _VideoPlayState extends State<VideoPlay> {
   @override
   void initState()  {
     super.initState();
-    _videoPlayerController = VideoPlayerController.file(widget.videoFile);
+    _videoPlayerController = VideoPlayerController.file(File(widget.videoPath));
     _chewieController = ChewieController(
       videoPlayerController: _videoPlayerController,
       autoPlay: true,
