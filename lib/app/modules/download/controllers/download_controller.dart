@@ -28,6 +28,9 @@ class DownloadController extends GetxController {
     if (list.isEmpty) {
       list.add(element);
       update();
+    } else if (list.isNotEmpty && list.length <= index) {
+      list.insert(index, element);
+      update();
     } else {
       list[index] = element;
       update();
@@ -43,7 +46,7 @@ class DownloadController extends GetxController {
         throw Exception("连接失败");
       }
       final htmlString = response.body;
-      insertList(currentDownProgress, index, 0);
+      insertList(currentDownProgress, index, 0.0);
       insertList(currentDownPage, index, 0);
       final document = parse(htmlString);
       final title = document.querySelector("h1");
@@ -60,7 +63,7 @@ class DownloadController extends GetxController {
       tmpDirectory.createSync();
       final images = document.querySelectorAll("img");
       final imagesSize = images.length;
-      insertList(connectState, index, imagesSize);
+      insertList(currentDownPageSize, index, imagesSize);
       var count = 0;
       for (var element in images) {
         var url = "https://telegra.ph${element.attributes['src']}";
@@ -82,17 +85,27 @@ class DownloadController extends GetxController {
         insertList(currentDownProgress, index, (count / imagesSize).toDouble());
         insertList(currentDownPage, index, count);
         update();
-        print(saveFile);
+
       }
+      connectState[index]=2;
       if (checkIsClean()) {
-        currentDownLink.removeRange(0, currentDownLink.length);
-        currentDownProgress.removeRange(0, currentDownProgress.length);
+        cleanDown(index);
       }
       update();
     } catch (e) {
       connectState.insert(index, 0);
       print(e);
     }
+  }
+
+  cleanDown(int index) {
+    currentDownLink.removeRange(0, currentDownLink.length);
+    currentDownProgress.removeRange(0, currentDownProgress.length);
+    currentDownPageSize.removeRange(0, currentDownPage.length);
+    currentDownPage.removeRange(0, currentDownPage.length);
+    currentDownProImg.removeRange(0, currentDownProImg.length);
+    currentDownPreview.removeRange(0, currentDownPreview.length);
+    connectState.removeRange(0, connectState.length);
   }
 
   deleteDown(int index) {
@@ -109,8 +122,8 @@ class DownloadController extends GetxController {
     if (currentDownProgress.isEmpty) {
       return false;
     }
-    for (double currentProgress in currentDownProgress) {
-      if (currentProgress != 1.0) {
+    for (int connect in connectState) {
+      if (connect != 2) {
         return false;
       }
     }

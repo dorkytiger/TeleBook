@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:path/path.dart';
 import 'package:wo_nas/app/modules/download/views/download_progress.dart';
 
 import '../controllers/download_controller.dart';
@@ -29,10 +30,12 @@ class DownloadView extends GetView<DownloadController> {
                               child: SizedBox(
                                   height: 150,
                                   child: Obx(
-                                    () => controller.currentDownPreview
-                                                .isNotEmpty &&
-                                            controller.currentDownPreview[index]
-                                                .isNotEmpty
+                                    () => (controller.currentDownPage.length >
+                                                index
+                                            ? (controller
+                                                    .currentDownPage[index] >
+                                                1)
+                                            : false)
                                         ? Image.file(File(controller
                                             .currentDownPreview[index]))
                                         : Obx(() => (controller
@@ -67,8 +70,8 @@ class DownloadView extends GetView<DownloadController> {
                                   children: [
                                     Obx(
                                       () => Text(
-                                        "当前下载页数：${controller.currentDownPage.isNotEmpty ? controller.currentDownPage[index] : 0}/${controller.currentDownPageSize.isNotEmpty ? controller.currentDownPageSize[index] : 0}",
-                                        style: const TextStyle(fontSize: 18),
+                                        "当前下载页数：${controller.currentDownPage.length > index ? controller.currentDownPage[index] : 0}/${controller.currentDownPageSize.length > index ? controller.currentDownPageSize[index] : 0}",
+                                        style: const TextStyle(fontSize: 15),
                                       ),
                                     ),
                                     Expanded(
@@ -77,8 +80,8 @@ class DownloadView extends GetView<DownloadController> {
                                           onPressed: () {
                                             controller.getBook(
                                                 index,
-                                                controller.currentDownLink[
-                                                index]);
+                                                controller
+                                                    .currentDownLink[index]);
                                           },
                                           icon: const Icon(
                                             Icons.refresh,
@@ -105,7 +108,11 @@ class DownloadView extends GetView<DownloadController> {
                                       padding:
                                           const EdgeInsets.fromLTRB(0, 5, 5, 5),
                                       child: Obx(() => controller
-                                              .currentDownProgress.isNotEmpty
+                                                  .currentDownProgress
+                                                  .isNotEmpty &&
+                                              controller.currentDownProgress
+                                                      .length >
+                                                  index
                                           ? LinearProgressIndicator(
                                               color: Colors.blue,
                                               value: controller
@@ -119,16 +126,20 @@ class DownloadView extends GetView<DownloadController> {
                                     Padding(
                                       padding:
                                           const EdgeInsets.fromLTRB(0, 5, 5, 0),
-                                      child: Obx(() => controller
-                                              .currentDownProImg.isNotEmpty
-                                          ? LinearProgressIndicator(
-                                              color: Colors.blue,
-                                              value: controller
-                                                  .currentDownProImg[index],
-                                            )
-                                          : const LinearProgressIndicator(
-                                              value: 0,
-                                            )),
+                                      child: Obx(() =>
+                                          controller.currentDownProImg.length >
+                                                      index &&
+                                                  controller.currentDownProImg[
+                                                          index] >=
+                                                      0.0
+                                              ? LinearProgressIndicator(
+                                                  color: Colors.blue,
+                                                  value: controller
+                                                      .currentDownProImg[index],
+                                                )
+                                              : const LinearProgressIndicator(
+                                                  value: 0,
+                                                )),
                                     ),
                                   ],
                                 )

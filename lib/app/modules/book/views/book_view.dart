@@ -26,9 +26,14 @@ class BookView extends GetView<BookController> {
                     controller.setGridCount();
                   },
                   icon: const Icon(Icons.grid_view_rounded)),
+              IconButton(
+                  onPressed: () {
+                    controller.toggleEditing();
+                  },
+                  icon: const Icon(Icons.edit)),
             ],
           ),
-          body: controller.bookPathList.isNotEmpty?RefreshIndicator(
+          body: RefreshIndicator(
               child: GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: controller.gridCount.value,
@@ -38,86 +43,101 @@ class BookView extends GetView<BookController> {
                         controller.isShowTitle.value ? (1 / 2) : (2 / 3)),
                 itemCount: controller.bookPreviewList.length,
                 itemBuilder: (BuildContext context, int index) {
-                  return GestureDetector(
-                      onTap: () async {
-                        await controller
-                            .getBookPageList(controller.bookPathList[index]);
-                        await Get.to(() => const BookPage(),
-                            arguments: controller.bookNameList[index]);
-                      },
-                      onLongPress: () {
-                        controller.toggleEditing();
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                            border:
-                                Border.all(color: Colors.white10, width: 5)),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Expanded(
-                                child: Stack(
-                                  alignment: Alignment.bottomCenter,
-                                  children: [
-                                    Image.file(
-                                      File(controller.bookPreviewList[index]),
-                                    ),
-                                    if (controller.isEditing.value)
-                                      Align(
-                                        alignment: Alignment.bottomRight,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              controller.toggleSelection(index);
-                                            },
-                                            child: Container(
+                  return controller.bookPathList.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () async {
+                            await controller.getBookPageList(
+                                controller.bookPathList[index]);
+                            await Get.to(() => const BookPage(),
+                                arguments: controller.bookNameList[index]);
+                          },
+                          onLongPress: () {
+                            controller.toggleEditing();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Colors.white10, width: 5)),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: Stack(
+                                      alignment: Alignment.bottomCenter,
+                                      children: [
+                                        Image.file(
+                                          File(controller
+                                              .bookPreviewList[index]),
+                                        ),
+                                        if (controller.isEditing.value)
+                                          Align(
+                                            alignment: Alignment.bottomRight,
+                                            child: Padding(
                                               padding:
-                                                  const EdgeInsets.all(5.0),
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                color: controller.selectedItems
-                                                        .contains(index)
-                                                    ? Colors.blue
-                                                    : Colors.white,
-                                              ),
-                                              child: const Icon(
-                                                Icons.check,
-                                                color: Colors.white,
+                                                  const EdgeInsets.all(8.0),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  controller
+                                                      .toggleSelection(index);
+                                                  print(
+                                                      controller.selectedItems);
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(5.0),
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: controller
+                                                            .selectedItems
+                                                            .contains(index)
+                                                        ? Colors.blue
+                                                        : Colors.white,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (controller.isShowTitle.value)
+                                    Expanded(
+                                        child: Text(
+                                            controller.bookNameList[index]))
+                                ],
                               ),
-                              if (controller.isShowTitle.value)
-                                Expanded(
-                                    child: Text(controller.bookNameList[index]))
-                            ],
-                          ),
-                        ),
-                      ));
+                            ),
+                          ))
+                      : const Center(
+                          child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              "暂无书籍,点击右下角",
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.grey),
+                            ),
+                            Icon(
+                              Icons.download,
+                              color: Colors.black54,
+                            ),
+                            Text(
+                              "下载",
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.grey),
+                            )
+                          ],
+                        ));
                 },
               ),
               onRefresh: () async {
                 await controller.getBookList();
-              }):const Center(
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    "暂无书籍,点击右下角",
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  Icon(Icons.download,color: Colors.black54,),
-                  Text("下载",style: TextStyle(fontSize: 18, color: Colors.grey),)
-                ],
-          )
-          ),
-
+              }),
           bottomNavigationBar: controller.isEditing.value
               ? BottomAppBar(
                   color: Colors.white,
@@ -136,7 +156,10 @@ class BookView extends GetView<BookController> {
                                 Icons.cancel_outlined,
                                 color: Colors.blue,
                               ),
-                              Text("取消",style: TextStyle(color: Colors.black),)
+                              Text(
+                                "取消",
+                                style: TextStyle(color: Colors.black54),
+                              )
                             ],
                           ),
                         ),
@@ -150,14 +173,17 @@ class BookView extends GetView<BookController> {
                                   title: const Text('确认删除'),
                                   content: const Text(
                                     '确定要删除选中的项吗？',
-                                    style: TextStyle(color: Colors.black),
+                                    style: TextStyle(color: Colors.black54),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () {
                                         Navigator.of(context).pop(); // 关闭对话框
                                       },
-                                      child: const Text('取消',style: TextStyle(color: Colors.black),),
+                                      child: const Text(
+                                        '取消',
+                                        style: TextStyle(color: Colors.black54),
+                                      ),
                                     ),
                                     TextButton(
                                       onPressed: () {
@@ -165,7 +191,10 @@ class BookView extends GetView<BookController> {
                                             .deleteSelectedItems(); // 执行删除操作
                                         Navigator.of(context).pop(); // 关闭对话框
                                       },
-                                      child: const Text('确认删除',style: TextStyle(color: Colors.black),),
+                                      child: const Text(
+                                        '确认删除',
+                                        style: TextStyle(color: Colors.black54),
+                                      ),
                                     ),
                                   ],
                                 );
@@ -178,7 +207,10 @@ class BookView extends GetView<BookController> {
                                 Icons.delete,
                                 color: Colors.blue,
                               ),
-                              Text("删除",style: TextStyle(color: Colors.black),)
+                              Text(
+                                "删除",
+                                style: TextStyle(color: Colors.black54),
+                              )
                             ],
                           ),
                         ),

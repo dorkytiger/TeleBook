@@ -14,13 +14,16 @@ class BookController extends GetxController {
   RxList<String> bookPageList = <String>[].obs;
   RxBool isEditing = false.obs;
   RxBool isShowTitle = false.obs;
+  RxBool isTwice = false.obs;
   RxInt gridCount = 3.obs;
   RxSet<int> selectedItems = <int>{}.obs;
   RxString url = "".obs;
   TextEditingController urlController = TextEditingController();
+  late SharedPreferences sharedPreferences;
 
   @override
   void onInit() async {
+    sharedPreferences = await SharedPreferences.getInstance();
     final tmpFile = await getApplicationDocumentsDirectory();
     final tmpBooks = Directory("${tmpFile.path}/book");
     if (!tmpBooks.existsSync()) {
@@ -47,69 +50,43 @@ class BookController extends GetxController {
     update();
   }
 
-  void deleteSelectedItems() {
-    update();
+  void deleteSelectedItems() async {
+    try {
+      for (var bookPathIndex in selectedItems) {
+        final path = bookPathList[bookPathIndex];
+        final bookDir = Directory(path);
+        if (bookDir.existsSync()) {
+          await bookDir.delete();
+        }
+      }
+      update();
+    } catch (e) {
+      print(e);
+    }
   }
 
   void initGridCount() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    var isTwice = sharedPreferences.getBool("isTwice");
-    if (isTwice == null) {
-      sharedPreferences.setBool("isTwice", false);
-      isTwice = sharedPreferences.getBool("isTwice");
-    }
-    print(isTwice);
-    if (isTwice!) {
-      gridCount.value = 2;
-    } else {
-      gridCount.value = 3;
-    }
-    update();
+    sharedPreferences = await SharedPreferences.getInstance();
+    setGridCount();
   }
 
   // 设置是一行显示两个还是三个
   void setGridCount() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    var isTwice = sharedPreferences.getBool("isTwice");
-    sharedPreferences.setBool("isTwice", !isTwice!);
-    print(isTwice);
-    if (isTwice) {
+    var isTwice = sharedPreferences.getBool("isTwice") ?? false;
+    sharedPreferences.setBool("isTwice", !isTwice);
+    if (!isTwice) {
       gridCount.value = 2;
+      update();
     } else {
       gridCount.value = 3;
+      update();
     }
-    update();
   }
 
- Future<String> getConnect() async{
-    String url=urlController.text;
+  Future<String> getConnect() async {
+    String url = urlController.text;
     var response = await GetConnect().get(url);
     return await response.body;
-  }
-
-  getBook(String htmlString) async {
-    final document=parse(htmlString);
-    final title = document.querySelector("h1");
-    final tmpFile = await getApplicationDocumentsDirectory();
-    final tmpBooks = Directory("${tmpFile.path}/book");
-    if (!tmpBooks.existsSync()) {
-      tmpBooks.createSync();
-    }
-    final tmpDirectory = Directory("${tmpFile.path}/book/${title?.text}");
-    tmpDirectory.createSync();
-    final images = document.querySelectorAll("img");
-    var count = 0;
-    for (var element in images) {
-      var url = "https://telegra.ph${element.attributes['src']}";
-      var imageResponse = await Dio()
-          .get(url, options: Options(responseType: ResponseType.bytes));
-      var saveFile = File("${tmpDirectory.path}/image_$count.png");
-      if (imageResponse.data != null) {
-        saveFile.writeAsBytes(imageResponse.data);
-      }
-      count++;
-      print(saveFile);
-    }
   }
 
   getBookList() async {
@@ -143,9 +120,5 @@ class BookController extends GetxController {
       }
     }
     update();
-  }
-
-  deleteBookList() {
-    print(selectedItems);
   }
 }
