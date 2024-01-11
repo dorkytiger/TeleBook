@@ -15,6 +15,9 @@ void main() {
               color: Colors.blue,
               iconTheme: IconThemeData(color: Colors.white),
               titleTextStyle: TextStyle(color: Colors.white, fontSize: 20)),
+          primaryColor: Colors.white,
+          dialogTheme: const DialogTheme(
+              backgroundColor: Colors.white, surfaceTintColor: Colors.white),
           elevatedButtonTheme: ElevatedButtonThemeData(
               style: ButtonStyle(
                   iconColor: MaterialStateProperty.resolveWith((states) {
@@ -36,7 +39,9 @@ void main() {
               return Colors.blue;
             }
           }))),
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(
+            color: Colors.white,
+          ),
           floatingActionButtonTheme:
               const FloatingActionButtonThemeData(backgroundColor: Colors.blue),
           bottomNavigationBarTheme: const BottomNavigationBarThemeData(

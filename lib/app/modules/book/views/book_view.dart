@@ -25,44 +25,6 @@ class BookView extends GetView<BookController> {
                     controller.setGridCount();
                   },
                   icon: const Icon(Icons.grid_view_rounded)),
-              IconButton(
-                  onPressed: () {
-                    showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text(
-                              '请输入链接',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            content: TextField(
-                              controller: controller.urlController,
-                              keyboardType: TextInputType.text,
-                              autofocus: true,
-                              textInputAction: TextInputAction.done,
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('取消'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: const Text('确定'),
-                                onPressed: () {
-                                  controller.getBook();
-                                  Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
-                                },
-                              ),
-                            ],
-                          );
-                        });
-                  },
-                  icon: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                  ))
             ],
           ),
           body: RefreshIndicator(
@@ -147,9 +109,9 @@ class BookView extends GetView<BookController> {
                   context: context,
                   builder: (context) {
                     return AlertDialog(
+                      backgroundColor: Colors.white,
                       title: const Text(
                         '请输入链接',
-                        style: TextStyle(color: Colors.blue),
                       ),
                       content: SizedBox(
                         child: TextField(
@@ -196,7 +158,10 @@ class BookView extends GetView<BookController> {
                   });
             },
             tooltip: 'Increment',
-            child: Icon(Icons.add),
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+            ),
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
           // 调整悬浮按钮位置
@@ -229,8 +194,8 @@ class BookView extends GetView<BookController> {
                               context: context,
                               builder: (context) {
                                 return AlertDialog(
-                                  title: const Text('确认删除',
-                                      style: TextStyle(color: Colors.blue)),
+                                  backgroundColor: Colors.white,
+                                  title: const Text('确认删除'),
                                   content: const Text(
                                     '确定要删除选中的项吗？',
                                     style: TextStyle(color: Colors.blue),
@@ -242,7 +207,7 @@ class BookView extends GetView<BookController> {
                                       },
                                       child: const Text('取消'),
                                     ),
-                                    ElevatedButton(
+                                    TextButton(
                                       onPressed: () {
                                         controller
                                             .deleteSelectedItems(); // 执行删除操作
