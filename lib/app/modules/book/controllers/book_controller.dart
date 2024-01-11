@@ -21,7 +21,11 @@ class BookController extends GetxController {
 
   @override
   void onInit() async {
-    // initGridCount();
+    final tmpFile = await getApplicationDocumentsDirectory();
+    final tmpBooks = Directory("${tmpFile.path}/book");
+    if (!tmpBooks.existsSync()) {
+      tmpBooks.createSync();
+    }
     getBookList();
     super.onInit();
   }
@@ -77,11 +81,14 @@ class BookController extends GetxController {
     update();
   }
 
-  getBook() async {
-    String url = urlController.text;
+ Future<String> getConnect() async{
+    String url=urlController.text;
     var response = await GetConnect().get(url);
-    var htmlString = await response.body;
-    var document = parse(htmlString);
+    return await response.body;
+  }
+
+  getBook(String htmlString) async {
+    final document=parse(htmlString);
     final title = document.querySelector("h1");
     final tmpFile = await getApplicationDocumentsDirectory();
     final tmpBooks = Directory("${tmpFile.path}/book");
@@ -136,5 +143,9 @@ class BookController extends GetxController {
       }
     }
     update();
+  }
+
+  deleteBookList() {
+    print(selectedItems);
   }
 }

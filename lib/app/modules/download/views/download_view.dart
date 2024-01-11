@@ -16,139 +16,147 @@ class DownloadView extends GetView<DownloadController> {
           appBar: AppBar(
             title: const Text('下载'),
             centerTitle: true,
-            actions: [
-              IconButton(
-                  onPressed: () {
-                    showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text(
-                              '请输入链接',
-                              style: TextStyle(color: Colors.blue),
-                            ),
-                            content: TextField(
-                              controller: controller.urlController,
-                              keyboardType: TextInputType.text,
-                              autofocus: true,
-                              textInputAction: TextInputAction.done,
-                            ),
-                            actions: <Widget>[
-                              TextButton(
-                                child: const Text('取消'),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                              TextButton(
-                                child: const Text('确定'),
-                                onPressed: () {
-                                  controller.getBook(
-                                      controller.currentDownLink.length);
-                                  Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
-                                },
-                              ),
-                            ],
-                          );
-                        });
-                  },
-                  icon: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                  ))
-            ],
           ),
           body: controller.currentDownLink.isNotEmpty
-              ? ListView.builder(
+              ? Obx(() => ListView.builder(
                   itemCount: controller.currentDownLink.length,
                   itemBuilder: (context, index) {
-                    return Obx(
-                      () => controller.currentDownProgress[index] != 1.0
-                          ? Padding(
-                              padding: const EdgeInsets.fromLTRB(5, 4, 5, 4),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                      child: FutureBuilder(
-                                    future: controller.getDownPreview(index),
-                                    builder: (BuildContext context,
-                                        AsyncSnapshot<dynamic> snapshot) {
-                                      if (snapshot.error != null) {
-                                        return const Center(
-                                          child: CircularProgressIndicator(),
-                                        );
-                                        // 当数据正在加载时显示进度指示器
-                                      } else if (snapshot.hasError) {
-                                        return Text(
-                                            'Error: ${snapshot.error}'); // 如果发生错误，显示错误信息
-                                      } else {
-                                        return SizedBox(
-                                          height: 150,
-                                          child: Image.file(
-                                            File(snapshot.data),
-                                            fit: BoxFit.fitHeight,
-                                          ),
-                                        ); // 当数据加载完成，显示数据
-                                      }
-                                    },
-                                  )),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Column(
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              "当前下载页数：${controller.currentDownPage[index]}/${controller.currentDownPageSize[index]}",
-                                              style: const TextStyle(fontSize: 18),
-                                            ),
-
-                                             IconButton(
-                                               iconSize: 35,
-                                                 onPressed: () {},
-                                                 icon: const Icon(
-                                                   Icons.cancel,
-                                                   color: Colors.blue,
-                                                 )),
-
-                                          ],
-                                        ),
-                                        const Text("总进度"),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              0, 5, 5, 5),
-                                          child: LinearProgressIndicator(
-                                            color: Colors.blue,
-                                            value: controller
-                                                .currentDownProgress[index],
-                                          ),
-                                        ),
-                                        const Text("当前页"),
-                                        Padding(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              0, 5, 5, 0),
-                                          child: LinearProgressIndicator(
-                                            color: Colors.blue,
-                                            value: controller
-                                                .currentDownProImg[index],
-                                          ),
-                                        ),
-                                      ],
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(5, 4, 5, 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                              child: SizedBox(
+                                  height: 150,
+                                  child: Obx(
+                                    () => controller.currentDownPreview
+                                                .isNotEmpty &&
+                                            controller.currentDownPreview[index]
+                                                .isNotEmpty
+                                        ? Image.file(File(controller
+                                            .currentDownPreview[index]))
+                                        : Obx(() => (controller
+                                                    .connectState[index] ==
+                                                1
+                                            ? const Center(
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              )
+                                            : const Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.cancel_outlined,
+                                                    size: 30,
+                                                    color: Colors.grey,
+                                                  ),
+                                                  Text("请求失败"),
+                                                ],
+                                              ))),
+                                  ))),
+                          Expanded(
+                            flex: 2,
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Obx(
+                                      () => Text(
+                                        "当前下载页数：${controller.currentDownPage.isNotEmpty ? controller.currentDownPage[index] : 0}/${controller.currentDownPageSize.isNotEmpty ? controller.currentDownPageSize[index] : 0}",
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
                                     ),
-                                  )
-                                ],
-                              ))
-                          : Container(
-                              child: null,
+                                    Expanded(
+                                      child: IconButton(
+                                          iconSize: 30,
+                                          onPressed: () {
+                                            controller.getBook(
+                                                index,
+                                                controller.currentDownLink[
+                                                index]);
+                                          },
+                                          icon: const Icon(
+                                            Icons.refresh,
+                                            color: Colors.blue,
+                                          )),
+                                    ),
+                                    Expanded(
+                                      child: IconButton(
+                                          iconSize: 30,
+                                          onPressed: () {
+                                            controller.deleteDown(index);
+                                          },
+                                          icon: const Icon(
+                                            Icons.cancel,
+                                            color: Colors.blue,
+                                          )),
+                                    )
+                                  ],
+                                ),
+                                Column(
+                                  children: [
+                                    const Text("总进度"),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.fromLTRB(0, 5, 5, 5),
+                                      child: Obx(() => controller
+                                              .currentDownProgress.isNotEmpty
+                                          ? LinearProgressIndicator(
+                                              color: Colors.blue,
+                                              value: controller
+                                                  .currentDownProgress[index],
+                                            )
+                                          : const LinearProgressIndicator(
+                                              value: 0,
+                                            )),
+                                    ),
+                                    const Text("当前页进度"),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.fromLTRB(0, 5, 5, 0),
+                                      child: Obx(() => controller
+                                              .currentDownProImg.isNotEmpty
+                                          ? LinearProgressIndicator(
+                                              color: Colors.blue,
+                                              value: controller
+                                                  .currentDownProImg[index],
+                                            )
+                                          : const LinearProgressIndicator(
+                                              value: 0,
+                                            )),
+                                    ),
+                                  ],
+                                )
+                              ],
                             ),
+                          )
+                        ],
+                      ),
                     );
-                  })
+                  }))
               : const Center(
-                  child: Text(
-                    "暂无下载链接",
-                    style: TextStyle(fontSize: 18),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        "暂无下载链接，点击右下角",
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      Icon(
+                        Icons.add,
+                        color: Colors.black54,
+                      ),
+                      Text(
+                        "添加",
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      )
+                    ],
                   ),
                 ),
           floatingActionButton: FloatingActionButton(
@@ -160,6 +168,7 @@ class DownloadView extends GetView<DownloadController> {
                       backgroundColor: Colors.white,
                       title: const Text(
                         '请输入链接',
+                        style: TextStyle(color: Colors.black54),
                       ),
                       content: SizedBox(
                         child: TextField(
@@ -171,6 +180,7 @@ class DownloadView extends GetView<DownloadController> {
                             minLines: 1,
                             decoration: const InputDecoration(
                               hintText: '输入',
+                              hintStyle: TextStyle(color: Colors.grey),
                               filled: true,
                               fillColor: Colors.white,
                               contentPadding: EdgeInsets.symmetric(
@@ -182,7 +192,7 @@ class DownloadView extends GetView<DownloadController> {
                         TextButton(
                           child: const Text(
                             '取消',
-                            style: TextStyle(color: Colors.black),
+                            style: TextStyle(color: Colors.black54),
                           ),
                           onPressed: () {
                             Navigator.of(context).pop();
@@ -191,11 +201,12 @@ class DownloadView extends GetView<DownloadController> {
                         TextButton(
                           child: const Text(
                             '确定',
-                            style: TextStyle(color: Colors.black),
+                            style: TextStyle(color: Colors.black54),
                           ),
                           onPressed: () {
-                            controller
-                                .getBook(controller.currentDownLink.length);
+                            final index = controller.currentDownLink.length;
+                            controller.getBook(
+                                index, controller.urlController.text);
                             Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
                           },
                         ),

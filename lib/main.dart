@@ -44,8 +44,10 @@ void main() {
           ),
           floatingActionButtonTheme:
               const FloatingActionButtonThemeData(backgroundColor: Colors.blue),
-          bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-              backgroundColor: Colors.white)),
+          bottomNavigationBarTheme:
+              const BottomNavigationBarThemeData(backgroundColor: Colors.white),
+          progressIndicatorTheme:
+              const ProgressIndicatorThemeData(color: Colors.blue)),
     ),
   );
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:chewie/chewie.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
@@ -12,12 +13,10 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 class VideoController extends GetxController {
   RxList<String> videoPathList = <String>[].obs;
   RxList<String> videoNameList = <String>[].obs;
-
+  TextEditingController videoPathController=TextEditingController();
   final pageSize = 6;
 
   late SharedPreferences sharedPreferences;
-  late VideoPlayerController videoPlayerController;
-  late ChewieController chewieController;
 
   @override
   void onInit() async {
@@ -29,15 +28,10 @@ class VideoController extends GetxController {
     super.onInit();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
+  setVideoPath() async {
+
   }
 
-  @override
-  void onClose() {
-    super.onClose();
-  }
 
   getVideoPathList(String path) async {
     try {

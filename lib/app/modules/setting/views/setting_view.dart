@@ -16,14 +16,37 @@ class SettingView extends GetView<SettingController> {
       body: ListView(
         children: [
           TextFormField(
-            controller: controller.bookPathController,
-            decoration: const InputDecoration(
-                icon: Icon(Icons.password), labelText: "书库路径"),
-          ),
-          TextFormField(
             controller: controller.videoPathController,
             decoration: const InputDecoration(
-                icon: Icon(Icons.password), labelText: "视频路径"),
+                icon: Icon(Icons.video_camera_front), labelText: "视频路径"),
+          ),
+          Row(
+            children: [
+              const Text(
+                "下载自动刷新：",
+                style: TextStyle(fontSize: 18),
+              ),
+              Obx(() => Switch(
+                  value: controller.isRefresh.value,
+                  onChanged: (value) {
+                    controller.isRefresh.value = !controller.isRefresh.value;
+                    controller.sharedPreferences.setBool("isRefresh", controller.isRefresh.value);
+                  }))
+            ],
+          ),
+          Row(
+            children: [
+              const Text(
+                "书籍双行三行显示：",
+                style: TextStyle(fontSize: 18),
+              ),
+              Obx(() => Switch(
+                  value: controller.isDouble.value,
+                  onChanged: (value) {
+                    controller.isDouble.value = !controller.isDouble.value;
+                    controller.sharedPreferences.setBool("isDouble", controller.isRefresh.value);
+                  }))
+            ],
           ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -37,7 +60,7 @@ class SettingView extends GetView<SettingController> {
                 child: const Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [Icon(Icons.save), Text("保存")],
+                  children: [Icon(Icons.save), Text("保存",style: TextStyle(color: Colors.white),)],
                 ),
               ),
             ],

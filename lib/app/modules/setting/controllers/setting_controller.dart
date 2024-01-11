@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
@@ -6,10 +7,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingController extends GetxController {
 
-  TextEditingController bookPathController = TextEditingController();
+
   TextEditingController videoPathController=TextEditingController();
+  late SharedPreferences sharedPreferences;
+  RxBool isRefresh=false.obs;
+  RxBool isDouble=false.obs;
+
   @override
-  void onInit() {
+  void onInit() async {
+    sharedPreferences=await SharedPreferences.getInstance();
     getSetting();
     super.onInit();
   }
@@ -17,14 +23,10 @@ class SettingController extends GetxController {
 
 
   Future saveSetting() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    sharedPreferences.setString('book', bookPathController.text);
     sharedPreferences.setString('video', videoPathController.text);
   }
 
   Future getSetting() async {
-    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    bookPathController.text = sharedPreferences.getString('book') ?? "";
     videoPathController.text = sharedPreferences.getString('video') ?? "";
   }
 

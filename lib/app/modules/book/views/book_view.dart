@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wo_nas/app/modules/book/views/book_page.dart';
+import 'package:wo_nas/app/modules/download/views/download_view.dart';
 
 import '../controllers/book_controller.dart';
 
@@ -27,7 +28,7 @@ class BookView extends GetView<BookController> {
                   icon: const Icon(Icons.grid_view_rounded)),
             ],
           ),
-          body: RefreshIndicator(
+          body: controller.bookPathList.isNotEmpty?RefreshIndicator(
               child: GridView.builder(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: controller.gridCount.value,
@@ -102,69 +103,20 @@ class BookView extends GetView<BookController> {
               ),
               onRefresh: () async {
                 await controller.getBookList();
-              }),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () {
-              showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      backgroundColor: Colors.white,
-                      title: const Text(
-                        '请输入链接',
-                      ),
-                      content: SizedBox(
-                        child: TextField(
-                            controller: controller.urlController,
-                            keyboardType: TextInputType.multiline,
-                            autofocus: true,
-                            textInputAction: TextInputAction.done,
-                            maxLines: 5,
-                            minLines: 1,
-                            decoration: const InputDecoration(
-                              hintText: '输入',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
-                              isDense: true,
-                              border: OutlineInputBorder(
-                                gapPadding: 0,
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(4)),
-                                borderSide: BorderSide(
-                                  width: 1,
-                                  style: BorderStyle.none,
-                                ),
-                              ),
-                            )),
-                      ),
-                      actions: <Widget>[
-                        TextButton(
-                          child: const Text('取消'),
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                        ),
-                        TextButton(
-                          child: const Text('确定'),
-                          onPressed: () {
-                            controller.getBook();
-                            Navigator.of(context).pop(); // 关闭对话框并返回输入的文本
-                          },
-                        ),
-                      ],
-                    );
-                  });
-            },
-            tooltip: 'Increment',
-            child: const Icon(
-              Icons.add,
-              color: Colors.white,
-            ),
+              }):const Center(
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    "暂无书籍,点击右下角",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                  Icon(Icons.download,color: Colors.black54,),
+                  Text("下载",style: TextStyle(fontSize: 18, color: Colors.grey),)
+                ],
+          )
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          // 调整悬浮按钮位置
 
           bottomNavigationBar: controller.isEditing.value
               ? BottomAppBar(
@@ -174,7 +126,7 @@ class BookView extends GetView<BookController> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        ElevatedButton(
+                        TextButton(
                           onPressed: () {
                             controller.toggleEditing(); // 退出编辑模式
                           },
@@ -184,11 +136,11 @@ class BookView extends GetView<BookController> {
                                 Icons.cancel_outlined,
                                 color: Colors.blue,
                               ),
-                              Text("取消")
+                              Text("取消",style: TextStyle(color: Colors.black),)
                             ],
                           ),
                         ),
-                        ElevatedButton(
+                        TextButton(
                           onPressed: () {
                             showDialog(
                               context: context,
@@ -198,14 +150,14 @@ class BookView extends GetView<BookController> {
                                   title: const Text('确认删除'),
                                   content: const Text(
                                     '确定要删除选中的项吗？',
-                                    style: TextStyle(color: Colors.blue),
+                                    style: TextStyle(color: Colors.black),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () {
                                         Navigator.of(context).pop(); // 关闭对话框
                                       },
-                                      child: const Text('取消'),
+                                      child: const Text('取消',style: TextStyle(color: Colors.black),),
                                     ),
                                     TextButton(
                                       onPressed: () {
@@ -213,7 +165,7 @@ class BookView extends GetView<BookController> {
                                             .deleteSelectedItems(); // 执行删除操作
                                         Navigator.of(context).pop(); // 关闭对话框
                                       },
-                                      child: const Text('确认删除'),
+                                      child: const Text('确认删除',style: TextStyle(color: Colors.black),),
                                     ),
                                   ],
                                 );
@@ -226,7 +178,7 @@ class BookView extends GetView<BookController> {
                                 Icons.delete,
                                 color: Colors.blue,
                               ),
-                              Text("删除")
+                              Text("删除",style: TextStyle(color: Colors.black),)
                             ],
                           ),
                         ),
