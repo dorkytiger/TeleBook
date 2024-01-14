@@ -1,9 +1,7 @@
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
-import 'package:html/parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,10 +13,13 @@ class BookController extends GetxController {
   RxBool isEditing = false.obs;
   RxBool isShowTitle = false.obs;
   RxBool isTwice = false.obs;
+  RxBool isShowProgress=false.obs;
+  RxInt currentPage=0.obs;
   RxInt gridCount = 3.obs;
   RxSet<int> selectedItems = <int>{}.obs;
   RxString url = "".obs;
   TextEditingController urlController = TextEditingController();
+  PageController pageController=PageController();
   late SharedPreferences sharedPreferences;
 
   @override
@@ -50,14 +51,22 @@ class BookController extends GetxController {
     update();
   }
 
-  void deleteSelectedItems() async {
+  Future deleteSelectedItems() async {
     try {
       for (var bookPathIndex in selectedItems) {
         final path = bookPathList[bookPathIndex];
         final bookDir = Directory(path);
+        print(bookDir.existsSync());
         if (bookDir.existsSync()) {
-          await bookDir.delete();
+          final book = bookDir.listSync();
+          for (var page in book) {
+            page.deleteSync();
+          }
+          bookDir.deleteSync();
         }
+      }
+      for (var index in selectedItems) {
+        bookPathList.removeAt(index);
       }
       update();
     } catch (e) {
@@ -97,13 +106,14 @@ class BookController extends GetxController {
       final tmpFile = await getApplicationDocumentsDirectory();
       List<FileSystemEntity> fileList =
           Directory("${tmpFile.path}/book").listSync().toList();
-
-      for (FileSystemEntity fileSystemEntity in fileList) {
-        final book = Directory(fileSystemEntity.path).listSync();
-        bookPathList.add(fileSystemEntity.path);
-        bookNameList.add(fileSystemEntity.path
-            .substring(fileSystemEntity.path.lastIndexOf("/") + 1));
-        bookPreviewList.add(book.first.path);
+      if (fileList.isNotEmpty) {
+        for (FileSystemEntity fileSystemEntity in fileList) {
+          final book = Directory(fileSystemEntity.path).listSync();
+          bookPathList.add(fileSystemEntity.path);
+          bookNameList.add(fileSystemEntity.path
+              .substring(fileSystemEntity.path.lastIndexOf("/") + 1));
+          bookPreviewList.add(book.first.path);
+        }
       }
     } catch (e) {
       print(e.toString());

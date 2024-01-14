@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wo_nas/app/modules/book/views/book_page.dart';
-import 'package:wo_nas/app/modules/download/views/download_view.dart';
 
 import '../controllers/book_controller.dart';
 
@@ -21,16 +20,41 @@ class BookView extends GetView<BookController> {
             centerTitle: true,
             backgroundColor: Colors.blue,
             actions: [
-              IconButton(
-                  onPressed: () {
-                    controller.setGridCount();
-                  },
-                  icon: const Icon(Icons.grid_view_rounded)),
-              IconButton(
-                  onPressed: () {
-                    controller.toggleEditing();
-                  },
-                  icon: const Icon(Icons.edit)),
+              PopupMenuButton<String>(
+                offset: const Offset(0, 55),
+                icon: const Icon(Icons.add,size: 35,),
+                onSelected: (String result) {
+                  // Handle the selection from the popup menu
+                  print('Selected: $result');
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: '1',
+                    child: TextButton(
+                      onPressed: () {
+                        controller.toggleEditing();
+                      },
+                      child: const Text("编辑书库",style: TextStyle(color: Colors.black54,fontSize: 15),),
+                    )
+                  ),
+                  PopupMenuItem<String>(
+                    value: '2',
+                    child: TextButton(
+                      onPressed: () {
+                        controller.setGridCount();
+                      },
+                      child: Obx(()=>Text(controller.isTwice.value?"双行显示":"三行显示",style: const TextStyle(color: Colors.black54,fontSize: 15),)),
+                    )
+                  ),
+                  // PopupMenuItem<String>(
+                  //   value: 'option3',
+                  //   child:TextButton(
+                  //     onPressed: () {  },
+                  //     child: const Text("搜素",style: TextStyle(color: Colors.black54,fontSize: 15),),
+                  //   )
+                  // ),
+                ],
+              ),
             ],
           ),
           body: RefreshIndicator(
@@ -187,9 +211,11 @@ class BookView extends GetView<BookController> {
                                     ),
                                     TextButton(
                                       onPressed: () {
-                                        controller
-                                            .deleteSelectedItems(); // 执行删除操作
-                                        Navigator.of(context).pop(); // 关闭对话框
+                                        controller.deleteSelectedItems();
+                                        Navigator.of(context).pop();
+                                        controller.toggleEditing();
+                                        controller.getBookList();
+                                        Get.forceAppUpdate();
                                       },
                                       child: const Text(
                                         '确认删除',

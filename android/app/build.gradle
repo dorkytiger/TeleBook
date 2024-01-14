@@ -23,8 +23,6 @@ if (flutterVersionName == null) {
 }
 
 android {
-    useAndroidx=true
-    enableJetifier=true
     namespace "com.dorkytiger.wo_nas"
     compileSdkVersion flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
