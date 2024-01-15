@@ -28,10 +28,8 @@ class HomeView extends GetView<HomeController> {
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.book), label: "书籍"),
             BottomNavigationBarItem(
-                icon: Icon(Icons.video_camera_front), label: "视频"),
-            // BottomNavigationBarItem(
-            //     icon: Icon(Icons.video_collection), label: "视频"),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "设置"),
+                icon: Icon(Icons.download), label: "下载"),
+
           ],
         )));
   }

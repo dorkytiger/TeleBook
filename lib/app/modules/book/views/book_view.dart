@@ -1,7 +1,6 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 import 'package:wo_nas/app/modules/book/views/book_page.dart';
 
@@ -12,67 +11,240 @@ class BookView extends GetView<BookController> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: const Text('书库',style: TextStyle(color: Colors.white),),
-          centerTitle: true,
-          backgroundColor: Colors.blue,
-          actions: [
-            IconButton(onPressed: (){
-              controller.getBookList();
-            }, icon: const Icon(Icons.refresh,color: Colors.white,))
-          ],
-        ),
-        body: Obx(() => RefreshIndicator(
-            child: ListView.builder(
+    return Obx(() => Scaffold(
+          appBar: AppBar(
+            title: const Text(
+              '书库',
+              style: TextStyle(color: Colors.white),
+            ),
+            centerTitle: true,
+            backgroundColor: Colors.blue,
+            actions: [
+              PopupMenuButton<String>(
+                offset: const Offset(0, 55),
+                icon: const Icon(Icons.add,size: 35,),
+                onSelected: (String result) {
+                  // Handle the selection from the popup menu
+                  print('Selected: $result');
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: '1',
+                    child: TextButton(
+                      onPressed: () {
+                        controller.toggleEditing();
+                      },
+                      child: const Text("编辑书库",style: TextStyle(color: Colors.black54,fontSize: 15),),
+                    )
+                  ),
+                  PopupMenuItem<String>(
+                    value: '2',
+                    child: TextButton(
+                      onPressed: () {
+                        controller.setGridCount();
+                      },
+                      child: Obx(()=>Text(controller.isTwice.value?"双行显示":"三行显示",style: const TextStyle(color: Colors.black54,fontSize: 15),)),
+                    )
+                  ),
+                  // PopupMenuItem<String>(
+                  //   value: 'option3',
+                  //   child:TextButton(
+                  //     onPressed: () {  },
+                  //     child: const Text("搜素",style: TextStyle(color: Colors.black54,fontSize: 15),),
+                  //   )
+                  // ),
+                ],
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: controller.gridCount.value,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 5,
+                    childAspectRatio:
+                        controller.isShowTitle.value ? (1 / 2) : (2 / 3)),
                 itemCount: controller.bookPreviewList.length,
                 itemBuilder: (BuildContext context, int index) {
-                  return GestureDetector(
-                      onTap: () async {
-                        await controller
-                            .getBookPageList(controller.bookPathList[index]);
-                        await Get.to(() => const BookPage(),arguments: controller.bookNameList[index]);
-                      },
-                      child: SizedBox(
-                        height: 150,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                  return controller.bookPathList.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () async {
+                            await controller.getBookPageList(
+                                controller.bookPathList[index]);
+                            await Get.to(() => const BookPage(),
+                                arguments: controller.bookNameList[index]);
+                          },
+                          onLongPress: () {
+                            controller.toggleEditing();
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: Colors.white10, width: 5)),
+                            child: Center(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: Stack(
+                                      alignment: Alignment.bottomCenter,
+                                      children: [
+                                        Image.file(
+                                          File(controller
+                                              .bookPreviewList[index]),
+                                        ),
+                                        if (controller.isEditing.value)
+                                          Align(
+                                            alignment: Alignment.bottomRight,
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.all(8.0),
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  controller
+                                                      .toggleSelection(index);
+                                                  print(
+                                                      controller.selectedItems);
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.all(5.0),
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: controller
+                                                            .selectedItems
+                                                            .contains(index)
+                                                        ? Colors.blue
+                                                        : Colors.white,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.check,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (controller.isShowTitle.value)
+                                    Expanded(
+                                        child: Text(
+                                            controller.bookNameList[index]))
+                                ],
+                              ),
+                            ),
+                          ))
+                      : const Center(
+                          child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Expanded(
-                              flex: 1,
-                              child: FutureBuilder<Uint8List>(
-                                future: controller.getPreview(
-                                    controller.bookPreviewList[index]),
-                                builder: (BuildContext context,
-                                    AsyncSnapshot<Uint8List> snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    return const Center(child: Text("加载失败"));
-                                  } else if (snapshot.hasData) {
-                                    return Image.memory(snapshot.data!);
-                                  } else {
-                                    return const Center(child: Text("空白页"));
-                                  }
-                                },
-                              ),
+                            Text(
+                              "暂无书籍,点击右下角",
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.grey),
                             ),
-                            Expanded(
-                              flex: 2,
-                              child: Center(
-                                child: Text(controller.bookNameList[index]),
-                              ),
+                            Icon(
+                              Icons.download,
+                              color: Colors.black54,
                             ),
+                            Text(
+                              "下载",
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.grey),
+                            )
                           ],
+                        ));
+                },
+              ),
+              onRefresh: () async {
+                await controller.getBookList();
+              }),
+          bottomNavigationBar: controller.isEditing.value
+              ? BottomAppBar(
+                  color: Colors.white,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            controller.toggleEditing(); // 退出编辑模式
+                          },
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.cancel_outlined,
+                                color: Colors.blue,
+                              ),
+                              Text(
+                                "取消",
+                                style: TextStyle(color: Colors.black54),
+                              )
+                            ],
+                          ),
                         ),
-                      ));
-                }),
-            onRefresh: () async {
-              controller.getBookList();
-              // controller.getPreview();
-            })));
+                        TextButton(
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  backgroundColor: Colors.white,
+                                  title: const Text('确认删除'),
+                                  content: const Text(
+                                    '确定要删除选中的项吗？',
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(); // 关闭对话框
+                                      },
+                                      child: const Text(
+                                        '取消',
+                                        style: TextStyle(color: Colors.black54),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        controller.deleteSelectedItems();
+                                        Navigator.of(context).pop();
+                                        controller.toggleEditing();
+                                        controller.getBookList();
+                                        Get.forceAppUpdate();
+                                      },
+                                      child: const Text(
+                                        '确认删除',
+                                        style: TextStyle(color: Colors.black54),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.delete,
+                                color: Colors.blue,
+                              ),
+                              Text(
+                                "删除",
+                                style: TextStyle(color: Colors.black54),
+                              )
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : null,
+        ));
   }
 }
