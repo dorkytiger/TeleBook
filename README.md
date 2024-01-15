@@ -1,6 +1,6 @@
 # TeleBook
 
-一个专门用来下载telegram上及时预览图片的app
+一个专门用来下载telegram上及时预览图片（书籍）的app
 
 ## Getting Started
 
