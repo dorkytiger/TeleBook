@@ -21,7 +21,7 @@ void main() {
               backgroundColor: Colors.white, surfaceTintColor: Colors.white),
           elevatedButtonTheme: ElevatedButtonThemeData(
               style: ButtonStyle(
-                  iconColor: MaterialStateProperty.resolveWith((states) {
+                  iconColor: WidgetStateProperty.resolveWith((states) {
             // 根据不同的状态返回不同的颜色
             if (states.contains(MaterialState.pressed)) {
               // 按钮被按下时的颜色
@@ -30,9 +30,9 @@ void main() {
               // 默认状态下的颜色
               return Colors.white;
             }
-          }), backgroundColor: MaterialStateProperty.resolveWith((states) {
+          }), backgroundColor: WidgetStateProperty.resolveWith((states) {
             // 根据不同的状态返回不同的颜色
-            if (states.contains(MaterialState.pressed)) {
+            if (states.contains(WidgetState.pressed)) {
               // 按钮被按下时的颜色
               return Colors.blueAccent;
             } else {

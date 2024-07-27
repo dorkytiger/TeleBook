@@ -1,12 +1,9 @@
-import 'dart:async';
-import 'dart:ffi';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:html/parser.dart';
-import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DownloadController extends GetxController {

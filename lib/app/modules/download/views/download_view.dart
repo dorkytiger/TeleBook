@@ -1,10 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
-import 'package:path/path.dart';
-import 'package:wo_nas/app/modules/download/views/download_progress.dart';
 
 import '../controllers/download_controller.dart';
 

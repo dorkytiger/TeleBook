@@ -4,27 +4,35 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wo_nas/app/modules/book/data/book_data.dart';
 
 class BookController extends GetxController {
-  RxList<String> bookPreviewList = <String>[].obs;
-  RxList<String> bookPathList = <String>[].obs;
-  RxList<String> bookNameList = <String>[].obs;
-  RxList<String> bookPageList = <String>[].obs;
+  RxList<BookProp> bookList = <BookProp>[].obs;
+  RxSet<int> selectedItems = <int>{}.obs;
+  RxInt currentBookIndex = 0.obs;
   RxBool isEditing = false.obs;
   RxBool isShowTitle = false.obs;
   RxBool isTwice = false.obs;
-  RxBool isShowProgress=false.obs;
-  RxInt currentPage=0.obs;
-  RxInt gridCount = 3.obs;
-  RxSet<int> selectedItems = <int>{}.obs;
+  RxBool isShowProgress = false.obs;
+  RxInt currentPage = 0.obs;
+  RxInt gridCount = 2.obs;
+
   RxString url = "".obs;
   TextEditingController urlController = TextEditingController();
-  PageController pageController=PageController();
+  PageController pageController = PageController();
   late SharedPreferences sharedPreferences;
 
   @override
   void onInit() async {
     sharedPreferences = await SharedPreferences.getInstance();
+    gridCount.value = sharedPreferences.getBool("gridCount") == null
+        ? 2
+        : sharedPreferences.getBool("gridCount")!
+            ? 2
+            : 3;
+    isShowTitle.value = sharedPreferences.getBool("showTitle") == null
+        ? false
+        : sharedPreferences.getBool("showTitle")!;
     final tmpFile = await getApplicationDocumentsDirectory();
     final tmpBooks = Directory("${tmpFile.path}/book");
     if (!tmpBooks.existsSync()) {
@@ -51,12 +59,11 @@ class BookController extends GetxController {
     update();
   }
 
-  Future deleteSelectedItems() async {
+  deleteSelectedItems() async {
     try {
       for (var bookPathIndex in selectedItems) {
-        final path = bookPathList[bookPathIndex];
+        final path = bookList[bookPathIndex].path;
         final bookDir = Directory(path);
-        print(bookDir.existsSync());
         if (bookDir.existsSync()) {
           final book = bookDir.listSync();
           for (var page in book) {
@@ -66,69 +73,62 @@ class BookController extends GetxController {
         }
       }
       for (var index in selectedItems) {
-        bookPathList.removeAt(index);
+        bookList.removeAt(index);
       }
       update();
     } catch (e) {
-      print(e);
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.TOP);
     }
   }
 
-  void initGridCount() async {
-    sharedPreferences = await SharedPreferences.getInstance();
-    setGridCount();
+  updateGridCount(bool isTwoRows) {
+    gridCount.value = isTwoRows ? 2 : 3;
+    update();
   }
 
-  // 设置是一行显示两个还是三个
-  void setGridCount() async {
-    var isTwice = sharedPreferences.getBool("isTwice") ?? false;
-    sharedPreferences.setBool("isTwice", !isTwice);
-    if (!isTwice) {
-      gridCount.value = 2;
-      update();
-    } else {
-      gridCount.value = 3;
-      update();
-    }
-  }
-
-  Future<String> getConnect() async {
-    String url = urlController.text;
-    var response = await GetConnect().get(url);
-    return await response.body;
+  updateShowTitle(bool isShow) {
+    isShowTitle.value = isShow;
+    update();
   }
 
   getBookList() async {
     try {
-      bookPathList.value = [];
-      bookNameList.value = [];
-      bookPreviewList.value = [];
       final tmpFile = await getApplicationDocumentsDirectory();
       List<FileSystemEntity> fileList =
           Directory("${tmpFile.path}/book").listSync().toList();
       if (fileList.isNotEmpty) {
+        var newBookList = <BookProp>[];
+        var count = 0;
         for (FileSystemEntity fileSystemEntity in fileList) {
           final book = Directory(fileSystemEntity.path).listSync();
-          bookPathList.add(fileSystemEntity.path);
-          bookNameList.add(fileSystemEntity.path
-              .substring(fileSystemEntity.path.lastIndexOf("/") + 1));
-          bookPreviewList.add(book.first.path);
+          var title = fileSystemEntity.path
+              .substring(fileSystemEntity.path.lastIndexOf("/") + 1);
+          var preview = book.first.path;
+          var path = fileSystemEntity.path;
+          List<String> pictures = [];
+          for (var page in book) {
+            if (page is File) {
+              pictures.add(page.path);
+            }
+          }
+          newBookList.add(BookProp(
+              id: count,
+              title: title,
+              path: path,
+              preview: preview,
+              pictures: pictures));
+          count++;
         }
+        bookList.value = newBookList;
       }
+      update();
     } catch (e) {
-      print(e.toString());
+      Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.TOP);
     }
-    update();
   }
 
-  getBookPageList(String filePath) async {
-    bookPageList.value = [];
-    final pageList = Directory(filePath).listSync();
-    for (var page in pageList) {
-      if (page is File) {
-        bookPageList.add(page.path);
-      }
-    }
+  onClickBook(int index) {
+    currentBookIndex.value = index;
     update();
   }
 }

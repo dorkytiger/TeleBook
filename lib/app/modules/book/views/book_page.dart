@@ -1,8 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-
 import 'package:get/get.dart';
 
 import '../controllers/book_controller.dart';
@@ -20,7 +18,8 @@ class BookPage extends GetView<BookController> {
             onPageChanged: (int page) {
               controller.currentPage.value = page;
             },
-            itemCount: controller.bookPageList.length,
+            itemCount:
+                controller.bookList[controller.currentBookIndex.value].pictures.length,
             itemBuilder: (BuildContext context, int index) {
               return Column(
                 children: [
@@ -30,7 +29,9 @@ class BookPage extends GetView<BookController> {
                       onTap: () {
                         _showBottomSheet(context);
                       },
-                      child: Image.file(File(controller.bookPageList[index])),
+                      child: Image.file(File(controller
+                          .bookList[controller.currentBookIndex.value]
+                          .pictures[index])),
                     ),
                   ),
                 ],
@@ -50,14 +51,17 @@ class BookPage extends GetView<BookController> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-             Obx(() =>  Slider(
-                 value: controller.currentPage.value.toDouble(),
-                 min: 0,
-                 max: (controller.bookPageList.length-1).toDouble(),
-                 onChanged: (value){
-                   controller.currentPage.value=value.toInt();
-                   controller.pageController.jumpToPage(value.toInt());
-                 }))
+              Obx(() => Slider(
+                  value: controller.currentPage.value.toDouble(),
+                  min: 0,
+                  max: (controller.bookList[controller.currentBookIndex.value].pictures
+                              .length -
+                          1)
+                      .toDouble(),
+                  onChanged: (value) {
+                    controller.currentPage.value = value.toInt();
+                    controller.pageController.jumpToPage(value.toInt());
+                  }))
             ],
           ),
         );

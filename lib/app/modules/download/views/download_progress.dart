@@ -51,7 +51,7 @@ class _DownloadProgressState extends State<DownloadProgress>
             padding: const EdgeInsets.all(16),
             child: LinearProgressIndicator(
               backgroundColor: Colors.grey[200],
-              value: _progress??0.0,
+              value: _progress,
             ),
           )
         ],
