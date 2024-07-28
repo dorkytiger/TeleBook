@@ -38,6 +38,7 @@ class BookController extends GetxController {
     if (isEditing.value) {
       toggleSelection(index);
     } else {
+      currentBookIndex.value = index;
       Get.to(const BookPage());
     }
   }

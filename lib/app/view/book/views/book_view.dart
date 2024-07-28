@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wo_nas/app/model/vo/book_vo.dart';
 import 'package:wo_nas/app/view/book/widget/book_card_widget.dart';
 import 'package:wo_nas/app/view/book/widget/book_empty_widget.dart';
 
@@ -74,7 +71,7 @@ class BookView extends GetView<BookController> {
             if (controller.bookList.isEmpty) {
               return const BookEmptyWidget();
             } else {
-              return Obx(() => ListView.builder(
+              return Obx(() => GridView.builder(
                     itemCount: controller.bookList.length,
                     itemBuilder: (BuildContext context, int index) {
                       return Obx(() => bookCardWidget(
@@ -85,6 +82,13 @@ class BookView extends GetView<BookController> {
                             controller.deleteBook(index);
                           }));
                     },
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 4 / 5,
+                       mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                    ),
                   ));
             }
           }), onRefresh: () async {

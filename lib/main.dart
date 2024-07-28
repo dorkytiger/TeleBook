@@ -12,6 +12,10 @@ void main() {
       getPages: AppPages.routes,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+          primarySwatch: Colors.blue,
+          primaryColorLight: Colors.white,
+          scaffoldBackgroundColor: Colors.white,
+          colorScheme: ColorScheme.fromSwatch().copyWith(secondary: Colors.blue),
           appBarTheme: const AppBarTheme(
               color: Colors.blue,
               iconTheme: IconThemeData(color: Colors.white),
@@ -23,7 +27,7 @@ void main() {
               style: ButtonStyle(
                   iconColor: WidgetStateProperty.resolveWith((states) {
             // 根据不同的状态返回不同的颜色
-            if (states.contains(MaterialState.pressed)) {
+            if (states.contains(WidgetState.pressed)) {
               // 按钮被按下时的颜色
               return Colors.white;
             } else {

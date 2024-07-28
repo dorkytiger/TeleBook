@@ -7,7 +7,6 @@ import '../controllers/book_controller.dart';
 
 class BookPage extends GetView<BookController> {
   const BookPage({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -18,8 +17,8 @@ class BookPage extends GetView<BookController> {
             onPageChanged: (int page) {
               controller.currentPage.value = page;
             },
-            itemCount:
-                controller.bookList[controller.currentBookIndex.value].pictures.length,
+            itemCount: controller
+                .bookList[controller.currentBookIndex.value].pictures.length,
             itemBuilder: (BuildContext context, int index) {
               return Column(
                 children: [
@@ -46,25 +45,34 @@ class BookPage extends GetView<BookController> {
       context: context,
       builder: (BuildContext context) {
         return Container(
-          height: 80,
-          color: Colors.white,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Obx(() => Slider(
-                  value: controller.currentPage.value.toDouble(),
-                  min: 0,
-                  max: (controller.bookList[controller.currentBookIndex.value].pictures
-                              .length -
-                          1)
-                      .toDouble(),
-                  onChanged: (value) {
-                    controller.currentPage.value = value.toInt();
-                    controller.pageController.jumpToPage(value.toInt());
-                  }))
-            ],
-          ),
-        );
+            height: 80,
+            color: Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  flex: 9,
+                  child: Slider(
+                      value: controller.currentPage.value.toDouble(),
+                      min: 0,
+                      max: (controller
+                                  .bookList[controller.currentBookIndex.value]
+                                  .pictures
+                                  .length -
+                              1)
+                          .toDouble(),
+                      onChanged: (value) {
+                        controller.currentPage.value = value.toInt();
+                        controller.pageController.jumpToPage(value.toInt());
+                      }),
+                ),
+                Expanded(
+                  flex: 1,
+                  child: Text(
+                      "${controller.currentPage.value + 1}/${controller.bookList[controller.currentBookIndex.value].pictures.length}"),
+                )
+              ],
+            ));
       },
     );
   }
