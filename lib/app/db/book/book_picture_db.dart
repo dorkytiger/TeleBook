@@ -70,4 +70,9 @@ class BookPictureDB {
             number: item[_bookPictureNumberColumnName] as int))
         .toList();
   }
+
+  deletePictures(int bookId) async {
+    final db = await database;
+    await db.delete(_bookPictureTableName, where: "$_bookPictureBookIdColumnName = ?", whereArgs: [bookId]);
+  }
 }

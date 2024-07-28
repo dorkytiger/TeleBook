@@ -46,6 +46,12 @@ class BookController extends GetxController {
     super.onInit();
   }
 
+  @override
+  void onReady() {
+    getBookList();
+    super.onReady();
+  }
+
   /// 切换编辑状态
   void toggleEditing() {
     isEditing.value = !isEditing.value;
@@ -66,7 +72,10 @@ class BookController extends GetxController {
   /// 删除选择的书籍
   deleteSelectedItems() async {
     try {
+      Set<int> bookIds = {};
       for (var bookPathIndex in selectedItems) {
+        final bookId = bookList[bookPathIndex].id;
+        bookIds.add(bookId);
         final path = bookList[bookPathIndex].path;
         final bookDir = Directory(path);
         if (bookDir.existsSync()) {
@@ -77,9 +86,10 @@ class BookController extends GetxController {
           bookDir.deleteSync();
         }
       }
-      for (var index in selectedItems) {
-        bookList.removeAt(index);
-      }
+      await _bookService.deleteBooks(bookIds);
+      selectedItems.clear();
+      toggleEditing();
+      getBookList();
       update();
     } catch (e) {
       Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.TOP);
@@ -101,8 +111,7 @@ class BookController extends GetxController {
     try {
       final books = await _bookService.getBooks();
       bookList.value = books;
-      print(books);
-        } catch (e) {
+    } catch (e) {
       Get.snackbar('Error', e.toString(), snackPosition: SnackPosition.TOP);
     }
   }

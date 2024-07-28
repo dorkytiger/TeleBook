@@ -59,4 +59,9 @@ class BookDB {
         .toList();
     return bookDTOs;
   }
+
+  deleteBook(int id) async {
+    final db = await database;
+    await db.delete(_booksTableName, where: "$_booksIdColumnName = ?", whereArgs: [id]);
+  }
 }

@@ -1,5 +1,6 @@
-import 'package:wo_nas/app/db/book_db.dart';
-import 'package:wo_nas/app/db/book_picture_db.dart';
+import 'package:get/get.dart';
+import 'package:wo_nas/app/db/book/book_db.dart';
+import 'package:wo_nas/app/db/book/book_picture_db.dart';
 import 'package:wo_nas/app/model/dto/book_dto.dart';
 import 'package:wo_nas/app/model/dto/book_picture_dto.dart';
 import 'package:wo_nas/app/model/vo/book_vo.dart';
@@ -38,7 +39,7 @@ class BookService {
       }
       return [];
     } catch (e) {
-      print(e);
+      Get.snackbar('获取书籍错误', e.toString(), snackPosition: SnackPosition.TOP);
     }
     return [];
   }
@@ -48,7 +49,7 @@ class BookService {
       final bookId = await _bookDB.insertBook(bookDTO);
       return bookId;
     } catch (e) {
-      print(e);
+      Get.snackbar('添加书籍错误', e.toString(), snackPosition: SnackPosition.TOP);
     }
     return null;
   }
@@ -57,7 +58,18 @@ class BookService {
     try {
       await _bookPictureDB.insertPicture(bookPictureDTo);
     } catch (e) {
-      print(e);
+      Get.snackbar('添加书籍图片错误', e.toString(), snackPosition: SnackPosition.TOP);
+    }
+  }
+
+  deleteBooks(Set<int> bookIds) async {
+    try {
+      for (var bookId in bookIds) {
+        await _bookDB.deleteBook(bookId);
+        await _bookPictureDB.deletePictures(bookId);
+      }
+    } catch (e) {
+      Get.snackbar('删除书籍错误', e.toString(), snackPosition: SnackPosition.TOP);
     }
   }
 }

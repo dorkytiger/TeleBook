@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:wo_nas/app/view/book/controllers/book_controller.dart';
 
 import '../../home/controllers/home_controller.dart';
 
-
-class BookEmptyWidget extends StatelessWidget {
+class BookEmptyWidget extends GetView<BookController> {
   const BookEmptyWidget({super.key});
+
+  Widget _actionButton(
+    String title,
+    IconData icon,
+    Function onPressed,
+  ) {
+    return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: SizedBox(
+          width: 130,
+          child: ElevatedButton(
+            onPressed: () {
+              onPressed();
+            },
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon),
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white),
+                )
+              ],
+            ),
+          ),
+        ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,32 +42,16 @@ class BookEmptyWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text(
-          "暂无书籍",
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child:SizedBox(
-            width: 130,
-            child: ElevatedButton(
-              onPressed: () {
-                Get.find<HomeController>().setCurrentPage(1);
-              },
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.download),
-                  Text(
-                    "前往下载",
-                    style: TextStyle(color: Colors.white),
-                  )
-                ],
-              ),
-            ),
-          )
-        )
+        const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              "暂无书籍",
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            )),
+        _actionButton("前往下载", Icons.download, () {
+          Get.find<HomeController>().setCurrentPage(1);
+        }),
+        _actionButton("刷新页面", Icons.refresh, controller.getBookList),
       ],
     ));
   }

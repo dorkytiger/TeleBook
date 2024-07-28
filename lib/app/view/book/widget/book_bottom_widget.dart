@@ -56,11 +56,8 @@ class BookBottomWidget extends GetView<BookController>{
                         ),
                         TextButton(
                           onPressed: () {
-                            //controller.deleteSelectedItems();
-                            Navigator.of(context).pop();
-                            controller.toggleEditing();
-                            controller.getBookList();
-                            Get.forceAppUpdate();
+                            controller.deleteSelectedItems();
+                            Navigator.of(context).pop(); // 关闭对话框
                           },
                           child: const Text(
                             '确认删除',
