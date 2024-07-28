@@ -3,13 +3,15 @@ import 'package:sqflite/sqflite.dart';
 import 'package:wo_nas/app/model/dto/book_dto.dart';
 
 class BookDB {
-
   final String _booksTableName = "book";
   final String _booksIdColumnName = "id";
   final String _booksTitleColumnName = "title";
   final String _booksPathColumnName = "path";
+  final String _booksCreateTimeColumnName = "create_time";
+  final String _booksUpdateTimeColumnName = "update_time";
 
   BookDB._constructor();
+
   static final BookDB instance = BookDB._constructor();
 
   static Database? _db;
@@ -31,7 +33,9 @@ class BookDB {
             CREATE TABLE $_booksTableName (
               $_booksIdColumnName INTEGER PRIMARY KEY,
               $_booksTitleColumnName TEXT NOT NULL,
-              $_booksPathColumnName TEXT NOT NULL
+              $_booksPathColumnName TEXT NOT NULL,
+              $_booksCreateTimeColumnName TEXT NOT NULL,
+              $_booksUpdateTimeColumnName TEXT NOT NULL
             )
             ''');
       },
@@ -44,6 +48,8 @@ class BookDB {
     final id = await db.insert(_booksTableName, {
       _booksTitleColumnName: book.title,
       _booksPathColumnName: book.path,
+      _booksCreateTimeColumnName: DateTime.now().toString(),
+      _booksUpdateTimeColumnName: DateTime.now().toString()
     });
     return id;
   }
@@ -55,13 +61,16 @@ class BookDB {
         .map((item) => BookDTO(
             id: item[_booksIdColumnName] as int,
             title: item[_booksTitleColumnName] as String,
-            path: item[_booksPathColumnName] as String))
+            path: item[_booksPathColumnName] as String,
+            createTime: item[_booksCreateTimeColumnName] as String,
+            updateTIme: item[_booksUpdateTimeColumnName] as String))
         .toList();
     return bookDTOs;
   }
 
   deleteBook(int id) async {
     final db = await database;
-    await db.delete(_booksTableName, where: "$_booksIdColumnName = ?", whereArgs: [id]);
+    await db.delete(_booksTableName,
+        where: "$_booksIdColumnName = ?", whereArgs: [id]);
   }
 }

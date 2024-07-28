@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:wo_nas/app/view/widget/button/delete_button_widget.dart';
 
 import '../controllers/book_controller.dart';
 
-class BookBottomWidget extends GetView<BookController>{
+class BookBottomWidget extends GetView<BookController> {
   const BookBottomWidget({Key? key}) : super(key: key);
 
   @override
@@ -32,56 +33,9 @@ class BookBottomWidget extends GetView<BookController>{
                 ],
               ),
             ),
-            TextButton(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return AlertDialog(
-                      backgroundColor: Colors.white,
-                      title: const Text('确认删除'),
-                      content: const Text(
-                        '确定要删除选中的项吗？',
-                        style: TextStyle(color: Colors.black54),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pop(); // 关闭对话框
-                          },
-                          child: const Text(
-                            '取消',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            controller.deleteSelectedItems();
-                            Navigator.of(context).pop(); // 关闭对话框
-                          },
-                          child: const Text(
-                            '确认删除',
-                            style: TextStyle(color: Colors.black54),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.delete,
-                    color: Colors.blue,
-                  ),
-                  Text(
-                    "删除",
-                    style: TextStyle(color: Colors.black54),
-                  )
-                ],
-              ),
-            ),
+            deleteButtonWidget(context, () {
+              controller.deleteBooks(); // 删除选中的书籍
+            })
           ],
         ),
       ),

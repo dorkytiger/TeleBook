@@ -12,7 +12,7 @@ class HomeController extends GetxController {
   final List<Widget> pages = const [
     BookView(),
     DownloadView(),
-    SettingPageView(),
+    // SettingPageView(),
   ];
 
   setCurrentPage(index) {

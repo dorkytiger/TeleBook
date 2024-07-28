@@ -32,7 +32,8 @@ class BookService {
               path: bookDTO.path,
               preview: bookPictureList.first,
               title: bookDTO.title,
-              pictures: bookPictureList);
+              pictures: bookPictureList,
+              createTime: bookDTO.createTime!);
           bookVOList.add(bookVO);
         }
         return bookVOList;

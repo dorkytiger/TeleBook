@@ -20,14 +20,12 @@ class SettingController extends GetxController {
   setGridCount(bool value) {
     gridCount.value = value;
     sharedPreferences.setBool("gridCount", value);
-    Get.find<BookController>().updateGridCount(value);
     update();
   }
 
   setShowTitle(bool value) {
     showTitle.value = value;
     sharedPreferences.setBool("showTitle", value);
-    Get.find<BookController>().updateShowTitle(value);
     update();
   }
 }

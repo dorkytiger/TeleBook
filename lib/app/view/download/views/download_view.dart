@@ -27,7 +27,7 @@ class DownloadView extends GetView<DownloadController> {
                           controller.downloadStates[index].preview,
                           controller.downloadStates[index].state,
                           () {
-                            controller.getBook(
+                            controller.downloadBook(
                                 index, controller.downloadStates[index].link);
                           },
                           () {
@@ -58,7 +58,7 @@ class DownloadView extends GetView<DownloadController> {
           floatingActionButton: DownloadFloatingButtonWidget(
               urlController: controller.urlController,
               onConfirm: () {
-                controller.getBook(controller.downloadStates.length,
+                controller.downloadBook(controller.downloadStates.length,
                     controller.urlController.text);
               }),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,

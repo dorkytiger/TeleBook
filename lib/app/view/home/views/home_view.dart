@@ -28,7 +28,7 @@ class HomeView extends GetView<HomeController> {
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.book), label: "书籍"),
             BottomNavigationBarItem(icon: Icon(Icons.download), label: "下载"),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "设置")
+            // BottomNavigationBarItem(icon: Icon(Icons.settings), label: "设置")
           ],
         )));
   }

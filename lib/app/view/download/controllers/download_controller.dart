@@ -51,7 +51,7 @@ class DownloadController extends GetxController {
     downloadStates.refresh();
   }
 
-  void getBook(int index, String url) async {
+  void downloadBook(int index, String url) async {
     try {
       updateDownloadState(
           index,

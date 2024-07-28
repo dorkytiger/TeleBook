@@ -63,7 +63,7 @@ class BookView extends GetView<BookController> {
                         onTap: () {
                           controller.toggleEditing();
                         },
-                        value: "1",
+                        value: "2",
                         child: _actionButton("编辑", Icons.edit)),
                   ],
                 ),
@@ -74,12 +74,18 @@ class BookView extends GetView<BookController> {
             if (controller.bookList.isEmpty) {
               return const BookEmptyWidget();
             } else {
-              return ListView.builder(
-                itemCount: controller.bookList.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return bookCardWidget(controller.bookList[index]);
-                },
-              );
+              return Obx(() => ListView.builder(
+                    itemCount: controller.bookList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      return Obx(() => bookCardWidget(
+                              controller.bookList[index],
+                              controller.selectedItems.contains(index), () {
+                            controller.onClickCard(index);
+                          }, () {
+                            controller.deleteBook(index);
+                          }));
+                    },
+                  ));
             }
           }), onRefresh: () async {
             await controller.getBookList();

@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 Widget downloadCardPreviewWidget(int page, int state, String preview) {
   {
-    if (page > 1) {
+    if (page > 0) {
       return Image.file(File(preview));
     } else if (state == 1) {
       return const Center(

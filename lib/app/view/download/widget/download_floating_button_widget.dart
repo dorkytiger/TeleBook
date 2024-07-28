@@ -12,6 +12,7 @@ class DownloadFloatingButtonWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return FloatingActionButton(
       onPressed: () {
+        urlController.clear();
         showDialog(
             context: context,
             builder: (context) {
