@@ -6,8 +6,8 @@ import 'package:wo_nas/app/view/book/widget/book_empty_widget.dart';
 import '../controllers/book_controller.dart';
 import '../widget/book_bottom_widget.dart';
 
-class BookView extends GetView<BookController> {
-  const BookView({Key? key}) : super(key: key);
+class BookHomeView extends GetView<BookController> {
+  const BookHomeView({Key? key}) : super(key: key);
 
   Widget _actionButton(String title, IconData icon) {
     return Row(

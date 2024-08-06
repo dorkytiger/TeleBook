@@ -12,7 +12,8 @@ Widget bookCardWidget(
       title,
       style: const TextStyle(
         color: Colors.black45,
-        fontSize: 16,
+        fontSize: 14,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -22,7 +23,7 @@ Widget bookCardWidget(
       title,
       style: const TextStyle(
         color: Color.fromRGBO(0, 0, 0, 0.65),
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: FontWeight.w500,
         overflow: TextOverflow.ellipsis,
       ),
@@ -51,16 +52,18 @@ Widget bookCardWidget(
                 )),
             Expanded(
                 flex: 1,
-                child:Padding(padding:const EdgeInsets.all(16.0),child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    titleDescription(bookVO.title),
-                    description("${bookVO.pictures.length}页"),
-                    description(DateFormat('yyyy-MM-dd HH:mm:ss')
-                        .format(DateTime.parse(bookVO.createTime))),
-                  ],
-                ))),
+                child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        titleDescription(bookVO.title),
+                        description("${bookVO.pictures.length}页"),
+                        description(DateFormat('yyyy-MM-dd HH:mm:ss')
+                            .format(DateTime.parse(bookVO.createTime))),
+                      ],
+                    ))),
           ],
         )),
   );

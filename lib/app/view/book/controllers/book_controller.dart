@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wo_nas/app/view/book/views/book_page.dart';
+import 'package:wo_nas/app/view/book/views/book_page_view.dart';
 
 import '../../../model/vo/book_vo.dart';
 import '../../../service/book_service.dart';
@@ -39,7 +39,7 @@ class BookController extends GetxController {
       toggleSelection(index);
     } else {
       currentBookIndex.value = index;
-      Get.to(const BookPage());
+      Get.to(const BookPageView());
     }
   }
 
