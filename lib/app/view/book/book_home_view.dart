@@ -3,10 +3,10 @@ import 'package:get/get.dart';
 import 'package:wo_nas/app/view/book/widget/book_card_widget.dart';
 import 'package:wo_nas/app/view/book/widget/book_empty_widget.dart';
 
-import '../controllers/book_controller.dart';
-import '../widget/book_bottom_widget.dart';
+import 'book_controller.dart';
+import 'widget/book_bottom_widget.dart';
 
-class BookHomeView extends GetView<BookController> {
+class BookHomeView extends StatelessWidget {
   const BookHomeView({Key? key}) : super(key: key);
 
   Widget _actionButton(String title, IconData icon) {
@@ -28,6 +28,8 @@ class BookHomeView extends GetView<BookController> {
 
   @override
   Widget build(BuildContext context) {
+    final controller=Get.put(BookController());
+
     return Obx(() => Scaffold(
           appBar: AppBar(
             title: const Text(

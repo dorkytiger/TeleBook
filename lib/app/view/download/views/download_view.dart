@@ -5,11 +5,13 @@ import 'package:wo_nas/app/view/download/widget/download_floating_button_widget.
 
 import '../controllers/download_controller.dart';
 
-class DownloadView extends GetView<DownloadController> {
+class DownloadView extends StatelessWidget {
   const DownloadView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final controller =Get.put(DownloadController());
+
     return Obx(() => Scaffold(
           appBar: AppBar(
             title: const Text('下载'),

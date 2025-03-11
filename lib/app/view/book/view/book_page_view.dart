@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../controllers/book_controller.dart';
+import '../book_controller.dart';
 
 class BookPageView extends GetView<BookController> {
   const BookPageView({Key? key}) : super(key: key);
@@ -19,7 +19,7 @@ class BookPageView extends GetView<BookController> {
               controller.currentPage.value = page;
             },
             itemCount: controller
-                .bookList[controller.currentBookIndex.value].pictures.length,
+                .bookList[controller.currentBookIndex.value].imageUrls.length,
             itemBuilder: (BuildContext context, int index) {
               return Column(
                 children: [
@@ -36,7 +36,7 @@ class BookPageView extends GetView<BookController> {
                       },
                       child: Image.file(File(controller
                           .bookList[controller.currentBookIndex.value]
-                          .pictures[index])),
+                          .localPaths[index])),
                     ),
                   ),
                 ],
@@ -59,7 +59,7 @@ class BookPageView extends GetView<BookController> {
                   value: controller.currentPage.value.toDouble(),
                   min: 0,
                   max: (controller.bookList[controller.currentBookIndex.value]
-                              .pictures.length -
+                              .localPaths.length -
                           1)
                       .toDouble(),
                   onChanged: (value) {
@@ -70,7 +70,7 @@ class BookPageView extends GetView<BookController> {
             Expanded(
               flex: 1,
               child: Text(
-                  "${controller.currentPage.value + 1}/${controller.bookList[controller.currentBookIndex.value].pictures.length}"),
+                  "${controller.currentPage.value + 1}/${controller.bookList[controller.currentBookIndex.value].imageUrls.length}"),
             )
           ],
         ));

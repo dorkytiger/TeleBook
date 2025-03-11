@@ -52,18 +52,20 @@ Widget downloadCardWidget(
                     ),
                     Column(
                       children: [
-                        const Text("总进度"),
+                        Text("总进度:${(state.progress*100).toInt()}%"),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(0, 5, 5, 5),
                           child: LinearProgressIndicator(
+                            backgroundColor: Colors.white,
                             color: Colors.blue,
                             value: state.progress,
                           ),
                         ),
-                        const Text("当前页进度"),
+                        Text("当前页进度：${(state.proImg*100).toInt()}%"),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(0, 5, 5, 0),
                           child: LinearProgressIndicator(
+                            backgroundColor: Colors.white,
                             color: Colors.blue,
                             value: state.proImg,
                           ),

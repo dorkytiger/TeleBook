@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wo_nas/app/view/book/controllers/book_controller.dart';
+import 'package:wo_nas/app/view/book/book_controller.dart';
 
 import '../../home/controllers/home_controller.dart';
 

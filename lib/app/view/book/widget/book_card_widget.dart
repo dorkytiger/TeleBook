@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:wo_nas/app/db/app_database.dart';
 
 import '../../../model/vo/book_vo.dart';
 
 Widget bookCardWidget(
-    BookVO bookVO, bool isSelect, Function onTap, Function onDelete) {
+    BookTableData bookTableData, bool isSelect, Function onTap, Function onDelete) {
   Widget description(String title) {
     return Text(
       title,
@@ -45,7 +45,7 @@ Widget bookCardWidget(
                 child: SizedBox(
                   height: 130,
                   child: Image.file(
-                    File(bookVO.preview),
+                    File(bookTableData.localPaths[0]),
                     fit: BoxFit.cover,
                     height: 130,
                   ),
@@ -58,10 +58,9 @@ Widget bookCardWidget(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        titleDescription(bookVO.title),
-                        description("${bookVO.pictures.length}页"),
-                        description(DateFormat('yyyy-MM-dd HH:mm:ss')
-                            .format(DateTime.parse(bookVO.createTime))),
+                        titleDescription(bookTableData.name),
+                        description("${bookTableData.localPaths.length}页"),
+                        description("11"),
                       ],
                     ))),
           ],

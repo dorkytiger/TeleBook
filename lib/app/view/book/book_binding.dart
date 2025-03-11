@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 
-import '../../home/controllers/home_controller.dart';
-import '../controllers/book_controller.dart';
+import '../home/controllers/home_controller.dart';
+import 'book_controller.dart';
 
 class BookBinding extends Bindings {
   @override

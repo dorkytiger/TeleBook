@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
+import 'package:wo_nas/app/db/app_database.dart';
+import 'package:wo_nas/app/view/home/views/home_view.dart';
 
-import 'app/routes/app_pages.dart';
+void main()  {
+  WidgetsFlutterBinding.ensureInitialized();
 
-void main() {
+  Get.put(AppDatabase());
+
   runApp(
     GetMaterialApp(
       title: "Application",
-      initialRoute: AppPages.INITIAL,
-      getPages: AppPages.routes,
+      home:const HomeView(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
           primarySwatch: Colors.blue,

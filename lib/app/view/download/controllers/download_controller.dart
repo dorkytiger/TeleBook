@@ -5,17 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:html/parser.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:wo_nas/app/db/app_database.dart';
 import 'package:wo_nas/app/model/dto/book_dto.dart';
 import 'package:wo_nas/app/model/dto/book_picture_dto.dart';
-import 'package:wo_nas/app/service/book_service.dart';
-
-import '../../../model/entity/download/download_state_entity.dart';
+import 'package:wo_nas/app/model/entity/download/download_state_entity.dart';
 
 class DownloadController extends GetxController {
+  final appDatabase = Get.find<AppDatabase>();
   TextEditingController urlController = TextEditingController();
   final RxList<DownloadState> downloadStates = <DownloadState>[].obs;
-
-  late final _bookService = BookService();
 
   void updateDownloadState(int index, DownloadState newState) {
     if (downloadStates.length <= index) {
@@ -72,7 +70,7 @@ class DownloadController extends GetxController {
 
       final htmlString = await response.body;
       final document = parse(htmlString);
-      final title = document.querySelector("h1");
+      final title = document.querySelector("h1")?.text;
 
       if (title == null) {
         downloadStates[index].state = 0;
@@ -81,10 +79,11 @@ class DownloadController extends GetxController {
       }
 
       final tmpFile = await getApplicationDocumentsDirectory();
+      debugPrint(tmpFile.path);
       final tmpBooksPath = "${tmpFile.path}/book";
       await createDirectoryIfNotExists(tmpBooksPath);
 
-      final bookPath = "$tmpBooksPath/${title.text}";
+      final bookPath = "$tmpBooksPath/$title";
       await createDirectoryIfNotExists(bookPath);
 
       final images = document.querySelectorAll("img");
@@ -92,24 +91,27 @@ class DownloadController extends GetxController {
       downloadStates[index].pageSize = imagesSize;
       downloadStates.refresh();
 
-      final bookId = await _bookService
-          .addBook(BookDTO(title: title.text, path: bookPath));
-      if (bookId == null) {
-        throw ArgumentError("插入失败");
-      }
+      List<String> localFilePath=[];
+      List<String> imageUrls=[];
 
       for (var count = 0; count < images.length; count++) {
-        final imageUrl = images[index].attributes["src"] ?? "";
+        final imageUrl = images[count].attributes["src"];
+        if (imageUrl == null) {
+          throw Exception("图片解析失败");
+        }
         final filePath = "$bookPath/image_$count.png";
         await saveImage(imageUrl, filePath, index, count + 1, imagesSize);
+
+        localFilePath.add(filePath);
+        imageUrls.add(filePath);
 
         if (count == 0) {
           downloadStates[index].preview = filePath;
           downloadStates.refresh();
         }
-        await _bookService.addBookPicture(
-            BookPictureDto(bookId: bookId, path: filePath, number: count + 1));
       }
+      await appDatabase
+          .into(appDatabase.bookTable).insert(BookTableCompanion.insert(name: title, localPaths: localFilePath, imageUrls: imageUrls));
 
       downloadStates[index].state = 2;
       downloadStates.refresh();

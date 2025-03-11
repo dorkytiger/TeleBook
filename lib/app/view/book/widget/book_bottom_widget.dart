@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:wo_nas/app/view/widget/button/delete_button_widget.dart';
 
-import '../controllers/book_controller.dart';
+import '../book_controller.dart';
 
 class BookBottomWidget extends GetView<BookController> {
   const BookBottomWidget({Key? key}) : super(key: key);
