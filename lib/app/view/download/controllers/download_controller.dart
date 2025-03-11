@@ -13,7 +13,7 @@ import '../../../model/entity/download/download_state_entity.dart';
 
 class DownloadController extends GetxController {
   TextEditingController urlController = TextEditingController();
-  RxList<DownloadState> downloadStates = <DownloadState>[].obs;
+  final RxList<DownloadState> downloadStates = <DownloadState>[].obs;
 
   late final _bookService = BookService();
 
@@ -36,15 +36,15 @@ class DownloadController extends GetxController {
 
   Future<void> saveImage(
       String url, String filePath, int index, int count, int imagesSize) async {
-    var imageResponse = await Dio()
+    final imageResponse = await Dio()
         .get(url, options: Options(responseType: ResponseType.bytes),
             onReceiveProgress: (current, total) {
       downloadStates[index].proImg = (current / total).toDouble();
       downloadStates.refresh();
     });
-    var saveFile = File(filePath);
+    final saveFile = File(filePath);
     if (imageResponse.data != null) {
-      saveFile.writeAsBytes(imageResponse.data);
+      await saveFile.writeAsBytes(imageResponse.data);
     }
     downloadStates[index].progress = (count / imagesSize).toDouble();
     downloadStates[index].page = count;
@@ -65,14 +65,15 @@ class DownloadController extends GetxController {
             state: 1,
           ));
 
-      var response = await GetConnect().get(url);
+      final response = await GetConnect().get(url);
       if (response.hasError) {
-        throw Exception("连接失败");
+        throw Exception("连接失败：${response.statusText}");
       }
 
-      final htmlString = response.body;
+      final htmlString = await response.body;
       final document = parse(htmlString);
       final title = document.querySelector("h1");
+
       if (title == null) {
         downloadStates[index].state = 0;
         downloadStates.refresh();
@@ -98,8 +99,8 @@ class DownloadController extends GetxController {
       }
 
       for (var count = 0; count < images.length; count++) {
-        var imageUrl = "https://telegra.ph${images[count].attributes['src']}";
-        var filePath = "$bookPath/image_$count.png";
+        final imageUrl = images[index].attributes["src"] ?? "";
+        final filePath = "$bookPath/image_$count.png";
         await saveImage(imageUrl, filePath, index, count + 1, imagesSize);
 
         if (count == 0) {

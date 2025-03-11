@@ -22,20 +22,15 @@ class DownloadView extends GetView<DownloadController> {
                     return Column(
                       children: [
                         Obx(() => downloadCardWidget(
-                          controller.downloadStates[index].page,
-                          controller.downloadStates[index].pageSize,
-                          controller.downloadStates[index].progress,
-                          controller.downloadStates[index].proImg,
-                          controller.downloadStates[index].preview,
-                          controller.downloadStates[index].state,
+                              controller.downloadStates[index],
                               () {
-                            controller.downloadBook(
-                                index, controller.downloadStates[index].link);
-                          },
+                                controller.downloadBook(index,
+                                    controller.downloadStates[index].link);
+                              },
                               () {
-                            controller.deleteDown(index);
-                          },
-                        )),
+                                controller.deleteDown(index);
+                              },
+                            )),
                         const Divider()
                       ],
                     );
