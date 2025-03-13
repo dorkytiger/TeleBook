@@ -108,10 +108,12 @@ class BookView extends StatelessWidget {
                       leftIconWidget: SizedBox(
                           height: 100,
                           width: 100,
-                          child: e.bookData.isDownload
-                              ? Image.file(File(e.bookData.localPaths.first))
-                              : CustomImageLoader(
-                                  url: e.bookData.imageUrls.first)),
+                          child: CustomImageLoader(
+                              isLocal: e.bookData.isDownload,
+                              networkUrl:
+                                  e.bookData.imageUrls.firstOrNull ?? "",
+                              localUrl:
+                                  e.bookData.localPaths.firstOrNull ?? "")),
                       rightIconWidget: () {
                         if (e.isDownloading) {
                           return SizedBox(

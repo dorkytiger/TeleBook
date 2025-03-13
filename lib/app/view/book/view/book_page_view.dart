@@ -1,12 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:wo_nas/app/db/app_database.dart';
 import 'package:wo_nas/app/util/request_state.dart';
 import 'package:wo_nas/app/view/book/view/book_page_controller.dart';
-
-import '../book_controller.dart';
+import 'package:wo_nas/app/widget/custom_image_loader.dart';
 
 class BookPageView extends GetView<BookPageController> {
   const BookPageView({Key? key}) : super(key: key);
@@ -35,47 +33,54 @@ class BookPageView extends GetView<BookPageController> {
                   child: TDLoading(size: TDLoadingSize.large),
                 );
               },
-              onSuccess: (value) {
-                final urls =
-                    value.isDownload ? value.localPaths : value.imageUrls;
-                debugPrint("urls: $urls");
-                return PageView.builder(
-                    controller: controller.pageController,
-                    itemCount: urls.length,
-                    onPageChanged: (index) {},
-                    itemBuilder: (BuildContext context, int index) {
-                      return GestureDetector(
-                        onTap: () {},
-                        child: value.isDownload
-                            ? Image.file(File(urls[index]))
-                            : Image.network(urls[index], loadingBuilder:
-                                (context, widget, loadingProgress) {
-                                if (loadingProgress == null) {
-                                  return widget;
-                                }
-                                return const Center(
-                                  child: TDLoading(size: TDLoadingSize.large),
-                                );
-                              }, errorBuilder: (context, error, stackTrace) {
-                                return Center(
-                                  child: Column(
-                                    children: [
-                                      TDResult(
-                                        theme: TDResultTheme.error,
-                                        title: "加载失败",
-                                        description: error.toString(),
-                                      ),
-                                      TDButton(
-                                        text: "重新加载",
-                                        onTap: () {},
-                                      )
-                                    ],
-                                  ),
-                                );
-                              }),
-                      );
-                    });
-              }));
+              onSuccess: (value) => _pageView(value, context, controller)));
         }());
+  }
+
+  Widget _pageView(
+      BookTableData data, BuildContext context, BookPageController controller) {
+    final urls = data.isDownload ? data.localPaths : data.imageUrls;
+    return PageView.builder(
+        controller: controller.pageController,
+        itemCount: urls.length,
+        onPageChanged: (index) {
+          controller.onPageChanged(index);
+        },
+        itemBuilder: (BuildContext context, int index) {
+          return GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(TDSlidePopupRoute(
+                  modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                  slideTransitionFrom: SlideTransitionFrom.bottom,
+                  builder: (context) {
+                    return Material(
+                        child: SizedBox(
+                      height: 100,
+                      child: TDSlider(
+                        sliderThemeData: TDSliderThemeData(
+                          scaleFormatter: (value) => value.toInt().toString(),
+                          showThumbValue: true,
+                          context: context,
+                          min: 0,
+                          max: urls.length.toDouble(),
+                        ),
+                        leftLabel: '0',
+                        rightLabel: '${urls.length}',
+                        value: controller.pageController.page!.toDouble(),
+                        onChanged: (value) {
+                          controller.pageController.jumpToPage(value.toInt());
+                        },
+                      ),
+                    ));
+                  }));
+            },
+            child: CustomImageLoader(
+                isLocal: data.isDownload,
+                networkUrl:
+                    data.imageUrls.isNotEmpty ? data.imageUrls[index] : "",
+                localUrl:
+                    data.localPaths.isNotEmpty ? data.localPaths[index] : ""),
+          );
+        });
   }
 }

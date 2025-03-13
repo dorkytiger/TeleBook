@@ -24,7 +24,6 @@ class BookController extends GetxController {
     getBookList();
     super.onInit();
     ever(addBookState, (state) {
-
       if (state.isSuccess()) {
         Get.showSnackbar(const GetSnackBar(
           title: "添加成功",
@@ -39,7 +38,7 @@ class BookController extends GetxController {
       }
     });
 
-    ever(deleteBookState, (state){
+    ever(deleteBookState, (state) {
       if (state.isSuccess()) {
         Get.showSnackbar(const GetSnackBar(
           title: "删除成功",
@@ -52,7 +51,6 @@ class BookController extends GetxController {
             GetSnackBar(title: "删除失败", message: state.getErrorMessage()));
         return;
       }
-
     });
   }
 
@@ -114,8 +112,8 @@ class BookController extends GetxController {
       await (appDatabase.delete(appDatabase.bookTable)
             ..where((t) => t.id.equals(id)))
           .go();
+      await getBookList();
       deleteBookState.value = const Success(null);
-      getBookList();
     } catch (e) {
       debugPrint(e.toString());
       deleteBookState.value = Error(e.toString());

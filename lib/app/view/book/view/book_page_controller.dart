@@ -23,6 +23,7 @@ class BookPageController extends GetxController {
             ..where((e) => e.id.equals(this.book.id)))
           .getSingle();
       pageController = PageController(initialPage: book.readCount);
+      debugPrint("初始页码：${book.readCount}");
       getBookState.value = Success(book);
     } catch (e) {
       debugPrint(e.toString());
@@ -30,5 +31,17 @@ class BookPageController extends GetxController {
     }
   }
 
-  Future<void> onPageChanged(int index) async {}
+  Future<void> onPageChanged(int index) async {
+    try {
+      final book = await (appDatabase.select(appDatabase.bookTable)
+            ..where((e) => e.id.equals(this.book.id)))
+          .getSingle();
+      final newBookData = book.copyWith(readCount: index);
+      await appDatabase.update(appDatabase.bookTable).replace(newBookData);
+      debugPrint("保存成功");
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+  }
+
 }
