@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:background_downloader/background_downloader.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -54,7 +55,7 @@ class BookController extends GetxController {
       }
     });
 
-    ever(deleteDownloadState,(state) {
+    ever(deleteDownloadState, (state) {
       if (state.isSuccess()) {
         Get.showSnackbar(const GetSnackBar(
           title: "删除成功",
@@ -141,16 +142,22 @@ class BookController extends GetxController {
     try {
       bookEntityList[index] = BookEntity(bookEntity.bookData, true, 0);
       bookEntityList.refresh();
-
-      final bookPath = await createBookPath(
-          "${bookEntity.bookData.id}-${bookEntity.bookData.name}");
+      final applicationDocument = await getApplicationDocumentsDirectory();
+      final bookPath = "${bookEntity.bookData.id}-${bookEntity.bookData.name}";
 
       for (var i = bookEntity.bookData.downloadCount;
           i < bookEntity.bookData.imageUrls.length;
           i++) {
         final url = bookEntity.bookData.imageUrls[i];
-        final filePath = "$bookPath/$i.jpg";
-        await saveImage(url, filePath);
+        final filePath = "${applicationDocument.path}/$bookPath/$i.jpg";
+        final task = DownloadTask(
+            url: url,
+            directory: bookPath,
+            filename: "$i.jpg",
+            retries: 5,
+            baseDirectory: BaseDirectory.applicationDocuments);
+        await FileDownloader().download(task);
+        debugPrint("下载图片$filePath");
         final localPaths = bookEntity.bookData.localPaths;
         localPaths.add(filePath);
 
@@ -198,7 +205,7 @@ class BookController extends GetxController {
       bookEntityList[index] = BookEntity(newBookData, false, 0);
       bookEntityList.refresh();
       getBookList();
-      deleteDownloadState.value= const Success(null);
+      deleteDownloadState.value = const Success(null);
     } catch (e) {
       debugPrint(e.toString());
       deleteDownloadState.value = Error(e.toString());

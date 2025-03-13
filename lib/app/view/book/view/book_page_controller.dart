@@ -23,7 +23,6 @@ class BookPageController extends GetxController {
             ..where((e) => e.id.equals(this.book.id)))
           .getSingle();
       pageController = PageController(initialPage: book.readCount);
-      debugPrint("初始页码：${book.readCount}");
       getBookState.value = Success(book);
     } catch (e) {
       debugPrint(e.toString());
