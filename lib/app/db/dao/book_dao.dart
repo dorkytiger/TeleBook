@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart';
-import 'package:wo_nas/app/db/converter/string_list_converter.dart';
+import 'package:tele_book/app/db/converter/string_list_converter.dart';
 
 class BookTable extends Table {
   IntColumn get id => integer().autoIncrement()();

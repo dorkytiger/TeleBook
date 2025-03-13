@@ -1,4 +1,4 @@
-name: wo_nas
+name: tele_book
 version: 1.0.0+1
 publish_to: none
 description: A new Flutter project.
@@ -19,6 +19,8 @@ dependencies:
   drift_flutter: ^0.2.4
   tdesign_flutter: ^0.1.8
   background_downloader: ^9.1.1
+  intl: ^0.20.2
+  shared_preferences: ^2.5.2
 
 dev_dependencies: 
   build_runner: ^2.4.15

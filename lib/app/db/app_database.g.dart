@@ -470,15 +470,200 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
   }
 }
 
+class $SettingTableTable extends SettingTable
+    with TableInfo<$SettingTableTable, SettingTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SettingTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _pageLayoutMeta =
+      const VerificationMeta('pageLayout');
+  @override
+  late final GeneratedColumn<String> pageLayout = GeneratedColumn<String>(
+      'page_layout', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('page'));
+  @override
+  List<GeneratedColumn> get $columns => [id, pageLayout];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'setting_table';
+  @override
+  VerificationContext validateIntegrity(Insertable<SettingTableData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('page_layout')) {
+      context.handle(
+          _pageLayoutMeta,
+          pageLayout.isAcceptableOrUnknown(
+              data['page_layout']!, _pageLayoutMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SettingTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SettingTableData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      pageLayout: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}page_layout'])!,
+    );
+  }
+
+  @override
+  $SettingTableTable createAlias(String alias) {
+    return $SettingTableTable(attachedDatabase, alias);
+  }
+}
+
+class SettingTableData extends DataClass
+    implements Insertable<SettingTableData> {
+  final int id;
+  final String pageLayout;
+  const SettingTableData({required this.id, required this.pageLayout});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['page_layout'] = Variable<String>(pageLayout);
+    return map;
+  }
+
+  SettingTableCompanion toCompanion(bool nullToAbsent) {
+    return SettingTableCompanion(
+      id: Value(id),
+      pageLayout: Value(pageLayout),
+    );
+  }
+
+  factory SettingTableData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SettingTableData(
+      id: serializer.fromJson<int>(json['id']),
+      pageLayout: serializer.fromJson<String>(json['pageLayout']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'pageLayout': serializer.toJson<String>(pageLayout),
+    };
+  }
+
+  SettingTableData copyWith({int? id, String? pageLayout}) => SettingTableData(
+        id: id ?? this.id,
+        pageLayout: pageLayout ?? this.pageLayout,
+      );
+  SettingTableData copyWithCompanion(SettingTableCompanion data) {
+    return SettingTableData(
+      id: data.id.present ? data.id.value : this.id,
+      pageLayout:
+          data.pageLayout.present ? data.pageLayout.value : this.pageLayout,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingTableData(')
+          ..write('id: $id, ')
+          ..write('pageLayout: $pageLayout')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, pageLayout);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SettingTableData &&
+          other.id == this.id &&
+          other.pageLayout == this.pageLayout);
+}
+
+class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
+  final Value<int> id;
+  final Value<String> pageLayout;
+  const SettingTableCompanion({
+    this.id = const Value.absent(),
+    this.pageLayout = const Value.absent(),
+  });
+  SettingTableCompanion.insert({
+    this.id = const Value.absent(),
+    this.pageLayout = const Value.absent(),
+  });
+  static Insertable<SettingTableData> custom({
+    Expression<int>? id,
+    Expression<String>? pageLayout,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pageLayout != null) 'page_layout': pageLayout,
+    });
+  }
+
+  SettingTableCompanion copyWith({Value<int>? id, Value<String>? pageLayout}) {
+    return SettingTableCompanion(
+      id: id ?? this.id,
+      pageLayout: pageLayout ?? this.pageLayout,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (pageLayout.present) {
+      map['page_layout'] = Variable<String>(pageLayout.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SettingTableCompanion(')
+          ..write('id: $id, ')
+          ..write('pageLayout: $pageLayout')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BookTableTable bookTable = $BookTableTable(this);
+  late final $SettingTableTable settingTable = $SettingTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [bookTable];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [bookTable, settingTable];
 }
 
 typedef $$BookTableTableCreateCompanionBuilder = BookTableCompanion Function({
@@ -712,10 +897,134 @@ typedef $$BookTableTableProcessedTableManager = ProcessedTableManager<
     ),
     BookTableData,
     PrefetchHooks Function()>;
+typedef $$SettingTableTableCreateCompanionBuilder = SettingTableCompanion
+    Function({
+  Value<int> id,
+  Value<String> pageLayout,
+});
+typedef $$SettingTableTableUpdateCompanionBuilder = SettingTableCompanion
+    Function({
+  Value<int> id,
+  Value<String> pageLayout,
+});
+
+class $$SettingTableTableFilterComposer
+    extends Composer<_$AppDatabase, $SettingTableTable> {
+  $$SettingTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get pageLayout => $composableBuilder(
+      column: $table.pageLayout, builder: (column) => ColumnFilters(column));
+}
+
+class $$SettingTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $SettingTableTable> {
+  $$SettingTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get pageLayout => $composableBuilder(
+      column: $table.pageLayout, builder: (column) => ColumnOrderings(column));
+}
+
+class $$SettingTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SettingTableTable> {
+  $$SettingTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get pageLayout => $composableBuilder(
+      column: $table.pageLayout, builder: (column) => column);
+}
+
+class $$SettingTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SettingTableTable,
+    SettingTableData,
+    $$SettingTableTableFilterComposer,
+    $$SettingTableTableOrderingComposer,
+    $$SettingTableTableAnnotationComposer,
+    $$SettingTableTableCreateCompanionBuilder,
+    $$SettingTableTableUpdateCompanionBuilder,
+    (
+      SettingTableData,
+      BaseReferences<_$AppDatabase, $SettingTableTable, SettingTableData>
+    ),
+    SettingTableData,
+    PrefetchHooks Function()> {
+  $$SettingTableTableTableManager(_$AppDatabase db, $SettingTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SettingTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SettingTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SettingTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> pageLayout = const Value.absent(),
+          }) =>
+              SettingTableCompanion(
+            id: id,
+            pageLayout: pageLayout,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<String> pageLayout = const Value.absent(),
+          }) =>
+              SettingTableCompanion.insert(
+            id: id,
+            pageLayout: pageLayout,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$SettingTableTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SettingTableTable,
+    SettingTableData,
+    $$SettingTableTableFilterComposer,
+    $$SettingTableTableOrderingComposer,
+    $$SettingTableTableAnnotationComposer,
+    $$SettingTableTableCreateCompanionBuilder,
+    $$SettingTableTableUpdateCompanionBuilder,
+    (
+      SettingTableData,
+      BaseReferences<_$AppDatabase, $SettingTableTable, SettingTableData>
+    ),
+    SettingTableData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
   $$BookTableTableTableManager get bookTable =>
       $$BookTableTableTableManager(_db, _db.bookTable);
+  $$SettingTableTableTableManager get settingTable =>
+      $$SettingTableTableTableManager(_db, _db.settingTable);
 }

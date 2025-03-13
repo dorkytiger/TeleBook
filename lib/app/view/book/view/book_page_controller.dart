@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:wo_nas/app/db/app_database.dart';
-import 'package:wo_nas/app/util/request_state.dart';
+import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/enum/book_page_layout_enum.dart';
+import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/view/book/book_controller.dart';
 
 class BookPageController extends GetxController {
   final arguments = Get.arguments as Map<String, dynamic>;
   late final BookTableData book = arguments['book'];
-  final appDatabase = Get.find<AppDatabase>();
   late final PageController pageController;
+  final appDatabase = Get.find<AppDatabase>();
   final getBookState = Rx<RequestState<BookTableData>>(Idle());
+  final bookController = Get.find<BookController>();
+  final layout = Rx<BookPageLayout>(BookPageLayout.page);
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
     getBook();
   }
+
+
 
   Future<void> getBook() async {
     try {
@@ -22,6 +28,8 @@ class BookPageController extends GetxController {
       final book = await (appDatabase.select(appDatabase.bookTable)
             ..where((e) => e.id.equals(this.book.id)))
           .getSingle();
+      final settingData= await appDatabase.select(appDatabase.settingTable).getSingle();
+      layout.value = BookPageLayout.values.firstWhere((e) => e.name == settingData.pageLayout);
       pageController = PageController(initialPage: book.readCount);
       getBookState.value = Success(book);
     } catch (e) {
@@ -37,10 +45,14 @@ class BookPageController extends GetxController {
           .getSingle();
       final newBookData = book.copyWith(readCount: index);
       await appDatabase.update(appDatabase.bookTable).replace(newBookData);
-      debugPrint("保存成功");
+      bookController.updateBookInfo(newBookData);
     } catch (e) {
       debugPrint(e.toString());
     }
   }
 
 }
+
+
+
+

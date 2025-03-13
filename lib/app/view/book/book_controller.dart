@@ -6,8 +6,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:wo_nas/app/db/app_database.dart';
-import 'package:wo_nas/app/util/html_util.dart';
+import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/util/html_util.dart';
 
 import '../../util/request_state.dart';
 
@@ -156,11 +156,12 @@ class BookController extends GetxController {
             filename: "$i.jpg",
             retries: 5,
             baseDirectory: BaseDirectory.applicationDocuments);
-        await FileDownloader().download(task);
-        debugPrint("下载图片$filePath");
+        final downloadResult = await FileDownloader().download(task);
+        if (downloadResult.status != TaskStatus.complete) {
+          throw Exception(downloadResult.exception ?? "下载失败");
+        }
         final localPaths = bookEntity.bookData.localPaths;
         localPaths.add(filePath);
-
         final newBookData = bookEntityList[index]
             .bookData
             .copyWith(localPaths: localPaths, downloadCount: i + 1);
@@ -226,18 +227,12 @@ class BookController extends GetxController {
     urlTextController.text = "";
   }
 
-  Future<String> createBookPath(String name) async {
-    final appDirectory = await getApplicationDocumentsDirectory();
-    final appPath = "${appDirectory.path}/TeleBook";
-    if (!await Directory(appPath).exists()) {
-      await Directory(appPath).create();
+  void updateBookInfo(BookTableData bookData) {
+    final index = bookEntityList.indexWhere((e) => e.bookData.id == bookData.id);
+    if (index != -1) {
+      bookEntityList[index] = BookEntity(bookData, false, 0);
+      bookEntityList.refresh();
     }
-    final bookPath = "$appPath/$name";
-
-    if (!await Directory(bookPath).exists()) {
-      await Directory(bookPath).create();
-    }
-    return bookPath;
   }
 }
 

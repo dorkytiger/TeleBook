@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:wo_nas/app/widget/custom_error.dart';
+import 'package:tele_book/app/widget/custom_error.dart';
 
 class CustomImageLoader extends StatefulWidget {
   final bool isLocal;
@@ -26,7 +26,19 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
   @override
   void initState() {
     super.initState();
-    _url = widget.isLocal ? widget.localUrl : widget.networkUrl;
+    _setUrl();
+  }
+
+  @override
+  void didUpdateWidget(CustomImageLoader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _setUrl();
+  }
+
+  void _setUrl() {
+    setState(() {
+      _url = widget.isLocal ? widget.localUrl : widget.networkUrl;
+    });
   }
 
   void _retryLoading() {
@@ -55,15 +67,17 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
               child: TDLoading(size: TDLoadingSize.small),
             );
           }, errorBuilder: (context, error, stackTrace) {
-            return TDLoading(
-              size: TDLoadingSize.small,
-              text: '加载失败',
-              refreshWidget: GestureDetector(
-                onTap: _retryLoading,
-                child: TDText(
-                  '刷新',
-                  font: TDTheme.of(context).fontBodySmall,
-                  textColor: TDTheme.of(context).brandNormalColor,
+            return Center(
+              child: TDLoading(
+                size: TDLoadingSize.small,
+                text: '加载失败',
+                refreshWidget: GestureDetector(
+                  onTap: _retryLoading,
+                  child: TDText(
+                    '刷新',
+                    font: TDTheme.of(context).fontBodySmall,
+                    textColor: TDTheme.of(context).brandNormalColor,
+                  ),
                 ),
               ),
             );

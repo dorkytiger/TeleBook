@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:wo_nas/app/util/request_state.dart';
-import 'package:wo_nas/app/view/book/view/book_page_binding.dart';
-import 'package:wo_nas/app/view/book/view/book_page_view.dart';
-import 'package:wo_nas/app/widget/custom_empty.dart';
-import 'package:wo_nas/app/widget/custom_error.dart';
-import 'package:wo_nas/app/widget/custom_image_loader.dart';
-import 'package:wo_nas/app/widget/custom_loading.dart';
+import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/view/book/view/book_page_binding.dart';
+import 'package:tele_book/app/view/book/view/book_page_view.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_error.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 
 import 'book_controller.dart';
 
@@ -47,6 +48,7 @@ class BookView extends StatelessWidget {
       ),
       theme: TDFabTheme.primary,
       onClick: () {
+        controller.resetState();
         showGeneralDialog(
           context: context,
           pageBuilder: (BuildContext buildContext, Animation<double> animation,
@@ -58,61 +60,72 @@ class BookView extends StatelessWidget {
     );
   }
 
-
   Widget _bookList(BuildContext context, BookController controller) {
     return ListView(
       children: [
         TDCellGroup(
-            cells: controller.bookEntityList
-                .map((e) => TDCell(
-                      title: e.bookData.name,
-                      description:
-                          "${DateTime.parse(e.bookData.createTime).year}年${DateTime.parse(e.bookData.createTime).month}月${DateTime.parse(e.bookData.createTime).day}日",
-                      leftIconWidget: SizedBox(
-                          height: 100,
-                          width: 100,
-                          child: CustomImageLoader(
-                              isLocal: e.bookData.isDownload,
-                              networkUrl:
-                                  e.bookData.imageUrls.firstOrNull ?? "",
-                              localUrl:
-                                  e.bookData.localPaths.firstOrNull ?? "")),
-                      rightIconWidget: () {
-                        if (e.isDownloading) {
-                          return SizedBox(
-                            height: 25,
-                            width: 25,
-                            child: CircularProgressIndicator(
-                                color: TDTheme.of(context).brandNormalColor,
-                                value: e.downloadProgress),
-                          );
-                        } else {
-                          return Icon(
-                            e.bookData.isDownload
-                                ? TDIcons.check
-                                : TDIcons.pending,
-                            color: TDTheme.of(context).brandNormalColor,
-                          );
-                        }
-                      }(),
-                      onClick: (TDCell cell) {
-                        Get.to(() => const BookPageView(),
-                            arguments: {
-                              'book': e.bookData,
-                            },
-                            binding: BookPageBinding());
-                      },
-                      onLongPress: (TDCell cell) {
-                        Navigator.of(context).push(TDSlidePopupRoute(
-                            modalBarrierColor: TDTheme.of(context).fontGyColor2,
-                            slideTransitionFrom: SlideTransitionFrom.bottom,
-                            builder: (context) {
-                              return _bookActionBottomSheet(
-                                  context, controller, e);
-                            }));
-                      },
-                    ))
-                .toList())
+            cells: controller.bookEntityList.map((e) {
+          final datetime = DateTime.parse(e.bookData.createTime);
+          String formattedDate =
+              DateFormat('yyyy-MM-dd HH:mm:ss').format(datetime);
+
+          return TDCell(
+            title: e.bookData.name,
+            descriptionWidget: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TDText(
+                  "下载时间：$formattedDate",
+                  font: Font(size: 12, lineHeight: 28),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                TDText(
+                  "阅读进度:${e.bookData.readCount}/${e.bookData.imageUrls.length}",
+                  font: Font(size: 12, lineHeight: 28),
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+            leftIconWidget: SizedBox(
+                height: 100,
+                width: 100,
+                child: CustomImageLoader(
+                    isLocal: e.bookData.isDownload,
+                    networkUrl: e.bookData.imageUrls.firstOrNull ?? "",
+                    localUrl: e.bookData.localPaths.firstOrNull ?? "")),
+            rightIconWidget: () {
+              if (e.isDownloading) {
+                return SizedBox(
+                  height: 25,
+                  width: 25,
+                  child: CircularProgressIndicator(
+                      color: TDTheme.of(context).brandNormalColor,
+                      value: e.downloadProgress),
+                );
+              } else {
+                return Icon(
+                  e.bookData.isDownload ? TDIcons.check : TDIcons.pending,
+                  color: TDTheme.of(context).brandNormalColor,
+                );
+              }
+            }(),
+            onClick: (TDCell cell) {
+              Get.to(() => const BookPageView(),
+                  arguments: {
+                    'book': e.bookData,
+                  },
+                  binding: BookPageBinding());
+            },
+            onLongPress: (TDCell cell) {
+              Navigator.of(context).push(TDSlidePopupRoute(
+                  modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                  slideTransitionFrom: SlideTransitionFrom.bottom,
+                  builder: (context) {
+                    return _bookActionBottomSheet(context, controller, e);
+                  }));
+            },
+          );
+        }).toList())
       ],
     );
   }
@@ -175,5 +188,4 @@ class BookView extends StatelessWidget {
           )),
     );
   }
-
 }

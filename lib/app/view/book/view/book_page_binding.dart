@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import 'package:wo_nas/app/view/book/view/book_page_controller.dart';
+import 'package:tele_book/app/view/book/view/book_page_controller.dart';
 
 class BookPageBinding extends Bindings {
   @override
