@@ -1,1 +1,1 @@
-enum BookPageLayout { page, row, column }
+enum BookPageLayout {  row, column }

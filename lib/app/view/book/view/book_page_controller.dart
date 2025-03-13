@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/db/app_database.dart';
@@ -12,15 +14,13 @@ class BookPageController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
   final getBookState = Rx<RequestState<BookTableData>>(Idle());
   final bookController = Get.find<BookController>();
-  final layout = Rx<BookPageLayout>(BookPageLayout.page);
+  final layout = Rx<BookPageLayout>(BookPageLayout.column);
 
   @override
   void onInit() async {
     super.onInit();
-    getBook();
+    await getBook();
   }
-
-
 
   Future<void> getBook() async {
     try {
@@ -28,8 +28,10 @@ class BookPageController extends GetxController {
       final book = await (appDatabase.select(appDatabase.bookTable)
             ..where((e) => e.id.equals(this.book.id)))
           .getSingle();
-      final settingData= await appDatabase.select(appDatabase.settingTable).getSingle();
-      layout.value = BookPageLayout.values.firstWhere((e) => e.name == settingData.pageLayout);
+      final settingData =
+          await appDatabase.select(appDatabase.settingTable).getSingle();
+      layout.value = BookPageLayout.values
+          .firstWhere((e) => e.name == settingData.pageLayout);
       pageController = PageController(initialPage: book.readCount);
       getBookState.value = Success(book);
     } catch (e) {
@@ -50,9 +52,4 @@ class BookPageController extends GetxController {
       debugPrint(e.toString());
     }
   }
-
 }
-
-
-
-

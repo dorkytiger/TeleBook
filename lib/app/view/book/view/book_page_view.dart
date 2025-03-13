@@ -19,56 +19,33 @@ class BookPageView extends GetView<BookPageController> {
         ),
         body: () {
           return Obx(() => DisplayResult(
-              state: controller.getBookState.value,
-              onError: (error) {
-                return Center(
-                  child: TDResult(
-                    theme: TDResultTheme.error,
-                    title: "加载失败",
-                    description: error,
-                  ),
-                );
-              },
-              onLoading: () {
-                return const Center(
-                  child: TDLoading(size: TDLoadingSize.large),
-                );
-              },
-              onSuccess: (value) {
-                return Obx(() {
-                  switch (controller.layout.value) {
-                    case BookPageLayout.row:
-                      return _listView(false, value, context, controller);
-                    case BookPageLayout.column:
-                      return _listView(true, value, context, controller);
-                    case BookPageLayout.page:
-                      return _pageView(value, context, controller);
-                  }
-                });
-              }));
+                state: controller.getBookState.value,
+                onError: (error) {
+                  return Center(
+                    child: TDResult(
+                      theme: TDResultTheme.error,
+                      title: "加载失败",
+                      description: error,
+                    ),
+                  );
+                },
+                onLoading: () {
+                  return const Center(
+                    child: TDLoading(size: TDLoadingSize.large),
+                  );
+                },
+                onSuccess: (value) => _pageView(book, context, controller),
+              ));
         }());
-  }
-
-  Widget _listView(bool isColumn, BookTableData data, BuildContext context,
-      BookPageController controller) {
-    return ListView.builder(
-        itemCount: data.imageUrls.length,
-        scrollDirection: isColumn ? Axis.vertical : Axis.horizontal,
-        controller: controller.pageController,
-        itemBuilder: (context, index) {
-          return CustomImageLoader(
-              isLocal: data.isDownload,
-              networkUrl:
-                  data.imageUrls.isNotEmpty ? data.imageUrls[index] : "",
-              localUrl:
-                  data.localPaths.isNotEmpty ? data.localPaths[index] : "");
-        });
   }
 
   Widget _pageView(
       BookTableData data, BuildContext context, BookPageController controller) {
     final urls = data.isDownload ? data.localPaths : data.imageUrls;
     return PageView.builder(
+        scrollDirection: controller.layout.value == BookPageLayout.column
+            ? Axis.vertical
+            : Axis.horizontal,
         controller: controller.pageController,
         itemCount: urls.length,
         onPageChanged: (index) {
@@ -131,5 +108,4 @@ class BookPageView extends GetView<BookPageController> {
           );
         });
   }
-
 }

@@ -492,7 +492,7 @@ class $SettingTableTable extends SettingTable
       'page_layout', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
-      defaultValue: const Constant('page'));
+      defaultValue: Constant(BookPageLayout.row.name));
   @override
   List<GeneratedColumn> get $columns => [id, pageLayout];
   @override

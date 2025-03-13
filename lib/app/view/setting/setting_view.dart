@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
@@ -25,7 +24,7 @@ class SettingView extends StatelessWidget {
                 TDCell(
                     leftIcon: TDIcons.component_layout,
                     title: "阅读布局",
-                    note: value.pageLayout,
+                    note: value.pageLayout == "row" ? "横向布局" : "纵向布局",
                     onClick: (TDCell cell) {
                       Navigator.of(context).push(TDSlidePopupRoute(
                           modalBarrierColor: TDTheme.of(context).fontGyColor2,
@@ -45,16 +44,6 @@ class SettingView extends StatelessWidget {
         title: '布局设置',
         child: TDCellGroup(cells: [
           TDCell(
-            title: "翻页布局",
-            leftIcon: TDIcons.page_head,
-            onClick: (TDCell cell) {
-              final newSettingData =
-                  data.copyWith(pageLayout: BookPageLayout.page.name);
-              controller.updateSettingData(newSettingData);
-              Navigator.of(context).pop();
-            },
-          ),
-          TDCell(
             title: "横向布局",
             leftIcon: TDIcons.horizontal,
             onClick: (TDCell cell) {
@@ -66,7 +55,7 @@ class SettingView extends StatelessWidget {
           ),
           TDCell(
             title: "纵向布局",
-            leftIcon: TDIcons.view_column,
+            leftIcon: TDIcons.vertical,
             onClick: (TDCell cell) {
               final newSettingData =
                   data.copyWith(pageLayout: BookPageLayout.column.name);

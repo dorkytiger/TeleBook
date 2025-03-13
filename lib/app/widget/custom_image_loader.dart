@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/widget/custom_error.dart';
 
 class CustomImageLoader extends StatefulWidget {
   final bool isLocal;
