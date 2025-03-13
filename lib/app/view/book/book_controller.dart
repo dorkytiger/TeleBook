@@ -16,6 +16,7 @@ class BookController extends GetxController {
   final bookEntityList = <BookEntity>[].obs;
   final addBookState = Rx<RequestState<void>>(Idle());
   final deleteBookState = Rx<RequestState<void>>(Idle());
+  final deleteDownloadState = Rx<RequestState<void>>(Idle());
   final urlTextController = TextEditingController();
   PageController pageController = PageController();
 
@@ -43,6 +44,21 @@ class BookController extends GetxController {
         Get.showSnackbar(const GetSnackBar(
           title: "删除成功",
           message: "删除书籍成功",
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(
+            GetSnackBar(title: "删除失败", message: state.getErrorMessage()));
+        return;
+      }
+    });
+
+    ever(deleteDownloadState,(state) {
+      if (state.isSuccess()) {
+        Get.showSnackbar(const GetSnackBar(
+          title: "删除成功",
+          message: "删除下载成功",
         ));
         return;
       }
@@ -167,6 +183,7 @@ class BookController extends GetxController {
 
   Future<void> deleteDownload(BookEntity bookEntity) async {
     try {
+      deleteDownloadState.value = Loading();
       final index = bookEntityList.indexOf(bookEntity);
       for (var i = 0; i < bookEntity.bookData.localPaths.length; i++) {
         final filePath = bookEntity.bookData.localPaths[i];
@@ -182,16 +199,10 @@ class BookController extends GetxController {
       bookEntityList[index] = BookEntity(newBookData, false, 0);
       bookEntityList.refresh();
       getBookList();
-      Get.showSnackbar(GetSnackBar(
-        title: "删除${bookEntity.bookData.name}成功",
-        message: "删除成功",
-      ));
+      deleteDownloadState.value= const Success(null);
     } catch (e) {
       debugPrint(e.toString());
-      Get.showSnackbar(GetSnackBar(
-        title: "删除${bookEntity.bookData.name}失败",
-        message: e.toString(),
-      ));
+      deleteDownloadState.value = Error(e.toString());
     }
   }
 
