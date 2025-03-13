@@ -24,6 +24,7 @@ class BookController extends GetxController {
     getBookList();
     super.onInit();
     ever(addBookState, (state) {
+
       if (state.isSuccess()) {
         Get.showSnackbar(const GetSnackBar(
           title: "添加成功",

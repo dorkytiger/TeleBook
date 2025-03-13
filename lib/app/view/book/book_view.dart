@@ -68,12 +68,14 @@ class BookView extends StatelessWidget {
         leftIcon: TDIcons.add,
         title: "添加书籍",
         onClick: (TDCell cell) {
+          Navigator.of(context).pop();
+          controller.resetState();
           showGeneralDialog(
               context: context,
               pageBuilder: (BuildContext buildContext,
                   Animation<double> animation,
                   Animation<double> secondaryAnimation) {
-                return _addBookDialog(context, controller);
+                return _addBookDialog(buildContext, controller);
               });
         },
       ),
@@ -81,6 +83,7 @@ class BookView extends StatelessWidget {
         leftIcon: TDIcons.search,
         title: "搜索数据",
         onClick: (TDCell cell) {
+          Navigator.of(context).pop();
           showGeneralDialog(
               context: context,
               pageBuilder: (BuildContext buildContext,
