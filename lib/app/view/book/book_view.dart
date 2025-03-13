@@ -44,57 +44,22 @@ class BookView extends StatelessWidget {
   Widget _floatActionButtons(BuildContext context, BookController controller) {
     return TDFab(
       icon: const Icon(
-        TDIcons.menu_application,
+        TDIcons.add,
         color: Colors.white,
       ),
       theme: TDFabTheme.primary,
       onClick: () {
-        Navigator.of(context).push(TDSlidePopupRoute(
-            modalBarrierColor: TDTheme.of(context).fontGyColor2,
-            slideTransitionFrom: SlideTransitionFrom.bottom,
-            builder: (context) {
-              return Container(
-                color: Colors.white,
-                child: _actionButtonSheet(context, controller),
-              );
-            }));
+        showGeneralDialog(
+          context: context,
+          pageBuilder: (BuildContext buildContext, Animation<double> animation,
+              Animation<double> secondaryAnimation) {
+            return _addBookDialog(buildContext, controller);
+          },
+        );
       },
     );
   }
 
-  Widget _actionButtonSheet(BuildContext context, BookController controller) {
-    return TDCellGroup(cells: [
-      TDCell(
-        leftIcon: TDIcons.add,
-        title: "添加书籍",
-        onClick: (TDCell cell) {
-          Navigator.of(context).pop();
-          controller.resetState();
-          showGeneralDialog(
-              context: context,
-              pageBuilder: (BuildContext buildContext,
-                  Animation<double> animation,
-                  Animation<double> secondaryAnimation) {
-                return _addBookDialog(buildContext, controller);
-              });
-        },
-      ),
-      TDCell(
-        leftIcon: TDIcons.search,
-        title: "搜索数据",
-        onClick: (TDCell cell) {
-          Navigator.of(context).pop();
-          showGeneralDialog(
-              context: context,
-              pageBuilder: (BuildContext buildContext,
-                  Animation<double> animation,
-                  Animation<double> secondaryAnimation) {
-                return _searchBookDialog(context, controller);
-              });
-        },
-      )
-    ]);
-  }
 
   Widget _bookList(BuildContext context, BookController controller) {
     return ListView(
@@ -213,23 +178,4 @@ class BookView extends StatelessWidget {
     );
   }
 
-  Widget _searchBookDialog(BuildContext context, BookController controller) {
-    return TDInputDialog(
-      textEditingController: controller.urlTextController,
-      title: "搜索数据",
-      hintText: "请输入关键词",
-      showCloseButton: true,
-      buttonWidget: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Obx(
-            () => TDButton(
-              width: double.infinity,
-              disabled: controller.addBookState.value.isLoading(),
-              theme: TDButtonTheme.primary,
-              text: "搜索",
-              onTap: () {},
-            ),
-          )),
-    );
-  }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 class CustomEmpty extends StatelessWidget {
   const CustomEmpty({Key? key, required this.message}) : super(key: key);
@@ -7,11 +8,8 @@ class CustomEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        message,
-        style: const TextStyle(fontSize: 16),
-      ),
+    return TDEmpty(
+        emptyText: message,
     );
   }
 }
