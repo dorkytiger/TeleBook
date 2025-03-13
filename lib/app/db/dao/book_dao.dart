@@ -6,9 +6,17 @@ class BookTable extends Table {
 
   TextColumn get name => text()();
 
+  TextColumn get baseUrl => text()();
+
   TextColumn get localPaths => text().map(const StringListConverter())();
+
+  IntColumn get downloadCount => integer().withDefault(const Constant(0))();
 
   BoolColumn get isDownload => boolean().withDefault(const Constant(false))();
 
   TextColumn get imageUrls => text().map(const StringListConverter())();
+
+  IntColumn get readCount => integer().withDefault(const Constant(0))();
+
+  TextColumn get createTime => text()();
 }

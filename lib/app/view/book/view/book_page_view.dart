@@ -2,77 +2,80 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:wo_nas/app/util/request_state.dart';
+import 'package:wo_nas/app/view/book/view/book_page_controller.dart';
 
 import '../book_controller.dart';
 
-class BookPageView extends GetView<BookController> {
+class BookPageView extends GetView<BookPageController> {
   const BookPageView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final book = controller.book;
     return Scaffold(
-      appBar: AppBar(),
-      body: Obx(
-        () => PageView.builder(
-            controller: controller.pageController,
-            onPageChanged: (int page) {
-              controller.currentPage.value = page;
-            },
-            itemCount: controller
-                .bookList[controller.currentBookIndex.value].imageUrls.length,
-            itemBuilder: (BuildContext context, int index) {
-              return Column(
-                children: [
-                  Expanded(
-                    flex: 9,
-                    child: GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return Obx(() => bottomSheet());
-                          },
-                        );
-                      },
-                      child: Image.file(File(controller
-                          .bookList[controller.currentBookIndex.value]
-                          .localPaths[index])),
-                    ),
+        appBar: TDNavBar(
+          title: book.name,
+        ),
+        body: () {
+          return Obx(() => DisplayResult(
+              state: controller.getBookState.value,
+              onError: (error) {
+                return Center(
+                  child: TDResult(
+                    theme: TDResultTheme.error,
+                    title: "加载失败",
+                    description: error,
                   ),
-                ],
-              );
-            }),
-      ),
-    );
-  }
-
-  Widget bottomSheet() {
-    return Container(
-        height: 80,
-        color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              flex: 9,
-              child: Slider(
-                  value: controller.currentPage.value.toDouble(),
-                  min: 0,
-                  max: (controller.bookList[controller.currentBookIndex.value]
-                              .localPaths.length -
-                          1)
-                      .toDouble(),
-                  onChanged: (value) {
-                    controller.currentPage.value = value.toInt();
-                    controller.pageController.jumpToPage(value.toInt());
-                  }),
-            ),
-            Expanded(
-              flex: 1,
-              child: Text(
-                  "${controller.currentPage.value + 1}/${controller.bookList[controller.currentBookIndex.value].imageUrls.length}"),
-            )
-          ],
-        ));
+                );
+              },
+              onLoading: () {
+                return const Center(
+                  child: TDLoading(size: TDLoadingSize.large),
+                );
+              },
+              onSuccess: (value) {
+                final urls =
+                    value.isDownload ? value.localPaths : value.imageUrls;
+                debugPrint("urls: $urls");
+                return PageView.builder(
+                    controller: controller.pageController,
+                    itemCount: urls.length,
+                    onPageChanged: (index) {},
+                    itemBuilder: (BuildContext context, int index) {
+                      return GestureDetector(
+                        onTap: () {},
+                        child: value.isDownload
+                            ? Image.file(File(urls[index]))
+                            : Image.network(urls[index], loadingBuilder:
+                                (context, widget, loadingProgress) {
+                                if (loadingProgress == null) {
+                                  return widget;
+                                }
+                                return const Center(
+                                  child: TDLoading(size: TDLoadingSize.large),
+                                );
+                              }, errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Column(
+                                    children: [
+                                      TDResult(
+                                        theme: TDResultTheme.error,
+                                        title: "加载失败",
+                                        description: error.toString(),
+                                      ),
+                                      TDButton(
+                                        text: "重新加载",
+                                        onTap: () {},
+                                      )
+                                    ],
+                                  ),
+                                );
+                              }),
+                      );
+                    });
+              }));
+        }());
   }
 }
