@@ -151,7 +151,6 @@ class BookController extends GetxController {
         final url = bookEntity.bookData.imageUrls[i];
         final filePath = "$bookPath/$i.jpg";
         await saveImage(url, filePath);
-        debugPrint("下载图片：$filePath");
         final localPaths = bookEntity.bookData.localPaths;
         localPaths.add(filePath);
 
