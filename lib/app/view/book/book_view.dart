@@ -8,6 +8,7 @@ import 'package:wo_nas/app/view/book/view/book_page_binding.dart';
 import 'package:wo_nas/app/view/book/view/book_page_view.dart';
 import 'package:wo_nas/app/widget/custom_empty.dart';
 import 'package:wo_nas/app/widget/custom_error.dart';
+import 'package:wo_nas/app/widget/custom_image_loader.dart';
 import 'package:wo_nas/app/widget/custom_loading.dart';
 
 import 'book_controller.dart';
@@ -25,7 +26,7 @@ class BookView extends StatelessWidget {
         title: '书库',
         centerTitle: true,
       ),
-      floatingActionButton: Obx(() => _floatActionButtons(context,controller)),
+      floatingActionButton: _floatActionButtons(context, controller),
       body: RefreshIndicator(child: Obx(() {
         return DisplayResult(
             state: controller.getBookListState.value,
@@ -41,15 +42,32 @@ class BookView extends StatelessWidget {
   }
 
   Widget _floatActionButtons(BuildContext context, BookController controller) {
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      child: TDFab(
-        icon: const Icon(
-          TDIcons.add,
-          color: Colors.white,
-        ),
-        theme: TDFabTheme.primary,
-        onClick: () {
+    return TDFab(
+      icon: const Icon(
+        TDIcons.menu_application,
+        color: Colors.white,
+      ),
+      theme: TDFabTheme.primary,
+      onClick: () {
+        Navigator.of(context).push(TDSlidePopupRoute(
+            modalBarrierColor: TDTheme.of(context).fontGyColor2,
+            slideTransitionFrom: SlideTransitionFrom.bottom,
+            builder: (context) {
+              return Container(
+                color: Colors.white,
+                child: _actionButtonSheet(context, controller),
+              );
+            }));
+      },
+    );
+  }
+
+  Widget _actionButtonSheet(BuildContext context, BookController controller) {
+    return TDCellGroup(cells: [
+      TDCell(
+        leftIcon: TDIcons.add,
+        title: "添加书籍",
+        onClick: (TDCell cell) {
           showGeneralDialog(
               context: context,
               pageBuilder: (BuildContext buildContext,
@@ -59,7 +77,20 @@ class BookView extends StatelessWidget {
               });
         },
       ),
-    );
+      TDCell(
+        leftIcon: TDIcons.search,
+        title: "搜索数据",
+        onClick: (TDCell cell) {
+          showGeneralDialog(
+              context: context,
+              pageBuilder: (BuildContext buildContext,
+                  Animation<double> animation,
+                  Animation<double> secondaryAnimation) {
+                return _searchBookDialog(context, controller);
+              });
+        },
+      )
+    ]);
   }
 
   Widget _bookList(BuildContext context, BookController controller) {
@@ -72,12 +103,12 @@ class BookView extends StatelessWidget {
                       description:
                           "${DateTime.parse(e.bookData.createTime).year}年${DateTime.parse(e.bookData.createTime).month}月${DateTime.parse(e.bookData.createTime).day}日",
                       leftIconWidget: SizedBox(
-                        height: 100,
-                        width: 100,
-                        child: e.bookData.isDownload
-                            ? Image.file(File(e.bookData.localPaths.first))
-                            : Image.network(e.bookData.imageUrls[0]),
-                      ),
+                          height: 100,
+                          width: 100,
+                          child: e.bookData.isDownload
+                              ? Image.file(File(e.bookData.localPaths.first))
+                              : CustomImageLoader(
+                                  url: e.bookData.imageUrls.first)),
                       rightIconWidget: () {
                         if (e.isDownloading) {
                           return SizedBox(
@@ -172,6 +203,26 @@ class BookView extends StatelessWidget {
                   Navigator.of(context).pop();
                 });
               },
+            ),
+          )),
+    );
+  }
+
+  Widget _searchBookDialog(BuildContext context, BookController controller) {
+    return TDInputDialog(
+      textEditingController: controller.urlTextController,
+      title: "搜索数据",
+      hintText: "请输入关键词",
+      showCloseButton: true,
+      buttonWidget: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Obx(
+            () => TDButton(
+              width: double.infinity,
+              disabled: controller.addBookState.value.isLoading(),
+              theme: TDButtonTheme.primary,
+              text: "搜索",
+              onTap: () {},
             ),
           )),
     );

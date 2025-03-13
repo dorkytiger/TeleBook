@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:wo_nas/app/db/app_database.dart';
 import 'package:wo_nas/app/util/html_util.dart';
+
 import '../../util/request_state.dart';
 
 class BookController extends GetxController {
@@ -14,6 +15,7 @@ class BookController extends GetxController {
   final getBookListState = Rx<RequestState<List<BookTableData>>>(Idle());
   final bookEntityList = <BookEntity>[].obs;
   final addBookState = Rx<RequestState<void>>(Idle());
+  final deleteBookState = Rx<RequestState<void>>(Idle());
   final urlTextController = TextEditingController();
   PageController pageController = PageController();
 
@@ -34,6 +36,22 @@ class BookController extends GetxController {
             GetSnackBar(title: "添加失败", message: state.getErrorMessage()));
         return;
       }
+    });
+
+    ever(deleteBookState, (state){
+      if (state.isSuccess()) {
+        Get.showSnackbar(const GetSnackBar(
+          title: "删除成功",
+          message: "删除书籍成功",
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(
+            GetSnackBar(title: "删除失败", message: state.getErrorMessage()));
+        return;
+      }
+
     });
   }
 
@@ -83,12 +101,23 @@ class BookController extends GetxController {
 
   Future<void> deleteBook(int id) async {
     try {
+      deleteBookState.value = Loading();
+      final tableData = await (appDatabase.select(appDatabase.bookTable)
+            ..where((t) => t.id.equals(id)))
+          .getSingle();
+      for (var file in tableData.localPaths) {
+        if (await File(file).exists()) {
+          await File(file).delete();
+        }
+      }
       await (appDatabase.delete(appDatabase.bookTable)
             ..where((t) => t.id.equals(id)))
           .go();
+      deleteBookState.value = const Success(null);
       getBookList();
     } catch (e) {
       debugPrint(e.toString());
+      deleteBookState.value = Error(e.toString());
     }
   }
 
