@@ -157,15 +157,12 @@ class SettingController extends GetxController {
       }
 
       if (GetPlatform.isDesktop) {
-        final outputFile = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['json'],
-          dialogTitle: '请选择保存文件地址',
+        final outputDirectory = await FilePicker.platform.getDirectoryPath(
         );
-        if (outputFile == null) {
+        if (outputDirectory == null) {
           return;
         }
-        final file = File(outputFile.files.first.path!);
+        final file = File("$outputDirectory/$exportFileName");
         await file.writeAsString(jsonData);
       }
 
