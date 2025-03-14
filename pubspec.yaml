@@ -21,7 +21,8 @@ dependencies:
   background_downloader: ^9.1.1
   intl: ^0.20.2
   shared_preferences: ^2.5.2
-  file_picker: ^9.0.0
+  file_picker: ^9.1.0
+  nsd: ^4.0.3
 
 dev_dependencies: 
   build_runner: ^2.4.15

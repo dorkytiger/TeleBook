@@ -6,9 +6,14 @@ import 'package:tele_book/app/enum/book_page_layout_enum.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/setting/setting_controller.dart'
     show SettingController;
+import 'package:tele_book/app/view/setting/view/transmit/setting_transmit_binding.dart';
+import 'package:tele_book/app/view/setting/view/transmit/setting_transmit_controller.dart';
+import 'package:tele_book/app/view/setting/view/transmit/setting_transmit_view.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
 
 class SettingView extends StatelessWidget {
+  const SettingView({super.key});
+
   @override
   Widget build(BuildContext context) {
     final controller = Get.put<SettingController>(SettingController());
@@ -66,13 +71,45 @@ class SettingView extends StatelessWidget {
           title: "导出配置",
           onClick: (TDCell cell) {
             controller.exportBookData();
+          }),
+      TDCell(
+          leftIcon: TDIcons.system_2,
+          title: "局域网同步",
+          onClick: (TDCell cell) {
+            Navigator.of(context).push(TDSlidePopupRoute(
+                modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                slideTransitionFrom: SlideTransitionFrom.bottom,
+                builder: (context) {
+                  return _transmitBottomSheet();
+                }));
           })
     ]);
   }
 
+  Widget _transmitBottomSheet() {
+    return TDPopupBottomDisplayPanel(
+        title: '局域网同步',
+        child: TDCellGroup(cells: [
+          TDCell(
+              title: "接收数据",
+              onClick: (TDCell cell) {
+                Get.to(()=> SettingTransmitView(),
+                    binding: SettingTransmitBinding(),
+                    arguments: {"type": TransmitType.receive});
+              }),
+          TDCell(
+              title: "发送数据",
+              onClick: (TDCell cell) {
+                Get.to(()=> SettingTransmitView(),
+                    binding: SettingTransmitBinding(),
+                    arguments: {"type": TransmitType.send});
+              })
+        ]));
+  }
+
   Widget _importBottomSheet(
       BuildContext context, SettingController controller) {
-    return Obx(()=>TDPopupBottomDisplayPanel(
+    return Obx(() => TDPopupBottomDisplayPanel(
         title: '导入配置',
         child: TDCellGroup(
           cells: [

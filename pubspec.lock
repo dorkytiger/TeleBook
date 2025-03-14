@@ -640,6 +640,62 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  nested:
+    dependency: transitive
+    description:
+      name: nested
+      sha256: "03bac4c528c64c95c722ec99280375a6f2fc708eec17c7b3f07253b626cd2a20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
+  nsd:
+    dependency: "direct main"
+    description:
+      name: nsd
+      sha256: cae71ee9c23ea7f75d4610efe7ff335b1f575fb93ef7b7f9a5c6183a091cbb74
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.3"
+  nsd_android:
+    dependency: transitive
+    description:
+      name: nsd_android
+      sha256: "1309cd47d02c99bd305219f0a226644f9f4a964d341c3d6730cebb906bb1ec78"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.2"
+  nsd_ios:
+    dependency: transitive
+    description:
+      name: nsd_ios
+      sha256: "562fffe753543a65190344d3acd0ed80d96c571ac1a05bf10780c5584b5055ac"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
+  nsd_macos:
+    dependency: transitive
+    description:
+      name: nsd_macos
+      sha256: "47cd355d84009befe02710c72bf1c1999b24d5f3fb3a3d914f8b77bcaca42542"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
+  nsd_platform_interface:
+    dependency: transitive
+    description:
+      name: nsd_platform_interface
+      sha256: "7220c8e0beeacd06c180fefcd6bb708415ed889c76f656e75ac633d09ceaa761"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
+  nsd_windows:
+    dependency: transitive
+    description:
+      name: nsd_windows
+      sha256: "68b4a256b0be258dbbad0ae789f2e8838d0935a353dac86b17c14c1a05df4ecd"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.1"
   package_config:
     dependency: transitive
     description:
@@ -744,6 +800,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.1"
+  provider:
+    dependency: transitive
+    description:
+      name: provider
+      sha256: c8a055ee5ce3fd98d6fc872478b03823ffdb448699c6ebdbbc71d59b596fd48c
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.1.2"
   pub_semver:
     dependency: transitive
     description:
@@ -861,6 +925,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.10.1"
+  sprintf:
+    dependency: transitive
+    description:
+      name: sprintf
+      sha256: "1fc9ffe69d4df602376b52949af107d8f5703b77cda567c4d7d86a0693120f23"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.0.0"
   sqlite3:
     dependency: transitive
     description:
@@ -957,6 +1029,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  uuid:
+    dependency: transitive
+    description:
+      name: uuid
+      sha256: a5be9ef6618a7ac1e964353ef476418026db906c4facdedaa299b7a2e71690ff
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.5.1"
   vector_math:
     dependency: transitive
     description:
