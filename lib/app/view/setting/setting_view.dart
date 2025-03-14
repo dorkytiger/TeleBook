@@ -20,22 +20,82 @@ class SettingView extends StatelessWidget {
       body: Obx(() => DisplayResult(
           state: controller.getSettingDataState,
           onError: (error) => CustomError(title: "获取设置失败", description: error),
-          onSuccess: (SettingTableData value) => TDCellGroup(cells: [
-                TDCell(
-                    leftIcon: TDIcons.component_layout,
-                    title: "阅读布局",
-                    note: value.pageLayout == "row" ? "横向布局" : "纵向布局",
-                    onClick: (TDCell cell) {
-                      Navigator.of(context).push(TDSlidePopupRoute(
-                          modalBarrierColor: TDTheme.of(context).fontGyColor2,
-                          slideTransitionFrom: SlideTransitionFrom.bottom,
-                          builder: (context) {
-                            return _layoutSettingBottomSheet(
-                                context, controller, value);
-                          }));
-                    })
-              ]))),
+          onSuccess: (SettingTableData value) => Column(
+                children: [
+                  _readSettingCellGroup(context, controller, value),
+                  _transmitCellGroup(context, controller, value)
+                ],
+              ))),
     );
+  }
+
+  Widget _readSettingCellGroup(BuildContext context,
+      SettingController controller, SettingTableData data) {
+    return TDCellGroup(title: "阅读设置", cells: [
+      TDCell(
+          leftIcon: TDIcons.component_layout,
+          title: "阅读布局",
+          note: data.pageLayout == "row" ? "横向布局" : "纵向布局",
+          onClick: (TDCell cell) {
+            Navigator.of(context).push(TDSlidePopupRoute(
+                modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                slideTransitionFrom: SlideTransitionFrom.bottom,
+                builder: (context) {
+                  return _layoutSettingBottomSheet(context, controller, data);
+                }));
+          })
+    ]);
+  }
+
+  Widget _transmitCellGroup(BuildContext context, SettingController controller,
+      SettingTableData data) {
+    return TDCellGroup(title: "传输设置", cells: [
+      TDCell(
+          leftIcon: TDIcons.file_import,
+          title: "导入配置",
+          onClick: (TDCell cell) {
+            Navigator.of(context).push(TDSlidePopupRoute(
+                modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                slideTransitionFrom: SlideTransitionFrom.bottom,
+                builder: (context) {
+                  return _importBottomSheet(context, controller);
+                }));
+          }),
+      TDCell(
+          leftIcon: TDIcons.file_export,
+          title: "导出配置",
+          onClick: (TDCell cell) {
+            controller.exportBookData();
+          })
+    ]);
+  }
+
+  Widget _importBottomSheet(
+      BuildContext context, SettingController controller) {
+    return Obx(()=>TDPopupBottomDisplayPanel(
+        title: '导入配置',
+        child: TDCellGroup(
+          cells: [
+            TDCell(
+              title: "跳过重复链接",
+              rightIconWidget: TDSwitch(
+                isOn: controller.skipDuplicate,
+                onChanged: (value) {
+                  final newSkipDuplicate = !controller.skipDuplicate;
+                  controller.onSkipDuplicatesChanged(newSkipDuplicate);
+                  return !newSkipDuplicate;
+                },
+              ),
+            ),
+            TDCell(
+              title: "选择文件导入",
+              onClick: (TDCell cell) {
+                controller.importBookData();
+                Navigator.of(context).pop();
+              },
+            )
+          ],
+        )));
   }
 
   Widget _layoutSettingBottomSheet(BuildContext context,
