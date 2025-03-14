@@ -142,22 +142,34 @@ class SettingController extends GetxController {
       final jsonData =
           jsonEncode(bookDataList.map((book) => book.toJson()).toList());
 
-      // Get the file
-      final directoryPath = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: "请选择保存文件的目录",
-      );
-      if (directoryPath == null) {
-        return;
-      }
-      final currentDateTime =
-          DateFormat('yyyyMMddHHmmss').format(DateTime.now());
-      final exportFilePath =
-          '$directoryPath/book_data_$currentDateTime.json';
-      final file = File(exportFilePath);
+      final exportFileName =
+          'book-data-${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.json';
 
-      // Write the JSON data to the file
-      await file.writeAsString(jsonData);
-      _exportBookDataState.value = Success(exportFilePath);
+      if (GetPlatform.isMobile) {
+        String? outputFile = await FilePicker.platform.saveFile(
+          dialogTitle: '请选择保存文件地址',
+          fileName: exportFileName,
+          bytes: utf8.encode(jsonData),
+        );
+        if (outputFile == null) {
+          return;
+        }
+      }
+
+      if (GetPlatform.isDesktop) {
+        final outputFile = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+          dialogTitle: '请选择保存文件地址',
+        );
+        if (outputFile == null) {
+          return;
+        }
+        final file = File(outputFile.files.first.path!);
+        await file.writeAsString(jsonData);
+      }
+
+      _exportBookDataState.value = Success(exportFileName);
     } catch (e) {
       debugPrint(e.toString());
       _exportBookDataState.value = Error(e.toString());
