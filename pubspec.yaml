@@ -1,11 +1,11 @@
 name: tele_book
-version: 1.0.0+1
+version: 1.0.0+3
 publish_to: none
-description: A new Flutter project.
+description: Simple way that download the telegraph Book.
 environment: 
   sdk: '>=3.2.3 <4.0.0'
 
-dependencies: 
+dependencies:
   cupertino_icons: ^1.0.2
   get: 4.6.6
   flutter: 
@@ -14,11 +14,11 @@ dependencies:
   path_provider: ^2.1.1
   html: ^0.15.0
   dio: ^5.4.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.3
   drift: ^2.26.0
   drift_flutter: ^0.2.4
   tdesign_flutter: ^0.1.8
-  background_downloader: ^9.1.1
+  background_downloader: ^9.2.0
   intl: ^0.20.2
   shared_preferences: ^2.5.2
   file_picker: ^9.0.0
@@ -32,8 +32,3 @@ dev_dependencies:
 
 flutter: 
   uses-material-design: true
-
-flutter_icons:
-  android: "ic_launcher"
-  ios: false
-  image_path: "images/logo.png"

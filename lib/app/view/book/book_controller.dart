@@ -79,9 +79,16 @@ class BookController extends GetxController {
         getBookListState.value = Empty();
         return;
       }
-
-      bookEntityList.value =
-          bookList.map((e) => BookEntity(e, false, 0)).toList();
+      final document = await getApplicationDocumentsDirectory();
+      bookEntityList.value = bookList.map((e) {
+        List<String> localPaths = e.localPaths;
+        if (e.isDownload) {
+          localPaths = e.localPaths.map((e) => "${document.path}/$e").toList();
+          debugPrint("localPaths:$localPaths");
+        }
+        final newData = e.copyWith(localPaths: localPaths);
+        return BookEntity(newData, false, 0);
+      }).toList();
       getBookListState.value = Success(bookList);
     } catch (e) {
       getBookListState.value = Error(e.toString());
@@ -143,26 +150,32 @@ class BookController extends GetxController {
     try {
       bookEntityList[index] = BookEntity(bookEntity.bookData, true, 0);
       bookEntityList.refresh();
-      final applicationDocument = await getApplicationDocumentsDirectory();
+
       final bookPath = "${bookEntity.bookData.id}-${bookEntity.bookData.name}";
 
       for (var i = bookEntity.bookData.downloadCount;
           i < bookEntity.bookData.imageUrls.length;
           i++) {
+
         final url = bookEntity.bookData.imageUrls[i];
-        final filePath = "${applicationDocument.path}/$bookPath/$i.jpg";
         final task = DownloadTask(
-            url: url,
+            url: Uri.parse(url).toString(),
             directory: bookPath,
             filename: "$i.jpg",
             retries: 5,
             baseDirectory: BaseDirectory.applicationDocuments);
-        final downloadResult = await FileDownloader().download(task);
+        final downloadResult = await FileDownloader()
+            .configureNotification(
+                running: TaskNotification('Downloading', 'file: $bookPath'),
+                complete: TaskNotification("Complete", 'file: $bookPath'),
+                progressBar: true)
+            .download(task);
         if (downloadResult.status != TaskStatus.complete) {
           throw Exception(downloadResult.exception ?? "下载失败");
         }
         final localPaths = bookEntity.bookData.localPaths;
-        localPaths.add(filePath);
+        final bookPathSuffix = "$bookPath/$i.jpg";
+        localPaths.add(bookPathSuffix);
         final newBookData = bookEntityList[index]
             .bookData
             .copyWith(localPaths: localPaths, downloadCount: i + 1);
@@ -229,7 +242,8 @@ class BookController extends GetxController {
   }
 
   void updateBookInfo(BookTableData bookData) {
-    final index = bookEntityList.indexWhere((e) => e.bookData.id == bookData.id);
+    final index =
+        bookEntityList.indexWhere((e) => e.bookData.id == bookData.id);
     if (index != -1) {
       bookEntityList[index] = BookEntity(bookData, false, 0);
       bookEntityList.refresh();
