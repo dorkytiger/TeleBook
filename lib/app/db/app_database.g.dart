@@ -169,10 +169,10 @@ class $BookTableTable extends BookTable
     return $BookTableTable(attachedDatabase, alias);
   }
 
-  static TypeConverter<List<String>, String> $converterlocalPaths =
-      const StringListConverter();
-  static TypeConverter<List<String>, String> $converterimageUrls =
-      const StringListConverter();
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+      $converterlocalPaths = const StringListConverter();
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+      $converterimageUrls = const StringListConverter();
 }
 
 class BookTableData extends DataClass implements Insertable<BookTableData> {
@@ -237,10 +237,12 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       baseUrl: serializer.fromJson<String>(json['baseUrl']),
-      localPaths: serializer.fromJson<List<String>>(json['localPaths']),
+      localPaths: $BookTableTable.$converterlocalPaths
+          .fromJson(serializer.fromJson<List<dynamic>>(json['localPaths'])),
       downloadCount: serializer.fromJson<int>(json['downloadCount']),
       isDownload: serializer.fromJson<bool>(json['isDownload']),
-      imageUrls: serializer.fromJson<List<String>>(json['imageUrls']),
+      imageUrls: $BookTableTable.$converterimageUrls
+          .fromJson(serializer.fromJson<List<dynamic>>(json['imageUrls'])),
       readCount: serializer.fromJson<int>(json['readCount']),
       createTime: serializer.fromJson<String>(json['createTime']),
     );
@@ -252,10 +254,12 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'baseUrl': serializer.toJson<String>(baseUrl),
-      'localPaths': serializer.toJson<List<String>>(localPaths),
+      'localPaths': serializer.toJson<List<dynamic>>(
+          $BookTableTable.$converterlocalPaths.toJson(localPaths)),
       'downloadCount': serializer.toJson<int>(downloadCount),
       'isDownload': serializer.toJson<bool>(isDownload),
-      'imageUrls': serializer.toJson<List<String>>(imageUrls),
+      'imageUrls': serializer.toJson<List<dynamic>>(
+          $BookTableTable.$converterimageUrls.toJson(imageUrls)),
       'readCount': serializer.toJson<int>(readCount),
       'createTime': serializer.toJson<String>(createTime),
     };

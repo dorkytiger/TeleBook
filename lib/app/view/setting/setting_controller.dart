@@ -50,18 +50,18 @@ class SettingController extends GetxController {
     });
     ever(_importBookDataState, (state) {
       if (state.isSuccess()) {
+        bookController.getBookList();
         Get.showSnackbar(const GetSnackBar(
           duration: Duration(seconds: 3),
           title: "导入成功",
           message: "已写入数据库",
         ));
-        bookController.getBookList();
         return;
       }
       if (state.isError()) {
         Get.showSnackbar(GetSnackBar(
           duration: const Duration(seconds: 3),
-          title: "导出失败",
+          title: "导入失败",
           message: state.getErrorMessage(),
         ));
         return;
@@ -107,7 +107,7 @@ class SettingController extends GetxController {
 
       // Convert the JSON data to a list of book data
       final bookDataList = (jsonDecode(jsonData) as List)
-          .map((book) => BookTableData.fromJson(book))
+          .map((book) => BookTableData.fromJson(book as Map<String, dynamic>))
           .toList();
 
       if (_skipDuplicates.value) {
@@ -139,8 +139,10 @@ class SettingController extends GetxController {
           await appDatabase.select(appDatabase.bookTable).get();
 
       // Convert the data to JSON format
-      final jsonData =
-          jsonEncode(bookDataList.map((book) => book.toJson()).toList());
+      final jsonData = jsonEncode(bookDataList.map((book) {
+        final newBook = book.copyWith(readCount: 0, localPaths: [], isDownload: false);
+        return newBook.toJson();
+      }).toList());
 
       final exportFileName =
           'book-data-${DateFormat('yyyyMMddHHmmss').format(DateTime.now())}.json';
@@ -157,8 +159,7 @@ class SettingController extends GetxController {
       }
 
       if (GetPlatform.isDesktop) {
-        final outputDirectory = await FilePicker.platform.getDirectoryPath(
-        );
+        final outputDirectory = await FilePicker.platform.getDirectoryPath();
         if (outputDirectory == null) {
           return;
         }

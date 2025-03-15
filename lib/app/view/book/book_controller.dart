@@ -79,6 +79,7 @@ class BookController extends GetxController {
         getBookListState.value = Empty();
         return;
       }
+
       bookEntityList.value =
           bookList.map((e) => BookEntity(e, false, 0)).toList();
       getBookListState.value = Success(bookList);
