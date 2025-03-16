@@ -47,7 +47,6 @@ class BookPageController extends GetxController {
           .getSingle();
       final newBookData = book.copyWith(readCount: index);
       await appDatabase.update(appDatabase.bookTable).replace(newBookData);
-      bookController.updateBookInfo(newBookData);
     } catch (e) {
       debugPrint(e.toString());
     }

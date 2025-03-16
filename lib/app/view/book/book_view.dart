@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/book/view/book_page_binding.dart';
 import 'package:tele_book/app/view/book/view/book_page_view.dart';
@@ -12,13 +13,11 @@ import 'package:tele_book/app/widget/custom_loading.dart';
 
 import 'book_controller.dart';
 
-class BookView extends StatelessWidget {
+class BookView extends GetView<BookController> {
   const BookView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(BookController());
-
     return Scaffold(
       appBar: const TDNavBar(
         useDefaultBack: false,
@@ -33,7 +32,7 @@ class BookView extends StatelessWidget {
             onError: (error) =>
                 CustomError(title: "获取书籍失败", description: error),
             onLoading: () => const CustomLoading(),
-            onSuccess: (value) => Obx(() => _bookList(context, controller)));
+            onSuccess: (value) => _bookList(context, value));
       }), onRefresh: () async {
         await controller.getBookList();
       }),
@@ -60,59 +59,30 @@ class BookView extends StatelessWidget {
     );
   }
 
-  Widget _bookList(BuildContext context, BookController controller) {
+  Widget _bookList(BuildContext context, List<BookTableData> bookList) {
     return ListView(
       children: [
         TDCellGroup(
-            cells: controller.bookEntityList.map((e) {
-          final datetime = DateTime.parse(e.bookData.createTime);
+            cells: bookList.map((e) {
+          final datetime = DateTime.parse(e.createTime);
           String formattedDate =
               DateFormat('yyyy-MM-dd HH:mm:ss').format(datetime);
 
           return TDCell(
-            title: e.bookData.name,
-            descriptionWidget: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TDText(
-                  "下载时间：$formattedDate",
-                  font: Font(size: 12, lineHeight: 28),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                TDText(
-                  "阅读进度:${e.bookData.readCount}/${e.bookData.imageUrls.length}",
-                  font: Font(size: 12, lineHeight: 28),
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
+            title: e.name,
+            description: formattedDate,
             leftIconWidget: SizedBox(
                 height: 100,
                 width: 100,
                 child: CustomImageLoader(
-                    isLocal: e.bookData.isDownload,
-                    networkUrl: e.bookData.imageUrls.firstOrNull ?? "",
-                    localUrl: e.bookData.localPaths.firstOrNull ?? "")),
-            rightIconWidget: () {
-              if (e.isDownloading) {
-                return SizedBox(
-                  height: 25,
-                  width: 25,
-                  child: CircularProgressIndicator(
-                      color: TDTheme.of(context).brandNormalColor,
-                      value: e.downloadProgress),
-                );
-              } else {
-                return Icon(
-                  e.bookData.isDownload ? TDIcons.check : TDIcons.pending,
-                  color: TDTheme.of(context).brandNormalColor,
-                );
-              }
-            }(),
+                    isLocal: e.isDownload,
+                    networkUrl: e.imageUrls.firstOrNull ?? "",
+                    localUrl: e.localPaths.firstOrNull ?? "")),
+            rightIcon: e.isDownload ? TDIcons.check : null,
             onClick: (TDCell cell) {
               Get.to(() => const BookPageView(),
                   arguments: {
-                    'book': e.bookData,
+                    'book': e,
                   },
                   binding: BookPageBinding());
             },
@@ -130,18 +100,18 @@ class BookView extends StatelessWidget {
     );
   }
 
-  Widget _bookActionBottomSheet(
-      BuildContext context, BookController controller, BookEntity bookEntity) {
+  Widget _bookActionBottomSheet(BuildContext context, BookController controller,
+      BookTableData bookTableData) {
     return TDPopupBottomDisplayPanel(
         title: "书籍操作",
         child: TDCellGroup(
           cells: [
-            bookEntity.bookData.isDownload
+            bookTableData.isDownload
                 ? TDCell(
                     title: "移除下载",
                     leftIcon: TDIcons.file_download,
                     onClick: (TDCell cell) {
-                      controller.deleteDownload(bookEntity);
+                      controller.deleteDownload(bookTableData);
                       Navigator.of(context).pop();
                     },
                   )
@@ -149,7 +119,7 @@ class BookView extends StatelessWidget {
                     title: "下载",
                     leftIcon: TDIcons.download,
                     onClick: (TDCell cell) {
-                      controller.downLoadBook(bookEntity);
+                      controller.downLoadBook(bookTableData);
                       Navigator.of(context).pop();
                     },
                   ),
@@ -157,7 +127,7 @@ class BookView extends StatelessWidget {
               title: "删除",
               leftIcon: TDIcons.delete,
               onClick: (TDCell cell) {
-                controller.deleteBook(bookEntity.bookData.id);
+                controller.deleteBook(bookTableData.id);
                 Navigator.of(context).pop();
               },
             )

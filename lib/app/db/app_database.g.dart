@@ -658,16 +658,364 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
   }
 }
 
+class $DownloadTableTable extends DownloadTable
+    with TableInfo<$DownloadTableTable, DownloadTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DownloadTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+      'book_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> localPaths =
+      GeneratedColumn<String>('local_paths', aliasedName, false,
+              type: DriftSqlType.string, requiredDuringInsert: true)
+          .withConverter<List<String>>(
+              $DownloadTableTable.$converterlocalPaths);
+  static const VerificationMeta _downloadCountMeta =
+      const VerificationMeta('downloadCount');
+  @override
+  late final GeneratedColumn<int> downloadCount = GeneratedColumn<int>(
+      'download_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> imageUrls =
+      GeneratedColumn<String>('image_urls', aliasedName, false,
+              type: DriftSqlType.string, requiredDuringInsert: true)
+          .withConverter<List<String>>($DownloadTableTable.$converterimageUrls);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, bookId, name, localPaths, downloadCount, imageUrls];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'download_table';
+  @override
+  VerificationContext validateIntegrity(Insertable<DownloadTableData> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(_bookIdMeta,
+          bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta));
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('download_count')) {
+      context.handle(
+          _downloadCountMeta,
+          downloadCount.isAcceptableOrUnknown(
+              data['download_count']!, _downloadCountMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DownloadTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DownloadTableData(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      bookId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}book_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      localPaths: $DownloadTableTable.$converterlocalPaths.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.string, data['${effectivePrefix}local_paths'])!),
+      downloadCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}download_count'])!,
+      imageUrls: $DownloadTableTable.$converterimageUrls.fromSql(
+          attachedDatabase.typeMapping.read(
+              DriftSqlType.string, data['${effectivePrefix}image_urls'])!),
+    );
+  }
+
+  @override
+  $DownloadTableTable createAlias(String alias) {
+    return $DownloadTableTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+      $converterlocalPaths = const StringListConverter();
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+      $converterimageUrls = const StringListConverter();
+}
+
+class DownloadTableData extends DataClass
+    implements Insertable<DownloadTableData> {
+  final int id;
+  final int bookId;
+  final String name;
+  final List<String> localPaths;
+  final int downloadCount;
+  final List<String> imageUrls;
+  const DownloadTableData(
+      {required this.id,
+      required this.bookId,
+      required this.name,
+      required this.localPaths,
+      required this.downloadCount,
+      required this.imageUrls});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['book_id'] = Variable<int>(bookId);
+    map['name'] = Variable<String>(name);
+    {
+      map['local_paths'] = Variable<String>(
+          $DownloadTableTable.$converterlocalPaths.toSql(localPaths));
+    }
+    map['download_count'] = Variable<int>(downloadCount);
+    {
+      map['image_urls'] = Variable<String>(
+          $DownloadTableTable.$converterimageUrls.toSql(imageUrls));
+    }
+    return map;
+  }
+
+  DownloadTableCompanion toCompanion(bool nullToAbsent) {
+    return DownloadTableCompanion(
+      id: Value(id),
+      bookId: Value(bookId),
+      name: Value(name),
+      localPaths: Value(localPaths),
+      downloadCount: Value(downloadCount),
+      imageUrls: Value(imageUrls),
+    );
+  }
+
+  factory DownloadTableData.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DownloadTableData(
+      id: serializer.fromJson<int>(json['id']),
+      bookId: serializer.fromJson<int>(json['bookId']),
+      name: serializer.fromJson<String>(json['name']),
+      localPaths: $DownloadTableTable.$converterlocalPaths
+          .fromJson(serializer.fromJson<List<dynamic>>(json['localPaths'])),
+      downloadCount: serializer.fromJson<int>(json['downloadCount']),
+      imageUrls: $DownloadTableTable.$converterimageUrls
+          .fromJson(serializer.fromJson<List<dynamic>>(json['imageUrls'])),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'bookId': serializer.toJson<int>(bookId),
+      'name': serializer.toJson<String>(name),
+      'localPaths': serializer.toJson<List<dynamic>>(
+          $DownloadTableTable.$converterlocalPaths.toJson(localPaths)),
+      'downloadCount': serializer.toJson<int>(downloadCount),
+      'imageUrls': serializer.toJson<List<dynamic>>(
+          $DownloadTableTable.$converterimageUrls.toJson(imageUrls)),
+    };
+  }
+
+  DownloadTableData copyWith(
+          {int? id,
+          int? bookId,
+          String? name,
+          List<String>? localPaths,
+          int? downloadCount,
+          List<String>? imageUrls}) =>
+      DownloadTableData(
+        id: id ?? this.id,
+        bookId: bookId ?? this.bookId,
+        name: name ?? this.name,
+        localPaths: localPaths ?? this.localPaths,
+        downloadCount: downloadCount ?? this.downloadCount,
+        imageUrls: imageUrls ?? this.imageUrls,
+      );
+  DownloadTableData copyWithCompanion(DownloadTableCompanion data) {
+    return DownloadTableData(
+      id: data.id.present ? data.id.value : this.id,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+      name: data.name.present ? data.name.value : this.name,
+      localPaths:
+          data.localPaths.present ? data.localPaths.value : this.localPaths,
+      downloadCount: data.downloadCount.present
+          ? data.downloadCount.value
+          : this.downloadCount,
+      imageUrls: data.imageUrls.present ? data.imageUrls.value : this.imageUrls,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadTableData(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('name: $name, ')
+          ..write('localPaths: $localPaths, ')
+          ..write('downloadCount: $downloadCount, ')
+          ..write('imageUrls: $imageUrls')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, bookId, name, localPaths, downloadCount, imageUrls);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DownloadTableData &&
+          other.id == this.id &&
+          other.bookId == this.bookId &&
+          other.name == this.name &&
+          other.localPaths == this.localPaths &&
+          other.downloadCount == this.downloadCount &&
+          other.imageUrls == this.imageUrls);
+}
+
+class DownloadTableCompanion extends UpdateCompanion<DownloadTableData> {
+  final Value<int> id;
+  final Value<int> bookId;
+  final Value<String> name;
+  final Value<List<String>> localPaths;
+  final Value<int> downloadCount;
+  final Value<List<String>> imageUrls;
+  const DownloadTableCompanion({
+    this.id = const Value.absent(),
+    this.bookId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.localPaths = const Value.absent(),
+    this.downloadCount = const Value.absent(),
+    this.imageUrls = const Value.absent(),
+  });
+  DownloadTableCompanion.insert({
+    this.id = const Value.absent(),
+    required int bookId,
+    required String name,
+    required List<String> localPaths,
+    this.downloadCount = const Value.absent(),
+    required List<String> imageUrls,
+  })  : bookId = Value(bookId),
+        name = Value(name),
+        localPaths = Value(localPaths),
+        imageUrls = Value(imageUrls);
+  static Insertable<DownloadTableData> custom({
+    Expression<int>? id,
+    Expression<int>? bookId,
+    Expression<String>? name,
+    Expression<String>? localPaths,
+    Expression<int>? downloadCount,
+    Expression<String>? imageUrls,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (bookId != null) 'book_id': bookId,
+      if (name != null) 'name': name,
+      if (localPaths != null) 'local_paths': localPaths,
+      if (downloadCount != null) 'download_count': downloadCount,
+      if (imageUrls != null) 'image_urls': imageUrls,
+    });
+  }
+
+  DownloadTableCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? bookId,
+      Value<String>? name,
+      Value<List<String>>? localPaths,
+      Value<int>? downloadCount,
+      Value<List<String>>? imageUrls}) {
+    return DownloadTableCompanion(
+      id: id ?? this.id,
+      bookId: bookId ?? this.bookId,
+      name: name ?? this.name,
+      localPaths: localPaths ?? this.localPaths,
+      downloadCount: downloadCount ?? this.downloadCount,
+      imageUrls: imageUrls ?? this.imageUrls,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (localPaths.present) {
+      map['local_paths'] = Variable<String>(
+          $DownloadTableTable.$converterlocalPaths.toSql(localPaths.value));
+    }
+    if (downloadCount.present) {
+      map['download_count'] = Variable<int>(downloadCount.value);
+    }
+    if (imageUrls.present) {
+      map['image_urls'] = Variable<String>(
+          $DownloadTableTable.$converterimageUrls.toSql(imageUrls.value));
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DownloadTableCompanion(')
+          ..write('id: $id, ')
+          ..write('bookId: $bookId, ')
+          ..write('name: $name, ')
+          ..write('localPaths: $localPaths, ')
+          ..write('downloadCount: $downloadCount, ')
+          ..write('imageUrls: $imageUrls')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $BookTableTable bookTable = $BookTableTable(this);
   late final $SettingTableTable settingTable = $SettingTableTable(this);
+  late final $DownloadTableTable downloadTable = $DownloadTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [bookTable, settingTable];
+  List<DatabaseSchemaEntity> get allSchemaEntities =>
+      [bookTable, settingTable, downloadTable];
 }
 
 typedef $$BookTableTableCreateCompanionBuilder = BookTableCompanion Function({
@@ -1023,6 +1371,194 @@ typedef $$SettingTableTableProcessedTableManager = ProcessedTableManager<
     ),
     SettingTableData,
     PrefetchHooks Function()>;
+typedef $$DownloadTableTableCreateCompanionBuilder = DownloadTableCompanion
+    Function({
+  Value<int> id,
+  required int bookId,
+  required String name,
+  required List<String> localPaths,
+  Value<int> downloadCount,
+  required List<String> imageUrls,
+});
+typedef $$DownloadTableTableUpdateCompanionBuilder = DownloadTableCompanion
+    Function({
+  Value<int> id,
+  Value<int> bookId,
+  Value<String> name,
+  Value<List<String>> localPaths,
+  Value<int> downloadCount,
+  Value<List<String>> imageUrls,
+});
+
+class $$DownloadTableTableFilterComposer
+    extends Composer<_$AppDatabase, $DownloadTableTable> {
+  $$DownloadTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get bookId => $composableBuilder(
+      column: $table.bookId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+      get localPaths => $composableBuilder(
+          column: $table.localPaths,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<int> get downloadCount => $composableBuilder(
+      column: $table.downloadCount, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+      get imageUrls => $composableBuilder(
+          column: $table.imageUrls,
+          builder: (column) => ColumnWithTypeConverterFilters(column));
+}
+
+class $$DownloadTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $DownloadTableTable> {
+  $$DownloadTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get bookId => $composableBuilder(
+      column: $table.bookId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get localPaths => $composableBuilder(
+      column: $table.localPaths, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get downloadCount => $composableBuilder(
+      column: $table.downloadCount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get imageUrls => $composableBuilder(
+      column: $table.imageUrls, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DownloadTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DownloadTableTable> {
+  $$DownloadTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get bookId =>
+      $composableBuilder(column: $table.bookId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get localPaths =>
+      $composableBuilder(
+          column: $table.localPaths, builder: (column) => column);
+
+  GeneratedColumn<int> get downloadCount => $composableBuilder(
+      column: $table.downloadCount, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get imageUrls =>
+      $composableBuilder(column: $table.imageUrls, builder: (column) => column);
+}
+
+class $$DownloadTableTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $DownloadTableTable,
+    DownloadTableData,
+    $$DownloadTableTableFilterComposer,
+    $$DownloadTableTableOrderingComposer,
+    $$DownloadTableTableAnnotationComposer,
+    $$DownloadTableTableCreateCompanionBuilder,
+    $$DownloadTableTableUpdateCompanionBuilder,
+    (
+      DownloadTableData,
+      BaseReferences<_$AppDatabase, $DownloadTableTable, DownloadTableData>
+    ),
+    DownloadTableData,
+    PrefetchHooks Function()> {
+  $$DownloadTableTableTableManager(_$AppDatabase db, $DownloadTableTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DownloadTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DownloadTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DownloadTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> bookId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<List<String>> localPaths = const Value.absent(),
+            Value<int> downloadCount = const Value.absent(),
+            Value<List<String>> imageUrls = const Value.absent(),
+          }) =>
+              DownloadTableCompanion(
+            id: id,
+            bookId: bookId,
+            name: name,
+            localPaths: localPaths,
+            downloadCount: downloadCount,
+            imageUrls: imageUrls,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int bookId,
+            required String name,
+            required List<String> localPaths,
+            Value<int> downloadCount = const Value.absent(),
+            required List<String> imageUrls,
+          }) =>
+              DownloadTableCompanion.insert(
+            id: id,
+            bookId: bookId,
+            name: name,
+            localPaths: localPaths,
+            downloadCount: downloadCount,
+            imageUrls: imageUrls,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DownloadTableTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $DownloadTableTable,
+    DownloadTableData,
+    $$DownloadTableTableFilterComposer,
+    $$DownloadTableTableOrderingComposer,
+    $$DownloadTableTableAnnotationComposer,
+    $$DownloadTableTableCreateCompanionBuilder,
+    $$DownloadTableTableUpdateCompanionBuilder,
+    (
+      DownloadTableData,
+      BaseReferences<_$AppDatabase, $DownloadTableTable, DownloadTableData>
+    ),
+    DownloadTableData,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1031,4 +1567,6 @@ class $AppDatabaseManager {
       $$BookTableTableTableManager(_db, _db.bookTable);
   $$SettingTableTableTableManager get settingTable =>
       $$SettingTableTableTableManager(_db, _db.settingTable);
+  $$DownloadTableTableTableManager get downloadTable =>
+      $$DownloadTableTableTableManager(_db, _db.downloadTable);
 }
