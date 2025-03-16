@@ -6,4 +6,17 @@ class SettingTable extends Table {
 
   TextColumn get pageLayout =>
       text().withDefault(Constant(BookPageLayout.row.name))();
+
+  TextColumn get host => text().withDefault(const Constant("192.168.1.1"))();
+
+  IntColumn get port => integer().withDefault(const Constant(22))();
+
+  TextColumn get username => text().withDefault(const Constant("root"))();
+
+  TextColumn get password => text().withDefault(const Constant("root"))();
+
+  TextColumn get dataPath => text().withDefault(const Constant("~/data"))();
+
+  TextColumn get imagePath => text().withDefault(const Constant("~/image"))();
+
 }

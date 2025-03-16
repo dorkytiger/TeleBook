@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/view/setting/setting_controller.dart';
+import 'package:tele_book/app/util/request_state.dart';
 
-class SettingHostView extends GetView<SettingController> {
+import 'package:tele_book/app/view/setting/view/setting_host_controller.dart';
+import 'package:tele_book/app/widget/custom_error.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
+
+class SettingHostView extends GetView<SettingHostController> {
   const SettingHostView({super.key});
 
   @override
@@ -12,10 +16,12 @@ class SettingHostView extends GetView<SettingController> {
       appBar: TDNavBar(
         title: "远程主机设置",
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [_hostInfo(context), _buttonLayout(context)],
-      ),
+      body: Obx(() => DisplayResult(
+          state: controller.getSettingState.value,
+          onError: (error) => CustomError(title: "获取设置失败", description: error),
+          onLoading: () => const CustomLoading(),
+          onSuccess: (value) => _hostInfo(context))),
+      bottomNavigationBar: _buttonLayout(context),
     );
   }
 
@@ -23,68 +29,103 @@ class SettingHostView extends GetView<SettingController> {
     return Column(
       children: [
         TDInput(
+          needClear: false,
+          controller: controller.hostTextController,
           leftIcon: Icon(TDIcons.system_application,
               color: TDTheme.of(context).brandNormalColor),
           leftLabel: "地址",
           backgroundColor: Colors.white,
         ),
         TDInput(
+          needClear: false,
+          controller: controller.portTextController,
           leftLabel: "端口",
           leftIcon: Icon(TDIcons.system_interface,
               color: TDTheme.of(context).brandNormalColor),
           backgroundColor: Colors.white,
         ),
         TDInput(
+          needClear: false,
+          controller: controller.usernameTextController,
           leftIcon:
               Icon(TDIcons.user, color: TDTheme.of(context).brandNormalColor),
           leftLabel: "用户",
           backgroundColor: Colors.white,
         ),
         TDInput(
+          needClear: false,
+          controller: controller.passwordTextController,
           leftIcon: Icon(TDIcons.user_password,
               color: TDTheme.of(context).brandNormalColor),
           leftLabel: "密码",
           backgroundColor: Colors.white,
         ),
-        TDCell(
-          title: "导出配置目录",
-          arrow: true,
-          description: "11",
-          leftIcon: TDIcons.file,
+        TDInput(
+          needClear: false,
+          controller: controller.dataPathTextController,
+          leftIcon:
+              Icon(TDIcons.data, color: TDTheme.of(context).brandNormalColor),
+          leftLabel: "数据目录",
+          backgroundColor: Colors.white,
         ),
-        TDCell(
-          title: "导出图片目录",
-          arrow: true,
-          description: "11",
-          leftIcon: TDIcons.image,
-        )
+        TDInput(
+          needClear: false,
+          controller: controller.imagePathTextController,
+          leftIcon:
+              Icon(TDIcons.image, color: TDTheme.of(context).brandNormalColor),
+          leftLabel: "图片目录",
+          backgroundColor: Colors.white,
+        ),
       ],
     );
   }
 
   Widget _buttonLayout(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: Column(
-        children: [
-          SizedBox(
-              width: double.infinity,
-              child: TDButton(
-                theme: TDButtonTheme.primary,
-                text: "测试链接",
-              )),
-          SizedBox(
-            height: 16,
-          ),
-          SizedBox(
-            width: double.infinity,
-            child: TDButton(
-              theme: TDButtonTheme.primary,
-              text: "保存",
+    return Obx(() => SizedBox(
+          height: 200,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              children: [
+                SizedBox(
+                    width: double.infinity,
+                    child: TDButton(
+                      disabled: controller.testConnectState.value.isLoading(),
+                      theme: TDButtonTheme.primary,
+                      text: "测试链接",
+                      onTap: () {
+                        controller.testConnect();
+                      },
+                    )),
+                const SizedBox(
+                  height: 16,
+                ),
+                SizedBox(
+                    width: double.infinity,
+                    child: TDButton(
+                      disabled: controller.testDataPathState.value.isLoading(),
+                      theme: TDButtonTheme.primary,
+                      text: "测试数据目录",
+                      onTap: () {
+                        controller.testDataPath();
+                      },
+                    )),
+                const SizedBox(
+                  height: 16,
+                ),
+                SizedBox(
+                  width: double.infinity,
+                  child: TDButton(
+                    theme: TDButtonTheme.primary,
+                    text: "保存",
+                    onTap: () {
+                      controller.saveSetting();
+                    },
+                  ),
+                )
+              ],
             ),
-          )
-        ],
-      ),
-    );
+          ),
+        ));
   }
 }

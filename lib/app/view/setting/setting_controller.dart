@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dartssh2/dartssh2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:tele_book/app/constant/host_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/book/book_controller.dart';
@@ -23,6 +25,26 @@ class SettingController extends GetxController {
   final _importBookDataState = Rx<RequestState<void>>(Idle());
 
   final _exportBookDataState = Rx<RequestState<String>>(Idle());
+
+  final _exportHostBookDataState = Rx<RequestState<void>>(Idle());
+
+  RequestState<void> get exportHostBookDataState =>
+      _exportHostBookDataState.value;
+
+  final _importHostBookDataState = Rx<RequestState<void>>(Idle());
+
+  RequestState<void> get importHostBookDataState =>
+      _importHostBookDataState.value;
+
+  final _exportHostImageDataState = Rx<RequestState<void>>(Idle());
+
+  RequestState<void> get exportHostImageDataState =>
+      _exportHostImageDataState.value;
+
+  final _importHostImageDataState = Rx<RequestState<void>>(Idle());
+
+  RequestState<void> get importHostImageDataState =>
+      _importHostImageDataState.value;
 
   final bookController = Get.find<BookController>();
 
@@ -49,6 +71,43 @@ class SettingController extends GetxController {
       }
     });
     ever(_importBookDataState, (state) {
+      if (state.isSuccess()) {
+        bookController.getBookList();
+        Get.showSnackbar(const GetSnackBar(
+          duration: Duration(seconds: 3),
+          title: "导入成功",
+          message: "已写入数据库",
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(GetSnackBar(
+          duration: const Duration(seconds: 3),
+          title: "导入失败",
+          message: state.getErrorMessage(),
+        ));
+        return;
+      }
+    });
+    ever(_exportHostBookDataState, (state) {
+      if (state.isSuccess()) {
+        Get.showSnackbar(GetSnackBar(
+          duration: const Duration(seconds: 3),
+          title: "导出成功",
+          message: _getSettingDataState.value.getSuccessData().dataPath,
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(GetSnackBar(
+          duration: const Duration(seconds: 3),
+          title: "导出失败",
+          message: state.getErrorMessage(),
+        ));
+        return;
+      }
+    });
+    ever(_importHostBookDataState, (state) {
       if (state.isSuccess()) {
         bookController.getBookList();
         Get.showSnackbar(const GetSnackBar(
@@ -140,7 +199,8 @@ class SettingController extends GetxController {
 
       // Convert the data to JSON format
       final jsonData = jsonEncode(bookDataList.map((book) {
-        final newBook = book.copyWith(readCount: 0, localPaths: [], isDownload: false);
+        final newBook =
+            book.copyWith(readCount: 0, localPaths: [], isDownload: false);
         return newBook.toJson();
       }).toList());
 
@@ -171,6 +231,99 @@ class SettingController extends GetxController {
     } catch (e) {
       debugPrint(e.toString());
       _exportBookDataState.value = Error(e.toString());
+    }
+  }
+
+  Future<void> exportHostBookData() async {
+    try {
+      _exportHostBookDataState.value = Loading();
+      final bookDataList =
+          await appDatabase.select(appDatabase.bookTable).get();
+
+      String jsonData;
+      if (bookDataList.isEmpty) {
+        jsonData = "[]";
+      } else {
+        jsonData = jsonEncode(bookDataList.map((book) {
+          final newBook =
+              book.copyWith(readCount: 0, localPaths: [], isDownload: false);
+          return newBook.toJson();
+        }).toList());
+      }
+      final settingData =
+          await appDatabase.select(appDatabase.settingTable).getSingle();
+      final socket = await SSHSocket.connect(settingData.host, settingData.port,
+          timeout: const Duration(seconds: 5));
+      final client = SSHClient(
+        socket,
+        username: settingData.username,
+        onPasswordRequest: () => settingData.password,
+      );
+      final sftp = await client.sftp();
+
+      final remoteFile = await sftp.open(
+        "${settingData.dataPath}/${HostConstant.dateFileName}",
+        mode: SftpFileOpenMode.create |
+            SftpFileOpenMode.truncate |
+            SftpFileOpenMode.write,
+      );
+      await remoteFile.writeBytes(utf8.encode(jsonData));
+      await remoteFile.close();
+      sftp.close();
+      client.close();
+      await socket.close();
+      _exportHostBookDataState.value = Success(null);
+    } catch (e) {
+      debugPrint(e.toString());
+      _exportHostBookDataState.value = Error(e.toString());
+    }
+  }
+
+  Future<void> importHostBookData() async {
+    try {
+      _importHostBookDataState.value = Loading();
+      final settingData =
+          await appDatabase.select(appDatabase.settingTable).getSingle();
+      final socket = await SSHSocket.connect(settingData.host, settingData.port,
+          timeout: const Duration(seconds: 5));
+      final client = SSHClient(
+        socket,
+        username: settingData.username,
+        onPasswordRequest: () => settingData.password,
+      );
+      final sftp = await client.sftp();
+
+      final remoteFile = await sftp.open(
+          "${settingData.dataPath}/${HostConstant.dateFileName}",
+      );
+
+      final byteData = await remoteFile.readBytes();
+
+      final jsonData =  utf8.decode(byteData);
+
+      // Convert the JSON data to a list of book data
+      final bookDataList = (jsonDecode(jsonData) as List)
+          .map((book) => BookTableData.fromJson(book as Map<String, dynamic>))
+          .toList();
+
+      if (_skipDuplicates.value) {
+        // Query all book data
+        final existingBookDataList =
+            await appDatabase.select(appDatabase.bookTable).get();
+
+        // Remove the existing book data from the list
+        bookDataList.removeWhere((book) => existingBookDataList
+            .any((existingBook) => existingBook.id == book.id));
+      }
+
+      // Insert the book data into the database
+      await appDatabase.batch((batch) {
+        batch.insertAll(appDatabase.bookTable, bookDataList);
+      });
+      _importHostBookDataState.value = const Success(null);
+    } catch (e) {
+      debugPrint(e.toString());
+      _importHostBookDataState.value = Error(e.toString());
     }
   }
 
