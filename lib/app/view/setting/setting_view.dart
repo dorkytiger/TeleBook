@@ -58,7 +58,8 @@ class SettingView extends GetView<SettingController> {
                 modalBarrierColor: TDTheme.of(context).fontGyColor2,
                 slideTransitionFrom: SlideTransitionFrom.bottom,
                 builder: (context) {
-                  return _importBottomSheet(context,controller.importBookData,"选择文件导入");
+                  return _importBottomSheet(
+                      context, controller.importBookData, "选择文件导入");
                 }));
           }),
       TDCell(
@@ -71,56 +72,72 @@ class SettingView extends GetView<SettingController> {
   }
 
   Widget _sshSettingCellGroup(BuildContext context, SettingTableData data) {
-    return Obx(()=>TDCellGroup(title: "远程设置", cells: [
-      TDCell(
-          leftIcon: TDIcons.terminal,
-          title: "远程主机设置",
-          arrow: true,
-          onClick: (TDCell cell) {
-            Get.to(() => const SettingHostView(),
-                binding: SettingHostBinding());
-          }),
-      TDCell(
-          leftIcon: TDIcons.file_import,
-          title: "从远程主机导入配置",
-          rightIconWidget: controller.importHostBookDataState.isLoading()
-              ? const TDLoading(size: TDLoadingSize.small)
-              : null,
-          disabled: controller.importHostBookDataState.isLoading(),
-          onClick: (TDCell cell) {
-            Navigator.of(context).push(TDSlidePopupRoute(
-                modalBarrierColor: TDTheme.of(context).fontGyColor2,
-                slideTransitionFrom: SlideTransitionFrom.bottom,
-                builder: (context) {
-                  return _importBottomSheet(context,controller.importHostBookData,"从服务器导入");
-                }));
-          }),
-      TDCell(
-          leftIcon: TDIcons.file_export,
-          title: "导出配置到远程主机",
-          rightIconWidget: controller.exportHostBookDataState.isLoading()
-              ? const TDLoading(size: TDLoadingSize.small)
-              : null,
-          disabled: controller.exportHostBookDataState.isLoading(),
-          onClick: (TDCell cell) {
-            controller.exportHostBookData();
-          }),
-      TDCell(
-          leftIcon: TDIcons.file_export,
-          title: "从远程主机导入图片",
-          onClick: (TDCell cell) {
-            //TODO
-          }),
-      TDCell(
-          leftIcon: TDIcons.file_export,
-          title: "导出图片到远程主机",
-          onClick: (TDCell cell) {
-            //TODO
-          }),
-    ]));
+    return Obx(() => TDCellGroup(title: "远程设置", cells: [
+          TDCell(
+              leftIcon: TDIcons.terminal,
+              title: "远程主机设置",
+              arrow: true,
+              onClick: (TDCell cell) {
+                Get.to(() => const SettingHostView(),
+                    binding: SettingHostBinding());
+              }),
+          TDCell(
+              leftIcon: TDIcons.file_import,
+              title: "从远程主机导入配置",
+              rightIconWidget: controller.importHostBookDataState.isLoading()
+                  ? const TDLoading(size: TDLoadingSize.small)
+                  : null,
+              disabled: controller.importHostBookDataState.isLoading(),
+              onClick: (TDCell cell) {
+                Navigator.of(context).push(TDSlidePopupRoute(
+                    modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                    slideTransitionFrom: SlideTransitionFrom.bottom,
+                    builder: (context) {
+                      return _importBottomSheet(
+                          context, controller.importHostBookData, "从远程主机导入");
+                    }));
+              }),
+          TDCell(
+              leftIcon: TDIcons.file_export,
+              title: "导出配置到远程主机",
+              rightIconWidget: controller.exportHostBookDataState.isLoading()
+                  ? const TDLoading(size: TDLoadingSize.small)
+                  : null,
+              disabled: controller.exportHostBookDataState.isLoading(),
+              onClick: (TDCell cell) {
+                controller.exportHostBookData();
+              }),
+          TDCell(
+              leftIcon: TDIcons.file_export,
+              title: "从远程主机导入图片",
+              rightIconWidget: controller.importHostImageDataState.isLoading()
+                  ? const TDLoading(size: TDLoadingSize.small)
+                  : null,
+              disabled: controller.importHostImageDataState.isLoading(),
+              onClick: (TDCell cell) {
+                controller.importHostImageData();
+              }),
+          TDCell(
+              leftIcon: TDIcons.file_export,
+              title: "导出图片到远程主机",
+              rightIconWidget: controller.exportHostImageDataState.isLoading()
+                  ? const TDLoading(size: TDLoadingSize.small)
+                  : null,
+              disabled: controller.exportHostImageDataState.isLoading(),
+              onClick: (TDCell cell) {
+                Navigator.of(context).push(TDSlidePopupRoute(
+                    modalBarrierColor: TDTheme.of(context).fontGyColor2,
+                    slideTransitionFrom: SlideTransitionFrom.bottom,
+                    builder: (context) {
+                      return _importBottomSheet(
+                          context, controller.exportHostImageData, "导出图片到远程主机");
+                    }));
+              }),
+        ]));
   }
 
-  Widget _importBottomSheet(BuildContext context,Function import,String importText) {
+  Widget _importBottomSheet(
+      BuildContext context, Function import, String importText) {
     return Obx(() => TDPopupBottomDisplayPanel(
         title: '导入配置',
         child: TDCellGroup(

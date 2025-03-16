@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/constant/host_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
@@ -114,6 +115,44 @@ class SettingController extends GetxController {
           duration: Duration(seconds: 3),
           title: "导入成功",
           message: "已写入数据库",
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(GetSnackBar(
+          duration: const Duration(seconds: 3),
+          title: "导入失败",
+          message: state.getErrorMessage(),
+        ));
+        return;
+      }
+    });
+
+    ever(_exportHostImageDataState, (state) {
+      if (state.isSuccess()) {
+        Get.showSnackbar(const GetSnackBar(
+          duration: Duration(seconds: 3),
+          title: "导出成功",
+          message: "已写入远程主机",
+        ));
+        return;
+      }
+      if (state.isError()) {
+        Get.showSnackbar(GetSnackBar(
+          duration: const Duration(seconds: 3),
+          title: "导出失败",
+          message: state.getErrorMessage(),
+        ));
+        return;
+      }
+    });
+
+    ever(_importHostImageDataState, (state) {
+      if (state.isSuccess()) {
+        Get.showSnackbar(const GetSnackBar(
+          duration: Duration(seconds: 3),
+          title: "导入成功",
+          message: "已写入本地数据库",
         ));
         return;
       }
@@ -294,12 +333,12 @@ class SettingController extends GetxController {
       final sftp = await client.sftp();
 
       final remoteFile = await sftp.open(
-          "${settingData.dataPath}/${HostConstant.dateFileName}",
+        "${settingData.dataPath}/${HostConstant.dateFileName}",
       );
 
       final byteData = await remoteFile.readBytes();
 
-      final jsonData =  utf8.decode(byteData);
+      final jsonData = utf8.decode(byteData);
 
       // Convert the JSON data to a list of book data
       final bookDataList = (jsonDecode(jsonData) as List)
@@ -327,7 +366,145 @@ class SettingController extends GetxController {
     }
   }
 
+  Future<void> exportHostImageData() async {
+    try {
+      _exportHostImageDataState.value = Loading();
+      final bookDataList =
+          await appDatabase.select(appDatabase.bookTable).get();
+
+      final settingData =
+          await appDatabase.select(appDatabase.settingTable).getSingle();
+      final socket = await SSHSocket.connect(settingData.host, settingData.port,
+          timeout: const Duration(seconds: 5));
+      final client = SSHClient(
+        socket,
+        username: settingData.username,
+        onPasswordRequest: () => settingData.password,
+      );
+      final sftp = await client.sftp();
+
+      final remoteDirectory = await sftp.listdir(settingData.imagePath);
+
+      final bookNames = remoteDirectory.map((e) => e.filename).toList();
+
+      final document = await getApplicationDocumentsDirectory();
+
+      for (final book in bookDataList) {
+        if (_skipDuplicates.value && bookNames.contains(book.name)) {
+          continue;
+        }
+        if (!book.isDownload) {
+          continue;
+        }
+
+        final remoteDir = "${settingData.imagePath}/${book.name}";
+        await sftp.mkdir(remoteDir);
+        for (final path in book.localPaths) {
+          final file = File("${document.path}/$path");
+          final remoteFile = await sftp.open(
+            "$remoteDir/${path.split('/').last}",
+            mode: SftpFileOpenMode.create |
+                SftpFileOpenMode.truncate |
+                SftpFileOpenMode.write,
+          );
+          await remoteFile.write(file.openRead().cast());
+          await remoteFile.close();
+        }
+      }
+
+      sftp.close();
+      client.close();
+      await socket.close();
+      _exportHostImageDataState.value = Success(null);
+    } catch (e) {
+      debugPrint(e.toString());
+      _exportHostImageDataState.value = Error(e.toString());
+    }
+  }
+
+  Future<void> importHostImageData() async {
+    try {
+      _importHostImageDataState.value = Loading();
+      final bookDataList =
+          await appDatabase.select(appDatabase.bookTable).get();
+      final settingData =
+          await appDatabase.select(appDatabase.settingTable).getSingle();
+      final socket = await SSHSocket.connect(settingData.host, settingData.port,
+          timeout: const Duration(seconds: 5));
+      final client = SSHClient(
+        socket,
+        username: settingData.username,
+        onPasswordRequest: () => settingData.password,
+      );
+      final sftp = await client.sftp();
+
+      final remoteDirectory = await sftp.listdir(settingData.imagePath);
+
+      final bookNames = remoteDirectory.map((e) => e.filename).toList();
+
+      final document = await getApplicationDocumentsDirectory();
+
+      for (final book in bookDataList) {
+        if (book.isDownload) {
+          continue;
+        }
+
+        if (!bookNames.contains(book.name)) {
+          continue;
+        }
+
+        final remoteDirPath = "${settingData.imagePath}/${book.name}";
+        List<SftpName> remoteFiles = await sftp.listdir(remoteDirPath);
+
+        List<String> localPaths = [];
+        for (final remoteFile in remoteFiles) {
+          if (!remoteFile.filename.contains(".jpg")) {
+            continue;
+          }
+
+          final localDirectory =
+              Directory("${document.path}/${book.id}-${book.name}");
+          if (!await localDirectory.exists()) {
+            await localDirectory.create();
+          }
+          final localFilePath = "${localDirectory.path}/${remoteFile.filename}";
+          localPaths.add("${book.id}-${book.name}/${remoteFile.filename}");
+          final localFile = File(localFilePath);
+          final openRemoteFile = await sftp.open(
+            "$remoteDirPath/${remoteFile.filename}",
+          );
+          await localFile.writeAsBytes(await openRemoteFile.readBytes());
+          await openRemoteFile.close();
+        }
+        localPaths.sort((a, b) {
+          final na = int.parse((a.split('/').last).split(".").first);
+          final nb = int.parse((b.split('/').last).split(".").first);
+          return na.compareTo(nb);
+        });
+        appDatabase
+            .update(appDatabase.bookTable)
+            .replace(book.copyWith(isDownload: true, localPaths: localPaths));
+      }
+
+      sftp.close();
+      client.close();
+      await socket.close();
+      _importHostImageDataState.value = Success(null);
+      Get.find<BookController>().getBookList();
+    } catch (e) {
+      debugPrint(e.toString());
+      _importHostImageDataState.value = Error(e.toString());
+    }
+  }
+
   void onSkipDuplicatesChanged(bool value) {
     _skipDuplicates.value = value;
   }
+}
+
+class ExportHostImageDataState {
+  int total;
+  int current;
+
+  ExportHostImageDataState({required this.total, required this.current});
 }

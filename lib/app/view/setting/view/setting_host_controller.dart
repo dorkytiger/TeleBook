@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/view/setting/setting_controller.dart';
 
 class SettingHostController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
@@ -114,6 +115,7 @@ class SettingHostController extends GetxController {
           );
       await appDatabase.update(appDatabase.settingTable).replace(settingData);
       saveSettingState.value = const Success(null);
+      Get.find<SettingController>().getSettingData();
     } catch (e) {
       debugPrint(e.toString());
       saveSettingState.value = Error("保存设置失败：${e.toString()}");
