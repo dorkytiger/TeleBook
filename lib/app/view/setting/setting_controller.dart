@@ -77,7 +77,7 @@ class SettingController extends GetxController {
         Get.showSnackbar(const GetSnackBar(
           duration: Duration(seconds: 3),
           title: "导入成功",
-          message: "已写入数据库",
+          message: "已写入本地数据库",
         ));
         return;
       }
@@ -114,7 +114,7 @@ class SettingController extends GetxController {
         Get.showSnackbar(const GetSnackBar(
           duration: Duration(seconds: 3),
           title: "导入成功",
-          message: "已写入数据库",
+          message: "已写入本地数据库",
         ));
         return;
       }

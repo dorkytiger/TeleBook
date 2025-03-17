@@ -1,3 +1,4 @@
+import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
@@ -29,42 +30,54 @@ class DownloadView extends GetView<DownloadController> {
     return Obx(() => ListView(
           children: [
             TDCellGroup(
-                cells: controller.downloadTaskList
-                    .map((e) => TDCell(
-                          title: e.downloadTableData.name,
-                          leftIconWidget: Image.network(
-                            e.downloadTableData.imageUrls.firstOrNull ?? "",
-                            height: 100,
-                            width: 100,
-                          ),
-                          descriptionWidget: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TDText(
-                                  font: Font(size: 12, lineHeight: 24),
-                                  style: const TextStyle(color: Colors.grey),
-                                  "成功：${e.success}  失败：${e.fail}  总进度：${e.success + e.fail}/${e.downloadTableData.imageUrls.length}"),
-                              LinearProgressIndicator(
-                                color: TDTheme.of(context).brandNormalColor,
-                                backgroundColor:TDTheme.of(context).brandColor1 ,
-                                value: ((e.success + e.fail) /
-                                    e.downloadTableData.imageUrls.length),
-                              ),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                      onPressed: () {
-                                        controller.deleteDownload(
-                                            e.downloadTableData);
-                                      },
-                                      icon: Icon(TDIcons.delete,color: TDTheme.of(context).brandClickColor,))
-                                ],
-                              )
-                            ],
-                          ),
-                        ))
-                    .toList())
+                cells: controller.downloadTaskList.map((e) {
+              if(e.status==TaskStatus.running){
+                return  TDCell(
+                  title: e.downloadTableData.name,
+                  leftIconWidget: Image.network(
+                    e.downloadTableData.imageUrls.firstOrNull ?? "",
+                    height: 100,
+                    width: 100,
+                  ),
+                  descriptionWidget: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TDText(
+                          font: Font(size: 12, lineHeight: 24),
+                          style: const TextStyle(color: Colors.grey),
+                          "总进度：${(e.totalProgress * 100).toPrecision(0)}"),
+                      LinearProgressIndicator(
+                        color: TDTheme.of(context).brandNormalColor,
+                        backgroundColor: TDTheme.of(context).brandColor1,
+                        value: (e.totalProgress),
+                      ),
+                      TDText(
+                          font: Font(size: 12, lineHeight: 24),
+                          style: const TextStyle(color: Colors.grey),
+                          "当前进度：${(e.currentProgress * 100).toPrecision(0)}"),
+                      LinearProgressIndicator(
+                        color: TDTheme.of(context).brandNormalColor,
+                        backgroundColor: TDTheme.of(context).brandColor1,
+                        value: (e.currentProgress),
+                      ),
+                    ],
+                  ),
+                );
+              }else{
+                return TDCell(
+                  title: e.downloadTableData.name,
+                  leftIconWidget: Image.network(
+                    e.downloadTableData.imageUrls.firstOrNull ?? "",
+                    height: 100,
+                    width: 100,
+                  ),
+                  description: "下载失败：${e.errorMessage}",
+                  rightIconWidget: IconButton(onPressed: (){
+                    //TODO
+                  }, icon: const Icon(TDIcons.refresh)),
+                );
+              }
+            }).toList())
           ],
         ));
   }
