@@ -10,7 +10,7 @@ class DownloadController extends GetxController {
 
   final getDownloadListState =
       Rx<RequestState<List<DownloadTableData>>>(Idle());
-  final downloadTaskList = <Task>[].obs;
+  final downloadTaskMap = Rx<Map<int, Task>>({});
 
   @override
   void onInit() {
@@ -27,63 +27,91 @@ class DownloadController extends GetxController {
         getDownloadListState.value = Empty();
         return;
       }
-      startDownload(downloadList);
+      for (var downloadTableData in downloadList) {
+        if (downloadTaskMap.value[downloadTableData.id] != null) {
+          continue;
+        }
+        startDownload(downloadTableData);
+      }
       getDownloadListState.value = Success(downloadList);
     } catch (e) {
       getDownloadListState.value = Error("获取下载列表失败：${e.toString()}");
     }
   }
 
-  Future<void> startDownload(List<DownloadTableData> downloadList) async {
+  Future<void> startDownload(DownloadTableData downloadTableData) async {
     try {
-      for (var index = 0; index < downloadList.length; index++) {
-        final downloadTableData = downloadList[index];
-        final bookPath = "${downloadTableData.id}-${downloadTableData.name}";
-        final totalProgress = (downloadTableData.downloadCount /
-                downloadTableData.imageUrls.length)
-            .toDouble();
-        final task =
-            Task(downloadTableData, 0, totalProgress, TaskStatus.running, "");
-        downloadTaskList.add(task);
-        downloadTaskList.refresh();
-        for (var i = downloadTableData.downloadCount;
-            i < downloadTableData.imageUrls.length;
-            i++) {
-          final imageUrl = downloadTableData.imageUrls[i];
-          final subPath = "$bookPath/$i.jpg";
-          final downloadTask = DownloadTask(
-              url: Uri.parse(imageUrl).toString(),
-              directory: bookPath,
-              filename: "$i.jpg",
-              retries: 5,
-              baseDirectory: BaseDirectory.applicationDocuments);
-          final result = await FileDownloader().download(downloadTask,
-              onProgress: (progress) {
-            downloadTaskList[index].currentProgress = progress;
-            downloadTaskList.refresh();
-          });
-          if (result.status != TaskStatus.complete) {
-            downloadTaskList[index].status = TaskStatus.waitingToRetry;
-            downloadTaskList[index].errorMessage =
-                result.exception?.description ?? "未知错误";
-            downloadTaskList.refresh();
-            return;
-          }
-          downloadTableData.localPaths.add(subPath);
-          await appDatabase
-              .update(appDatabase.downloadTable)
-              .replace(downloadTableData);
+      final bookPath = "${downloadTableData.id}-${downloadTableData.name}";
+      final totalProgress =
+          (downloadTableData.downloadCount / downloadTableData.imageUrls.length)
+              .toDouble();
+      final task =
+          Task(downloadTableData, 0, totalProgress, TaskStatus.running, "");
+      downloadTaskMap.value[downloadTableData.id] = task;
+      downloadTaskMap.refresh();
+      for (var i = downloadTableData.downloadCount;
+          i < downloadTableData.imageUrls.length;
+          i++) {
+        final imageUrl = downloadTableData.imageUrls[i];
+        final subPath = "$bookPath/$i.jpg";
+        final downloadTask = DownloadTask(
+            url: Uri.parse(imageUrl).toString(),
+            directory: bookPath,
+            filename: "$i.jpg",
+            retries: 5,
+            baseDirectory: BaseDirectory.applicationDocuments);
+        final result = await FileDownloader().download(downloadTask,
+            onProgress: (progress) {
+          downloadTaskMap.value[downloadTableData.id]?.currentProgress =
+              progress;
+          downloadTaskMap.refresh();
+        });
+        if (result.status != TaskStatus.complete) {
+          downloadTaskMap.value[downloadTableData.id]?.status =
+              TaskStatus.waitingToRetry;
+          downloadTaskMap.value[downloadTableData.id]?.errorMessage =
+              result.exception?.description ?? "未知错误";
+          downloadTaskMap.refresh();
+          return;
         }
-        final bookData = await (appDatabase.select(appDatabase.bookTable)
-              ..where((t) => t.id.equals(downloadTableData.bookId)))
-            .getSingle();
-        final newBookData = bookData.copyWith(
-          localPaths: downloadTableData.localPaths,
-          isDownload: true,
-        );
-        await appDatabase.update(appDatabase.bookTable).replace(newBookData);
-        Get.find<BookController>().getBookList();
+        final currentDownloadTableData =
+            await (appDatabase.select(appDatabase.downloadTable)
+                  ..where((t) => t.id.equals(downloadTableData.id)))
+                .getSingle();
+        final newDownloadTableData = currentDownloadTableData.copyWith(
+            downloadCount: i + 1,
+            localPaths: [...currentDownloadTableData.localPaths, subPath]);
+        await appDatabase
+            .update(appDatabase.downloadTable)
+            .replace(newDownloadTableData);
+        downloadTaskMap.value[downloadTableData.id]?.downloadTableData =
+            newDownloadTableData;
+        downloadTaskMap.value[downloadTableData.id]?.totalProgress =
+            (newDownloadTableData.downloadCount /
+                    newDownloadTableData.imageUrls.length)
+                .toDouble();
+        downloadTaskMap.value[downloadTableData.id]?.currentProgress = 0;
+        downloadTaskMap.refresh();
       }
+      final lastDownloadTableData =
+          await (appDatabase.select(appDatabase.downloadTable)
+                ..where((t) => t.id.equals(downloadTableData.id)))
+              .getSingle();
+      final bookData = await (appDatabase.select(appDatabase.bookTable)
+            ..where((t) => t.id.equals(downloadTableData.bookId)))
+          .getSingle();
+      final newBookData = bookData.copyWith(
+        localPaths: lastDownloadTableData.localPaths,
+        isDownload: true,
+      );
+      await appDatabase.update(appDatabase.bookTable).replace(newBookData);
+      await (appDatabase.delete(appDatabase.downloadTable)
+            ..where((t) => t.id.equals(downloadTableData.id)))
+          .go();
+      downloadTaskMap.value.remove(downloadTableData.id);
+      downloadTaskMap.refresh();
+      getDownloadList();
+      Get.find<BookController>().getBookList();
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -94,9 +122,8 @@ class DownloadController extends GetxController {
       await (appDatabase.delete(appDatabase.downloadTable)
             ..where((t) => t.id.equals(downloadTableData.id)))
           .go();
-      downloadTaskList.removeWhere(
-          (element) => element.downloadTableData.id == downloadTableData.id);
-      downloadTaskList.refresh();
+      downloadTaskMap.value.remove(downloadTableData.id);
+      downloadTaskMap.refresh();
       await getDownloadList();
     } catch (e) {
       debugPrint(e.toString());

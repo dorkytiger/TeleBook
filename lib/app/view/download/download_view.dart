@@ -30,12 +30,13 @@ class DownloadView extends GetView<DownloadController> {
     return Obx(() => ListView(
           children: [
             TDCellGroup(
-                cells: controller.downloadTaskList.map((e) {
-              if(e.status==TaskStatus.running){
+                cells: controller.downloadTaskMap.value.entries.map((entry) {
+              final task = entry.value;
+              if(task.status==TaskStatus.running){
                 return  TDCell(
-                  title: e.downloadTableData.name,
+                  title: task.downloadTableData.name,
                   leftIconWidget: Image.network(
-                    e.downloadTableData.imageUrls.firstOrNull ?? "",
+                    task.downloadTableData.imageUrls.firstOrNull ?? "",
                     height: 100,
                     width: 100,
                   ),
@@ -45,33 +46,33 @@ class DownloadView extends GetView<DownloadController> {
                       TDText(
                           font: Font(size: 12, lineHeight: 24),
                           style: const TextStyle(color: Colors.grey),
-                          "总进度：${(e.totalProgress * 100).toPrecision(0)}"),
+                          "总进度：${(task.totalProgress * 100).toInt()}%"),
                       LinearProgressIndicator(
                         color: TDTheme.of(context).brandNormalColor,
                         backgroundColor: TDTheme.of(context).brandColor1,
-                        value: (e.totalProgress),
+                        value: (task.totalProgress),
                       ),
                       TDText(
                           font: Font(size: 12, lineHeight: 24),
                           style: const TextStyle(color: Colors.grey),
-                          "当前进度：${(e.currentProgress * 100).toPrecision(0)}"),
+                          "当前进度：${(task.currentProgress * 100).toInt()}%"),
                       LinearProgressIndicator(
                         color: TDTheme.of(context).brandNormalColor,
                         backgroundColor: TDTheme.of(context).brandColor1,
-                        value: (e.currentProgress),
+                        value: (task.currentProgress),
                       ),
                     ],
                   ),
                 );
               }else{
                 return TDCell(
-                  title: e.downloadTableData.name,
+                  title: task.downloadTableData.name,
                   leftIconWidget: Image.network(
-                    e.downloadTableData.imageUrls.firstOrNull ?? "",
+                    task.downloadTableData.imageUrls.firstOrNull ?? "",
                     height: 100,
                     width: 100,
                   ),
-                  description: "下载失败：${e.errorMessage}",
+                  description: "下载失败：${task.errorMessage}",
                   rightIconWidget: IconButton(onPressed: (){
                     //TODO
                   }, icon: const Icon(TDIcons.refresh)),
