@@ -21,7 +21,7 @@ class SettingView extends GetView<SettingController> {
       body: Obx(() => DisplayResult(
           state: controller.getSettingDataState,
           onError: (error) => CustomError(title: "获取设置失败", description: error),
-          onSuccess: (SettingTableData value) => Column(
+          onSuccess: (SettingTableData value) => ListView(
                 children: [
                   _readSettingCellGroup(context, value),
                   _transmitCellGroup(context, value),

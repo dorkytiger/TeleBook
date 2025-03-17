@@ -26,7 +26,7 @@ class SettingHostView extends GetView<SettingHostController> {
   }
 
   Widget _hostInfo(BuildContext context) {
-    return Column(
+    return ListView(
       children: [
         TDInput(
           needClear: false,
