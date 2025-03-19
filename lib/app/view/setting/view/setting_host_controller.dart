@@ -59,13 +59,12 @@ class SettingHostController extends GetxController {
       });
       ever(saveSettingState, (state) {
         if (state.isSuccess()) {
-          Get.showSnackbar(GetSnackBar(
+          Get.showSnackbar(const GetSnackBar(
             title: "保存成功",
-            message: hostTextController.text,
-            duration: const Duration(seconds: 3),
+            message: "已写入本地数据库",
+            duration: Duration(seconds: 3),
           ));
-          getSetting();
-          getSettingState.value = Idle();
+          Get.find<SettingController>().getSettingData();
           return;
         }
         if (state.isError()) {
@@ -74,7 +73,6 @@ class SettingHostController extends GetxController {
             message: state.getErrorMessage(),
             duration: const Duration(seconds: 3),
           ));
-          getSettingState.value = Idle();
           return;
         }
       });
@@ -175,6 +173,4 @@ class SettingHostController extends GetxController {
       testDataPathState.value = Error("检查数据目录失败：${e.toString()}");
     }
   }
-
-
 }
