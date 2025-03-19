@@ -9,7 +9,6 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/nav/nav_controller.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/view/download/download_controller.dart';
-import 'package:tele_book/app/view/download/download_view.dart';
 
 import '../../util/request_state.dart';
 
@@ -137,7 +136,7 @@ class BookController extends GetxController {
     try {
       deleteBookState.value = Loading();
       final tableData = await (appDatabase.select(appDatabase.bookTable)
-            ..where((t) => t.id.equals(id)))
+        ..where((t) => t.id.equals(id)))
           .getSingle();
       final doc = await getApplicationDocumentsDirectory();
       for (var path in tableData.localPaths) {
@@ -147,7 +146,7 @@ class BookController extends GetxController {
         }
       }
       await (appDatabase.delete(appDatabase.bookTable)
-            ..where((t) => t.id.equals(id)))
+        ..where((t) => t.id.equals(id)))
           .go();
       await getBookList();
       deleteBookState.value = const Success(null);
@@ -180,7 +179,7 @@ class BookController extends GetxController {
         }
       }
       final newBookData =
-          bookTableData.copyWith(localPaths: [], isDownload: false);
+      bookTableData.copyWith(localPaths: [], isDownload: false);
       await appDatabase.update(appDatabase.bookTable).replace(newBookData);
       getBookList();
       deleteDownloadState.value = const Success(null);
@@ -203,7 +202,6 @@ class BookController extends GetxController {
     addBookState.value = Idle();
     urlTextController.text = "";
   }
-
 }
 
 class BookEntity {
