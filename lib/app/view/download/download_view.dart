@@ -32,8 +32,8 @@ class DownloadView extends GetView<DownloadController> {
             TDCellGroup(
                 cells: controller.downloadTaskMap.value.entries.map((entry) {
               final task = entry.value;
-              if(task.status==TaskStatus.running){
-                return  TDCell(
+              if (task.status == TaskStatus.running) {
+                return TDCell(
                   title: task.downloadTableData.name,
                   leftIconWidget: Image.network(
                     task.downloadTableData.imageUrls.firstOrNull ?? "",
@@ -64,7 +64,7 @@ class DownloadView extends GetView<DownloadController> {
                     ],
                   ),
                 );
-              }else{
+              } else {
                 return TDCell(
                   title: task.downloadTableData.name,
                   leftIconWidget: Image.network(
@@ -73,9 +73,11 @@ class DownloadView extends GetView<DownloadController> {
                     width: 100,
                   ),
                   description: "下载失败：${task.errorMessage}",
-                  rightIconWidget: IconButton(onPressed: (){
-                    //TODO
-                  }, icon: const Icon(TDIcons.refresh)),
+                  rightIconWidget: IconButton(
+                      onPressed: () {
+                        controller.startDownload(task.downloadTableData);
+                      },
+                      icon: const Icon(TDIcons.refresh)),
                 );
               }
             }).toList())
