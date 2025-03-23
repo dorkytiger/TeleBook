@@ -70,9 +70,7 @@ class SettingExportView extends GetView<SettingExportController> {
                   onTap: () {
                     controller.exportBook();
                   },
-                  disabled: controller.selectedExportIds.value.isEmpty ||
-                      controller.exportBookList.value.values
-                          .any((e) => e.status == ExportBookStatus.running),
+                  disabled: controller.exportBookState.value.isLoading(),
                 )),
           ),
         ),

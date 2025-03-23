@@ -71,9 +71,7 @@ class SettingImportView extends GetView<SettingImportController> {
                   onTap: () {
                     controller.importBook();
                   },
-                  disabled: controller.selectImportBookIds.value.isEmpty ||
-                      controller.importBookMap.value.values
-                          .any((e) => e.status == ImportBookStatus.running),
+                  disabled: controller.importBookState.value.isLoading(),
                 )),
           ),
         ),
