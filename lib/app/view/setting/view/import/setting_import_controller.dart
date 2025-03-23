@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/view/book/book_controller.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class SettingImportController extends GetxController {
@@ -150,6 +151,7 @@ class SettingImportController extends GetxController {
             await appDatabase.update(appDatabase.bookTable).replace(bookData
                 .copyWith(isDownload: true, localPaths: bookData.localPaths));
           }
+          Get.find<BookController>().getBookList();
 
           importBookMap.value[id]!.status = ImportBookStatus.complete;
           importBookMap.refresh();
