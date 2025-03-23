@@ -1,9 +1,12 @@
 import 'package:background_downloader/background_downloader.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/book/book_controller.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class DownloadController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
@@ -16,6 +19,13 @@ class DownloadController extends GetxController {
   void onInit() {
     super.onInit();
     getDownloadList();
+    ever(downloadTaskMap, (map) {
+      if (map.isEmpty) {
+        WakelockPlus.disable();
+      } else {
+        WakelockPlus.enable();
+      }
+    });
   }
 
   Future<void> getDownloadList() async {
@@ -49,49 +59,44 @@ class DownloadController extends GetxController {
           Task(downloadTableData, 0, totalProgress, TaskStatus.running, "");
       downloadTaskMap.value[downloadTableData.id] = task;
       downloadTaskMap.refresh();
+      final docPath = await getApplicationDocumentsDirectory();
+      final dio = Dio();
       for (var i = downloadTableData.downloadCount;
           i < downloadTableData.imageUrls.length;
           i++) {
         final imageUrl = downloadTableData.imageUrls[i];
         final subPath = "$bookPath/$i.jpg";
-        final downloadTask = DownloadTask(
-            url: Uri.parse(imageUrl).toString(),
-            directory: bookPath,
-            filename: "$i.jpg",
-            retries: 5,
-            baseDirectory: BaseDirectory.applicationDocuments);
-        final result = await FileDownloader().download(downloadTask,
-            onProgress: (progress) {
+
+        final response = await dio
+            .download(imageUrl, "${docPath.path}/$subPath",
+                onReceiveProgress: (count, total) {
           downloadTaskMap.value[downloadTableData.id]?.currentProgress =
-              progress;
+              count / total;
           downloadTaskMap.refresh();
         });
-        if (result.status != TaskStatus.complete) {
-          downloadTaskMap.value[downloadTableData.id]?.status =
-              TaskStatus.waitingToRetry;
-          downloadTaskMap.value[downloadTableData.id]?.errorMessage =
-              result.exception?.description ?? "未知错误";
+
+        if (response.statusCode == 200) {
+          final currentDownloadTableData =
+              await (appDatabase.select(appDatabase.downloadTable)
+                    ..where((t) => t.id.equals(downloadTableData.id)))
+                  .getSingle();
+          final newDownloadTableData = currentDownloadTableData.copyWith(
+              downloadCount: i + 1,
+              localPaths: [...currentDownloadTableData.localPaths, subPath]);
+          await appDatabase
+              .update(appDatabase.downloadTable)
+              .replace(newDownloadTableData);
+          downloadTaskMap.value[downloadTableData.id]?.downloadTableData =
+              newDownloadTableData;
+          downloadTaskMap.value[downloadTableData.id]?.totalProgress =
+              (newDownloadTableData.downloadCount /
+                      newDownloadTableData.imageUrls.length)
+                  .toDouble();
+          downloadTaskMap.value[downloadTableData.id]?.currentProgress = 0;
           downloadTaskMap.refresh();
-          return;
+        } else {
+          throw Exception(response.statusMessage);
         }
-        final currentDownloadTableData =
-            await (appDatabase.select(appDatabase.downloadTable)
-                  ..where((t) => t.id.equals(downloadTableData.id)))
-                .getSingle();
-        final newDownloadTableData = currentDownloadTableData.copyWith(
-            downloadCount: i + 1,
-            localPaths: [...currentDownloadTableData.localPaths, subPath]);
-        await appDatabase
-            .update(appDatabase.downloadTable)
-            .replace(newDownloadTableData);
-        downloadTaskMap.value[downloadTableData.id]?.downloadTableData =
-            newDownloadTableData;
-        downloadTaskMap.value[downloadTableData.id]?.totalProgress =
-            (newDownloadTableData.downloadCount /
-                    newDownloadTableData.imageUrls.length)
-                .toDouble();
-        downloadTaskMap.value[downloadTableData.id]?.currentProgress = 0;
-        downloadTaskMap.refresh();
       }
       final lastDownloadTableData =
           await (appDatabase.select(appDatabase.downloadTable)
@@ -114,6 +119,10 @@ class DownloadController extends GetxController {
       Get.find<BookController>().getBookList();
     } catch (e) {
       debugPrint(e.toString());
+      downloadTaskMap.value[downloadTableData.id]?.status=
+          TaskStatus.failed;
+      downloadTaskMap.value[downloadTableData.id]?.errorMessage =
+      e.toString();
     }
   }
 

@@ -6,8 +6,12 @@ import 'package:tele_book/app/enum/book_page_layout_enum.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/setting/setting_controller.dart'
     show SettingController;
-import 'package:tele_book/app/view/setting/view/setting_host_binding.dart';
-import 'package:tele_book/app/view/setting/view/setting_host_view.dart';
+import 'package:tele_book/app/view/setting/view/export/setting_export_binding.dart';
+import 'package:tele_book/app/view/setting/view/export/setting_export_view.dart';
+import 'package:tele_book/app/view/setting/view/host/setting_host_binding.dart';
+import 'package:tele_book/app/view/setting/view/host/setting_host_view.dart';
+import 'package:tele_book/app/view/setting/view/import/setting_import_binding.dart';
+import 'package:tele_book/app/view/setting/view/import/setting_import_view.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
 
 class SettingView extends GetView<SettingController> {
@@ -110,28 +114,16 @@ class SettingView extends GetView<SettingController> {
           TDCell(
               leftIcon: TDIcons.file_export,
               title: "从远程主机导入图片",
-              rightIconWidget: controller.importHostImageDataState.isLoading()
-                  ? const TDLoading(size: TDLoadingSize.small)
-                  : null,
-              disabled: controller.importHostImageDataState.isLoading(),
               onClick: (TDCell cell) {
-                controller.importHostImageData();
+                Get.to(() => const SettingImportView(),
+                    binding: SettingImportBinding());
               }),
           TDCell(
               leftIcon: TDIcons.file_export,
               title: "导出图片到远程主机",
-              rightIconWidget: controller.exportHostImageDataState.isLoading()
-                  ? const TDLoading(size: TDLoadingSize.small)
-                  : null,
-              disabled: controller.exportHostImageDataState.isLoading(),
               onClick: (TDCell cell) {
-                Navigator.of(context).push(TDSlidePopupRoute(
-                    modalBarrierColor: TDTheme.of(context).fontGyColor2,
-                    slideTransitionFrom: SlideTransitionFrom.bottom,
-                    builder: (context) {
-                      return _importBottomSheet(
-                          context, controller.exportHostImageData, "导出图片到远程主机");
-                    }));
+                Get.to(() => const SettingExportView(),
+                    binding: SettingExportBinding());
               }),
         ]));
   }

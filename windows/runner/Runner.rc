@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.dorkytiger" "\0"
-            VALUE "FileDescription", "wo_nas" "\0"
+            VALUE "FileDescription", "tele_book" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "wo_nas" "\0"
+            VALUE "InternalName", "tele_book" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2023 com.dorkytiger. All rights reserved." "\0"
-            VALUE "OriginalFilename", "wo_nas.exe" "\0"
-            VALUE "ProductName", "wo_nas" "\0"
+            VALUE "OriginalFilename", "tele_book.exe" "\0"
+            VALUE "ProductName", "tele_book" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

@@ -113,7 +113,6 @@ class SettingHostController extends GetxController {
           );
       await appDatabase.update(appDatabase.settingTable).replace(settingData);
       saveSettingState.value = const Success(null);
-      Get.find<SettingController>().getSettingData();
     } catch (e) {
       debugPrint(e.toString());
       saveSettingState.value = Error("保存设置失败：${e.toString()}");

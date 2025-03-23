@@ -12,55 +12,71 @@ class SettingExportView extends GetView<SettingExportController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(()=>DisplayResult(
+      appBar: const TDNavBar(
+        title: "导出到服务器",
+      ),
+      body: Obx(() => DisplayResult(
           state: controller.getDownloadBookState.value,
-          onLoading: ()=>const CustomLoading(),
-          onError: (error)=>CustomError(title: "", description: error),
+          onLoading: () => const CustomLoading(),
+          onError: (error) => CustomError(title: "", description: error),
           onSuccess: (value) {
             return ListView(
               children: [
-                TDCheckboxGroupContainer(
-                  selectIds: const ['index:1'],
-                  cardMode: true,
-                  direction: Axis.vertical,
-                  directionalTdCheckboxes: [
-                    TDCheckbox(
-                      id: 'index:0',
-                      title: '多选',
-                      titleMaxLine: 2,
-                      subTitleMaxLine: 2,
-                      subTitle: '描述信息',
-                      cardMode: true,
-                    ),
-                    TDCheckbox(
-                      id: 'index:1',
-                      title: '多选',
-                      titleMaxLine: 2,
-                      subTitleMaxLine: 2,
-                      subTitle: '描述信息',
-                      cardMode: true,
-                    ),
-                    TDCheckbox(
-                      id: 'index:2',
-                      title: '多选',
-                      titleMaxLine: 2,
-                      subTitleMaxLine: 2,
-                      subTitle: '描述信息',
-                      cardMode: true,
-                    ),
-                    TDCheckbox(
-                      id: 'index:3',
-                      title: '多选',
-                      titleMaxLine: 2,
-                      subTitleMaxLine: 2,
-                      subTitle: '描述信息',
-                      cardMode: true,
-                    ),
-                  ],
-                )
+                const SizedBox(
+                  height: 16,
+                ),
+                Obx(() => TDCheckboxGroupContainer(
+                    selectIds: controller.selectedExportIds.value,
+                    onCheckBoxGroupChange: (value) {
+                      controller.setSelectedExportIds(value);
+                    },
+                    cardMode: true,
+                    direction: Axis.vertical,
+                    directionalTdCheckboxes:
+                        controller.exportBookList.value.values
+                            .map((e) => TDCheckbox(
+                                  id: e.data.id.toString(),
+                                  title: e.data.name,
+                                  titleMaxLine: 1,
+                                  subTitleMaxLine: 2,
+                                  subTitle: () {
+                                    if (e.status == ExportBookStatus.idle) {
+                                      return e.isExport ? "已导出" : "未导出";
+                                    } else if (e.status ==
+                                        ExportBookStatus.running) {
+                                      return "正在导出${e.current}/${e.total}";
+                                    } else if (e.status ==
+                                        ExportBookStatus.complete) {
+                                      return "导出成功";
+                                    } else {
+                                      return e.errorMessage;
+                                    }
+                                  }(),
+                                  cardMode: true,
+                                ))
+                            .toList()))
               ],
             );
-          }))
+          })),
+      bottomNavigationBar: SizedBox(
+        height: 80,
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: Obx(() => TDButton(
+                  theme: TDButtonTheme.primary,
+                  text: "导出",
+                  onTap: () {
+                    controller.exportBook();
+                  },
+                  disabled: controller.selectedExportIds.value.isEmpty ||
+                      controller.exportBookList.value.values
+                          .any((e) => e.status == ExportBookStatus.running),
+                )),
+          ),
+        ),
+      ),
     );
   }
 }

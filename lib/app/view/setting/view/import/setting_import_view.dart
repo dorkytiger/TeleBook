@@ -12,57 +12,72 @@ class SettingImportView extends GetView<SettingImportController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: TDNavBar(
-          title: "从服务器导入数据",
+      appBar: const TDNavBar(
+        title: "从服务器导入数据",
+      ),
+      body: Obx(() => DisplayResult(
+          state: controller.getImportBookListState.value,
+          onLoading: () => const CustomLoading(),
+          onError: (error) => CustomError(title: "", description: error),
+          onSuccess: (value) {
+            return ListView(
+              children: [
+                const SizedBox(
+                  height: 16,
+                ),
+                Obx(() => TDCheckboxGroupContainer(
+                      selectIds: controller.selectImportBookIds.value,
+                      onCheckBoxGroupChange: (value){
+                        controller.setImportBookIds(value);
+                      },
+                      cardMode: true,
+                      direction: Axis.vertical,
+                      directionalTdCheckboxes:
+                          controller.importBookMap.value.values
+                              .map((e) => TDCheckbox(
+                                    id: e.name,
+                                    title: e.name,
+                                    titleMaxLine: 1,
+                                    subTitleMaxLine: 2,
+                                    subTitle: () {
+                                      if (e.status == ImportBookStatus.idle) {
+                                        return e.isImport ? "已导入" : "未导入";
+                                      } else if (e.status ==
+                                          ImportBookStatus.running) {
+                                        return "正在导入${e.current}/${e.total}";
+                                      } else if (e.status ==
+                                          ImportBookStatus.complete) {
+                                        return "导入成功";
+                                      } else {
+                                        return e.errorMessage;
+                                      }
+                                    }(),
+                                    cardMode: true,
+                                  ))
+                              .toList(),
+                    ))
+              ],
+            );
+          })),
+      bottomNavigationBar: SizedBox(
+        height: 80,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: Obx(() => TDButton(
+                  theme: TDButtonTheme.primary,
+                  text: "导入",
+                  onTap: () {
+                    controller.importBook();
+                  },
+                  disabled: controller.selectImportBookIds.value.isEmpty ||
+                      controller.importBookMap.value.values
+                          .any((e) => e.status == ImportBookStatus.running),
+                )),
+          ),
         ),
-        body: DisplayResult(
-            state: controller.getDownloadBookState.value,
-            onLoading: ()=>const CustomLoading(),
-            onError: (error)=>CustomError(title: "", description: error),
-            onSuccess: (value) {
-              return ListView(
-                children: [
-                  TDCheckboxGroupContainer(
-                    selectIds: const ['index:1'],
-                    cardMode: true,
-                    direction: Axis.vertical,
-                    directionalTdCheckboxes: [
-                      TDCheckbox(
-                        id: 'index:0',
-                        title: '多选',
-                        titleMaxLine: 2,
-                        subTitleMaxLine: 2,
-                        subTitle: '描述信息',
-                        cardMode: true,
-                      ),
-                      TDCheckbox(
-                        id: 'index:1',
-                        title: '多选',
-                        titleMaxLine: 2,
-                        subTitleMaxLine: 2,
-                        subTitle: '描述信息',
-                        cardMode: true,
-                      ),
-                      TDCheckbox(
-                        id: 'index:2',
-                        title: '多选',
-                        titleMaxLine: 2,
-                        subTitleMaxLine: 2,
-                        subTitle: '描述信息',
-                        cardMode: true,
-                      ),
-                      TDCheckbox(
-                        id: 'index:3',
-                        title: '多选',
-                        titleMaxLine: 2,
-                        subTitleMaxLine: 2,
-                        subTitle: '描述信息',
-                        cardMode: true,
-                      ),
-                    ],
-                  )
-                ],
-              );
-            }));
+      ),
+    );
   }
 }

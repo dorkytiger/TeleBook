@@ -181,6 +181,7 @@ class SettingController extends GetxController {
 
   Future<void> updateSettingData(SettingTableData settingData) async {
     try {
+
       await appDatabase.update(appDatabase.settingTable).replace(settingData);
       getSettingData();
     } catch (e) {
@@ -273,26 +274,14 @@ class SettingController extends GetxController {
     }
   }
 
+
   Future<void> exportHostBookData() async {
     try {
       _exportHostBookDataState.value = Loading();
-      final bookDataList =
-          await appDatabase.select(appDatabase.bookTable).get();
+      final bookDataList = await appDatabase.select(appDatabase.bookTable).get();
 
-      String jsonData;
-      if (bookDataList.isEmpty) {
-        jsonData = "[]";
-      } else {
-        jsonData = jsonEncode(bookDataList.map((book) {
-          final newBook =
-              book.copyWith(readCount: 0, localPaths: [], isDownload: false);
-          return newBook.toJson();
-        }).toList());
-      }
-      final settingData =
-          await appDatabase.select(appDatabase.settingTable).getSingle();
-      final socket = await SSHSocket.connect(settingData.host, settingData.port,
-          timeout: const Duration(seconds: 5));
+      final settingData = await appDatabase.select(appDatabase.settingTable).getSingle();
+      final socket = await SSHSocket.connect(settingData.host, settingData.port, timeout: const Duration(seconds: 5));
       final client = SSHClient(
         socket,
         username: settingData.username,
@@ -300,14 +289,46 @@ class SettingController extends GetxController {
       );
       final sftp = await client.sftp();
 
+      // Read the remote configuration JSON file
+      String remoteJsonData;
+      try {
+        final remoteFile = await sftp.open("${settingData.dataPath}/${HostConstant.dateFileName}");
+        final byteData = await remoteFile.readBytes();
+        remoteJsonData = utf8.decode(byteData);
+        await remoteFile.close();
+      } catch (e) {
+        // If the file does not exist, initialize with an empty array
+        remoteJsonData = "[]";
+      }
+
+      // Parse the remote JSON data
+      final List<dynamic> remoteBookList = jsonDecode(remoteJsonData);
+
+      // Convert the local book data to JSON format
+      final List<Map<String, dynamic>> localBookList = bookDataList.map((book) {
+        final newBook = book.copyWith(readCount: 0, localPaths: [], isDownload: false);
+        return newBook.toJson();
+      }).toList();
+
+      // Merge the local book data with the remote book data, skipping duplicates
+      final Set<String> existingBaseUrls = remoteBookList.map((book) => book['baseUrl'] as String).toSet();
+      for (final localBook in localBookList) {
+        if (!existingBaseUrls.contains(localBook['baseUrl'])) {
+          remoteBookList.add(localBook);
+        }
+      }
+
+      // Convert the merged data back to JSON
+      final String jsonData = jsonEncode(remoteBookList);
+
+      // Write the merged data back to the remote file
       final remoteFile = await sftp.open(
         "${settingData.dataPath}/${HostConstant.dateFileName}",
-        mode: SftpFileOpenMode.create |
-            SftpFileOpenMode.truncate |
-            SftpFileOpenMode.write,
+        mode: SftpFileOpenMode.create | SftpFileOpenMode.truncate | SftpFileOpenMode.write,
       );
       await remoteFile.writeBytes(utf8.encode(jsonData));
       await remoteFile.close();
+
       sftp.close();
       client.close();
       await socket.close();

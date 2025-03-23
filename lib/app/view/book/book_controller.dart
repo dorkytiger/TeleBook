@@ -203,11 +203,3 @@ class BookController extends GetxController {
     urlTextController.text = "";
   }
 }
-
-class BookEntity {
-  final BookTableData bookData;
-  final bool isDownloading;
-  final double downloadProgress;
-
-  BookEntity(this.bookData, this.isDownloading, this.downloadProgress);
-}

@@ -6,6 +6,7 @@ import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/download/download_controller.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class DownloadView extends GetView<DownloadController> {
   @override
@@ -32,13 +33,43 @@ class DownloadView extends GetView<DownloadController> {
             TDCellGroup(
                 cells: controller.downloadTaskMap.value.entries.map((entry) {
               final task = entry.value;
-              if (task.status == TaskStatus.running) {
+              if (task.status == TaskStatus.failed) {
                 return TDCell(
                   title: task.downloadTableData.name,
                   leftIconWidget: Image.network(
                     task.downloadTableData.imageUrls.firstOrNull ?? "",
                     height: 100,
                     width: 100,
+                    errorBuilder: (build,widget,trace){
+                      return TDResult(
+                        theme: TDResultTheme.error,
+
+                      );
+                    },
+                  ),
+                  description: "下载失败：${task.errorMessage}",
+                  rightIconWidget: Column(
+                    children: [
+                      IconButton(
+                          onPressed: () {
+                            controller.startDownload(task.downloadTableData);
+                          },
+                          icon:  Icon(TDIcons.refresh,color: TDTheme.of(context).brandNormalColor,)),
+                      IconButton(
+                          onPressed: () {
+                            controller.deleteDownload(task.downloadTableData);
+                          },
+                          icon:  Icon(TDIcons.delete,color: TDTheme.of(context).brandNormalColor,))
+                    ],
+                  ),
+                );
+              } else {
+                return TDCell(
+                  title: task.downloadTableData.name,
+                  leftIconWidget: SizedBox(
+                    height: 100,
+                    width: 100,
+                    child: CustomImageLoader(isLocal: false, networkUrl: task.downloadTableData.imageUrls.firstOrNull??"", localUrl: ""),
                   ),
                   descriptionWidget: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,22 +94,22 @@ class DownloadView extends GetView<DownloadController> {
                       ),
                     ],
                   ),
-                );
-              } else {
-                return TDCell(
-                  title: task.downloadTableData.name,
-                  leftIconWidget: Image.network(
-                    task.downloadTableData.imageUrls.firstOrNull ?? "",
-                    height: 100,
-                    width: 100,
+                  rightIconWidget: Column(
+                    children: [
+                      IconButton(
+                          onPressed: () {
+                            controller.startDownload(task.downloadTableData);
+                          },
+                          icon:  Icon(TDIcons.refresh,color: TDTheme.of(context).brandNormalColor,)),
+                      IconButton(
+                          onPressed: () {
+                            controller.deleteDownload(task.downloadTableData);
+                          },
+                          icon:  Icon(TDIcons.delete,color: TDTheme.of(context).brandNormalColor,))
+                    ],
                   ),
-                  description: "下载失败：${task.errorMessage}",
-                  rightIconWidget: IconButton(
-                      onPressed: () {
-                        controller.startDownload(task.downloadTableData);
-                      },
-                      icon: const Icon(TDIcons.refresh)),
                 );
+
               }
             }).toList())
           ],
