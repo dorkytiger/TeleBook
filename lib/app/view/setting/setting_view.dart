@@ -6,12 +6,16 @@ import 'package:tele_book/app/enum/book_page_layout_enum.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/setting/setting_controller.dart'
     show SettingController;
+import 'package:tele_book/app/view/setting/view/download/setting_download_binding.dart';
+import 'package:tele_book/app/view/setting/view/download/setting_download_view.dart';
 import 'package:tele_book/app/view/setting/view/export/setting_export_binding.dart';
 import 'package:tele_book/app/view/setting/view/export/setting_export_view.dart';
 import 'package:tele_book/app/view/setting/view/host/setting_host_binding.dart';
 import 'package:tele_book/app/view/setting/view/host/setting_host_view.dart';
 import 'package:tele_book/app/view/setting/view/import/setting_import_binding.dart';
 import 'package:tele_book/app/view/setting/view/import/setting_import_view.dart';
+import 'package:tele_book/app/view/setting/view/upload/setting_upload_binding.dart';
+import 'package:tele_book/app/view/setting/view/upload/setting_upload_view.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
 
 class SettingView extends GetView<SettingController> {
@@ -29,7 +33,8 @@ class SettingView extends GetView<SettingController> {
                 children: [
                   _readSettingCellGroup(context, value),
                   _transmitCellGroup(context, value),
-                  _sshSettingCellGroup(context, value)
+                  _sshSettingCellGroup(context, value),
+                  _serverSettingCellGroup(context,value)
                 ],
               ))),
     );
@@ -112,20 +117,47 @@ class SettingView extends GetView<SettingController> {
                 controller.exportHostBookData();
               }),
           TDCell(
-              leftIcon: TDIcons.file_export,
+              leftIcon: TDIcons.image_1,
               title: "从远程主机导入图片",
               onClick: (TDCell cell) {
                 Get.to(() => const SettingImportView(),
                     binding: SettingImportBinding());
               }),
           TDCell(
-              leftIcon: TDIcons.file_export,
+              leftIcon: TDIcons.image_1_filled,
               title: "导出图片到远程主机",
               onClick: (TDCell cell) {
                 Get.to(() => const SettingExportView(),
                     binding: SettingExportBinding());
               }),
         ]));
+  }
+
+  Widget _serverSettingCellGroup(BuildContext context, SettingTableData data) {
+    return TDCellGroup(title: "服务器设置", cells: [
+      TDCell(
+          leftIcon: TDIcons.terminal,
+          title: "服务器设置",
+          arrow: true,
+          onClick: (TDCell cell) {
+            // Get.to(() => const SettingHostView(),
+            //     binding: SettingHostBinding());
+          }),
+      TDCell(
+          leftIcon: TDIcons.cloud_download,
+          title: "从服务器下载",
+          onClick: (TDCell cell) {
+            Get.to(() => const SettingDownloadView(),
+                binding: SettingDownloadBinding());
+          }),
+      TDCell(
+          leftIcon: TDIcons.cloud_upload,
+          title: "上传到服务器",
+          onClick: (TDCell cell) {
+            Get.to(() => const SettingUploadView(),
+                binding: SettingUploadBinding());
+          }),
+    ]);
   }
 
   Widget _importBottomSheet(

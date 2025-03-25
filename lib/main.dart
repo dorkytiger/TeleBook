@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/nav/nav_binding.dart';
 import 'package:tele_book/app/nav/nav_view.dart';
+import 'package:tele_book/app/service/tb_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,5 +26,6 @@ void main() {
 
 void _init() {
   Get.put(AppDatabase());
+  Get.put(TBService());
   Get.put(SharedPreferences.getInstance());
 }
