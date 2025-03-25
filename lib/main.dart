@@ -24,8 +24,7 @@ void main() {
   );
 }
 
-void _init() {
+void _init() async {
   Get.put(AppDatabase());
-  Get.put(TBService());
   Get.put(SharedPreferences.getInstance());
 }

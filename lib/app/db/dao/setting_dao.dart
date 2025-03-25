@@ -19,4 +19,7 @@ class SettingTable extends Table {
 
   TextColumn get imagePath => text().withDefault(const Constant("~/image"))();
 
+  TextColumn get serverHost => text().withDefault(const Constant(""))();
+
+  IntColumn get serverPort => integer().withDefault(const Constant(8080))();
 }

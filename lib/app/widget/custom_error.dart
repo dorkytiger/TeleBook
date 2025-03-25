@@ -11,10 +11,13 @@ class CustomError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: TDResult(
-        theme: TDResultTheme.error,
-        title: title,
-        description: description,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: TDResult(
+          theme: TDResultTheme.error,
+          title: title,
+          description: description,
+        ),
       ),
     );
   }

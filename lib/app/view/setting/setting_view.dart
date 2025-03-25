@@ -14,6 +14,8 @@ import 'package:tele_book/app/view/setting/view/host/setting_host_binding.dart';
 import 'package:tele_book/app/view/setting/view/host/setting_host_view.dart';
 import 'package:tele_book/app/view/setting/view/import/setting_import_binding.dart';
 import 'package:tele_book/app/view/setting/view/import/setting_import_view.dart';
+import 'package:tele_book/app/view/setting/view/server/setting_server_binding.dart';
+import 'package:tele_book/app/view/setting/view/server/setting_server_view.dart';
 import 'package:tele_book/app/view/setting/view/upload/setting_upload_binding.dart';
 import 'package:tele_book/app/view/setting/view/upload/setting_upload_view.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
@@ -140,8 +142,8 @@ class SettingView extends GetView<SettingController> {
           title: "服务器设置",
           arrow: true,
           onClick: (TDCell cell) {
-            // Get.to(() => const SettingHostView(),
-            //     binding: SettingHostBinding());
+            Get.to(() =>  SettingServerView(),
+                binding: SettingServerBinding());
           }),
       TDCell(
           leftIcon: TDIcons.cloud_download,

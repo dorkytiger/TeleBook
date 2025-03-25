@@ -9,15 +9,16 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 class SettingUploadController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
-  final tbService = Get.find<TBService>();
+  final TBService tbService = TBService();
   final getDownloadBookState = Rx<RequestState<List<BookTableData>>>(Idle());
   final uploadBookMap = Rx<Map<String, UploadBook>>({});
   final selectedUploadIds = Rx<List<String>>([]);
   final uploadBookState = Rx<RequestState<void>>(Idle());
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
+    await tbService.init();
     getDownloadBook();
   }
 

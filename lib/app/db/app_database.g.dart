@@ -543,9 +543,35 @@ class $SettingTableTable extends SettingTable
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant("~/image"));
+  static const VerificationMeta _serverHostMeta =
+      const VerificationMeta('serverHost');
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, pageLayout, host, port, username, password, dataPath, imagePath];
+  late final GeneratedColumn<String> serverHost = GeneratedColumn<String>(
+      'server_host', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(""));
+  static const VerificationMeta _serverPortMeta =
+      const VerificationMeta('serverPort');
+  @override
+  late final GeneratedColumn<int> serverPort = GeneratedColumn<int>(
+      'server_port', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(8080));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        pageLayout,
+        host,
+        port,
+        username,
+        password,
+        dataPath,
+        imagePath,
+        serverHost,
+        serverPort
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -589,6 +615,18 @@ class $SettingTableTable extends SettingTable
       context.handle(_imagePathMeta,
           imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta));
     }
+    if (data.containsKey('server_host')) {
+      context.handle(
+          _serverHostMeta,
+          serverHost.isAcceptableOrUnknown(
+              data['server_host']!, _serverHostMeta));
+    }
+    if (data.containsKey('server_port')) {
+      context.handle(
+          _serverPortMeta,
+          serverPort.isAcceptableOrUnknown(
+              data['server_port']!, _serverPortMeta));
+    }
     return context;
   }
 
@@ -614,6 +652,10 @@ class $SettingTableTable extends SettingTable
           .read(DriftSqlType.string, data['${effectivePrefix}data_path'])!,
       imagePath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}image_path'])!,
+      serverHost: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}server_host'])!,
+      serverPort: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}server_port'])!,
     );
   }
 
@@ -633,6 +675,8 @@ class SettingTableData extends DataClass
   final String password;
   final String dataPath;
   final String imagePath;
+  final String serverHost;
+  final int serverPort;
   const SettingTableData(
       {required this.id,
       required this.pageLayout,
@@ -641,7 +685,9 @@ class SettingTableData extends DataClass
       required this.username,
       required this.password,
       required this.dataPath,
-      required this.imagePath});
+      required this.imagePath,
+      required this.serverHost,
+      required this.serverPort});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -653,6 +699,8 @@ class SettingTableData extends DataClass
     map['password'] = Variable<String>(password);
     map['data_path'] = Variable<String>(dataPath);
     map['image_path'] = Variable<String>(imagePath);
+    map['server_host'] = Variable<String>(serverHost);
+    map['server_port'] = Variable<int>(serverPort);
     return map;
   }
 
@@ -666,6 +714,8 @@ class SettingTableData extends DataClass
       password: Value(password),
       dataPath: Value(dataPath),
       imagePath: Value(imagePath),
+      serverHost: Value(serverHost),
+      serverPort: Value(serverPort),
     );
   }
 
@@ -681,6 +731,8 @@ class SettingTableData extends DataClass
       password: serializer.fromJson<String>(json['password']),
       dataPath: serializer.fromJson<String>(json['dataPath']),
       imagePath: serializer.fromJson<String>(json['imagePath']),
+      serverHost: serializer.fromJson<String>(json['serverHost']),
+      serverPort: serializer.fromJson<int>(json['serverPort']),
     );
   }
   @override
@@ -695,6 +747,8 @@ class SettingTableData extends DataClass
       'password': serializer.toJson<String>(password),
       'dataPath': serializer.toJson<String>(dataPath),
       'imagePath': serializer.toJson<String>(imagePath),
+      'serverHost': serializer.toJson<String>(serverHost),
+      'serverPort': serializer.toJson<int>(serverPort),
     };
   }
 
@@ -706,7 +760,9 @@ class SettingTableData extends DataClass
           String? username,
           String? password,
           String? dataPath,
-          String? imagePath}) =>
+          String? imagePath,
+          String? serverHost,
+          int? serverPort}) =>
       SettingTableData(
         id: id ?? this.id,
         pageLayout: pageLayout ?? this.pageLayout,
@@ -716,6 +772,8 @@ class SettingTableData extends DataClass
         password: password ?? this.password,
         dataPath: dataPath ?? this.dataPath,
         imagePath: imagePath ?? this.imagePath,
+        serverHost: serverHost ?? this.serverHost,
+        serverPort: serverPort ?? this.serverPort,
       );
   SettingTableData copyWithCompanion(SettingTableCompanion data) {
     return SettingTableData(
@@ -728,6 +786,10 @@ class SettingTableData extends DataClass
       password: data.password.present ? data.password.value : this.password,
       dataPath: data.dataPath.present ? data.dataPath.value : this.dataPath,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+      serverHost:
+          data.serverHost.present ? data.serverHost.value : this.serverHost,
+      serverPort:
+          data.serverPort.present ? data.serverPort.value : this.serverPort,
     );
   }
 
@@ -741,14 +803,16 @@ class SettingTableData extends DataClass
           ..write('username: $username, ')
           ..write('password: $password, ')
           ..write('dataPath: $dataPath, ')
-          ..write('imagePath: $imagePath')
+          ..write('imagePath: $imagePath, ')
+          ..write('serverHost: $serverHost, ')
+          ..write('serverPort: $serverPort')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, pageLayout, host, port, username, password, dataPath, imagePath);
+  int get hashCode => Object.hash(id, pageLayout, host, port, username,
+      password, dataPath, imagePath, serverHost, serverPort);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -760,7 +824,9 @@ class SettingTableData extends DataClass
           other.username == this.username &&
           other.password == this.password &&
           other.dataPath == this.dataPath &&
-          other.imagePath == this.imagePath);
+          other.imagePath == this.imagePath &&
+          other.serverHost == this.serverHost &&
+          other.serverPort == this.serverPort);
 }
 
 class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
@@ -772,6 +838,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
   final Value<String> password;
   final Value<String> dataPath;
   final Value<String> imagePath;
+  final Value<String> serverHost;
+  final Value<int> serverPort;
   const SettingTableCompanion({
     this.id = const Value.absent(),
     this.pageLayout = const Value.absent(),
@@ -781,6 +849,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
     this.password = const Value.absent(),
     this.dataPath = const Value.absent(),
     this.imagePath = const Value.absent(),
+    this.serverHost = const Value.absent(),
+    this.serverPort = const Value.absent(),
   });
   SettingTableCompanion.insert({
     this.id = const Value.absent(),
@@ -791,6 +861,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
     this.password = const Value.absent(),
     this.dataPath = const Value.absent(),
     this.imagePath = const Value.absent(),
+    this.serverHost = const Value.absent(),
+    this.serverPort = const Value.absent(),
   });
   static Insertable<SettingTableData> custom({
     Expression<int>? id,
@@ -801,6 +873,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
     Expression<String>? password,
     Expression<String>? dataPath,
     Expression<String>? imagePath,
+    Expression<String>? serverHost,
+    Expression<int>? serverPort,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -811,6 +885,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
       if (password != null) 'password': password,
       if (dataPath != null) 'data_path': dataPath,
       if (imagePath != null) 'image_path': imagePath,
+      if (serverHost != null) 'server_host': serverHost,
+      if (serverPort != null) 'server_port': serverPort,
     });
   }
 
@@ -822,7 +898,9 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
       Value<String>? username,
       Value<String>? password,
       Value<String>? dataPath,
-      Value<String>? imagePath}) {
+      Value<String>? imagePath,
+      Value<String>? serverHost,
+      Value<int>? serverPort}) {
     return SettingTableCompanion(
       id: id ?? this.id,
       pageLayout: pageLayout ?? this.pageLayout,
@@ -832,6 +910,8 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
       password: password ?? this.password,
       dataPath: dataPath ?? this.dataPath,
       imagePath: imagePath ?? this.imagePath,
+      serverHost: serverHost ?? this.serverHost,
+      serverPort: serverPort ?? this.serverPort,
     );
   }
 
@@ -862,6 +942,12 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
     if (imagePath.present) {
       map['image_path'] = Variable<String>(imagePath.value);
     }
+    if (serverHost.present) {
+      map['server_host'] = Variable<String>(serverHost.value);
+    }
+    if (serverPort.present) {
+      map['server_port'] = Variable<int>(serverPort.value);
+    }
     return map;
   }
 
@@ -875,7 +961,9 @@ class SettingTableCompanion extends UpdateCompanion<SettingTableData> {
           ..write('username: $username, ')
           ..write('password: $password, ')
           ..write('dataPath: $dataPath, ')
-          ..write('imagePath: $imagePath')
+          ..write('imagePath: $imagePath, ')
+          ..write('serverHost: $serverHost, ')
+          ..write('serverPort: $serverPort')
           ..write(')'))
         .toString();
   }
@@ -1482,6 +1570,8 @@ typedef $$SettingTableTableCreateCompanionBuilder = SettingTableCompanion
   Value<String> password,
   Value<String> dataPath,
   Value<String> imagePath,
+  Value<String> serverHost,
+  Value<int> serverPort,
 });
 typedef $$SettingTableTableUpdateCompanionBuilder = SettingTableCompanion
     Function({
@@ -1493,6 +1583,8 @@ typedef $$SettingTableTableUpdateCompanionBuilder = SettingTableCompanion
   Value<String> password,
   Value<String> dataPath,
   Value<String> imagePath,
+  Value<String> serverHost,
+  Value<int> serverPort,
 });
 
 class $$SettingTableTableFilterComposer
@@ -1527,6 +1619,12 @@ class $$SettingTableTableFilterComposer
 
   ColumnFilters<String> get imagePath => $composableBuilder(
       column: $table.imagePath, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get serverHost => $composableBuilder(
+      column: $table.serverHost, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get serverPort => $composableBuilder(
+      column: $table.serverPort, builder: (column) => ColumnFilters(column));
 }
 
 class $$SettingTableTableOrderingComposer
@@ -1561,6 +1659,12 @@ class $$SettingTableTableOrderingComposer
 
   ColumnOrderings<String> get imagePath => $composableBuilder(
       column: $table.imagePath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get serverHost => $composableBuilder(
+      column: $table.serverHost, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get serverPort => $composableBuilder(
+      column: $table.serverPort, builder: (column) => ColumnOrderings(column));
 }
 
 class $$SettingTableTableAnnotationComposer
@@ -1595,6 +1699,12 @@ class $$SettingTableTableAnnotationComposer
 
   GeneratedColumn<String> get imagePath =>
       $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  GeneratedColumn<String> get serverHost => $composableBuilder(
+      column: $table.serverHost, builder: (column) => column);
+
+  GeneratedColumn<int> get serverPort => $composableBuilder(
+      column: $table.serverPort, builder: (column) => column);
 }
 
 class $$SettingTableTableTableManager extends RootTableManager<
@@ -1631,6 +1741,8 @@ class $$SettingTableTableTableManager extends RootTableManager<
             Value<String> password = const Value.absent(),
             Value<String> dataPath = const Value.absent(),
             Value<String> imagePath = const Value.absent(),
+            Value<String> serverHost = const Value.absent(),
+            Value<int> serverPort = const Value.absent(),
           }) =>
               SettingTableCompanion(
             id: id,
@@ -1641,6 +1753,8 @@ class $$SettingTableTableTableManager extends RootTableManager<
             password: password,
             dataPath: dataPath,
             imagePath: imagePath,
+            serverHost: serverHost,
+            serverPort: serverPort,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -1651,6 +1765,8 @@ class $$SettingTableTableTableManager extends RootTableManager<
             Value<String> password = const Value.absent(),
             Value<String> dataPath = const Value.absent(),
             Value<String> imagePath = const Value.absent(),
+            Value<String> serverHost = const Value.absent(),
+            Value<int> serverPort = const Value.absent(),
           }) =>
               SettingTableCompanion.insert(
             id: id,
@@ -1661,6 +1777,8 @@ class $$SettingTableTableTableManager extends RootTableManager<
             password: password,
             dataPath: dataPath,
             imagePath: imagePath,
+            serverHost: serverHost,
+            serverPort: serverPort,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

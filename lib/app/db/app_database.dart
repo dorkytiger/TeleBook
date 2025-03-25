@@ -9,12 +9,12 @@ import 'dao/setting_dao.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [BookTable, SettingTable,DownloadTable])
+@DriftDatabase(tables: [BookTable, SettingTable, DownloadTable])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -23,6 +23,12 @@ class AppDatabase extends _$AppDatabase {
           await into(settingTable).insert(
             SettingTableCompanion.insert(),
           );
+        },
+        onUpgrade: (migrator, from, to) async {
+          if (from == 1) {
+            await migrator.addColumn(settingTable, settingTable.serverHost);
+            await migrator.addColumn(settingTable, settingTable.serverPort);
+          }
         },
       );
 

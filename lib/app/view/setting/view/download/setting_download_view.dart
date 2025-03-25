@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/setting/view/download/setting_download_controller.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_error.dart';
 import 'package:tele_book/app/widget/custom_loading.dart';
 
@@ -17,6 +18,7 @@ class SettingDownloadView extends GetView<SettingDownloadController> {
       ),
       body: Obx(() => DisplayResult(
           state: controller.getDownloadBookState.value,
+          onEmpty: ()=>const CustomEmpty(message: "服务器暂无可下载书籍"),
           onLoading: () => const CustomLoading(),
           onError: (error) => CustomError(title: "", description: error),
           onSuccess: (value) {

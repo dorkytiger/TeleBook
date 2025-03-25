@@ -10,16 +10,17 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 class SettingDownloadController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
-  final tbService = Get.find<TBService>();
+  final TBService tbService = TBService();
   final getDownloadBookState = Rx<RequestState<BookListResponseEntity>>(Idle());
   final downloadBookMap = Rx<Map<String, DownloadBook>>({});
   final selectedDownloadIds = Rx<List<String>>([]);
   final downloadBookState = Rx<RequestState<void>>(Idle());
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
-    getDownloadBook();
+    await tbService.init();
+    await getDownloadBook();
   }
 
   Future<void> getDownloadBook() async {
