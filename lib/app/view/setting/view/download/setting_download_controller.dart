@@ -7,18 +7,22 @@ import 'package:tele_book/app/service/tb_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/view/book/book_controller.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:drift/drift.dart' as drift;
 
-class SettingDownloadController extends GetxController {
+class SettingDownloadController extends GetxController
+    with GetSingleTickerProviderStateMixin {
   final appDatabase = Get.find<AppDatabase>();
   final TBService tbService = TBService();
   final getDownloadBookState = Rx<RequestState<BookListResponseEntity>>(Idle());
   final downloadBookMap = Rx<Map<String, DownloadBook>>({});
   final selectedDownloadIds = Rx<List<String>>([]);
   final downloadBookState = Rx<RequestState<void>>(Idle());
+  late final TabController tabController;
 
   @override
   void onInit() async {
     super.onInit();
+    tabController = TabController(length: 3, vsync: this);
     await tbService.init();
     await getDownloadBook();
   }
@@ -92,6 +96,7 @@ class SettingDownloadController extends GetxController {
                   baseUrl: book.baseUrl,
                   localPaths: localPaths,
                   imageUrls: book.imageUrls,
+                  isDownload: const drift.Value(true),
                   createTime: DateTime.now().toIso8601String()));
         }
         Get.find<BookController>().getBookList();
