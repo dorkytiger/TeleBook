@@ -23,7 +23,13 @@ class SettingDownloadController extends GetxController
   void onInit() async {
     super.onInit();
     tabController = TabController(length: 3, vsync: this);
-    await tbService.init();
+    try {
+      await tbService.init();
+    } catch (e) {
+      debugPrint("SettingDownloadController onInit error: ${e.toString()}");
+      getDownloadBookState.value =
+          const Error("初始化服务失败，请检查服务器地址和端口是否正确"); // 初始化失败，提示用户
+    }
     await getDownloadBook();
   }
 
