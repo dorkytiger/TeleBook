@@ -58,4 +58,6 @@
 
 - **服务器设置**
 
+[TeleBookBackEnd](https://github.com/dorkytiger/TeleBookBackend.git)
+
 `go`写的小型服务端，部署到本地或远程的服务器，填写好地址和端口号，即可上传或下载书库信息和图片
