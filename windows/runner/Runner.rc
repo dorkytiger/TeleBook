@@ -6,7 +6,7 @@
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated from the TEXTINCLUDE 2 resource.
+// Generated form the TEXTINCLUDE 2 resource.
 //
 #include "winres.h"
 
@@ -113,7 +113,7 @@ END
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated from the TEXTINCLUDE 3 resource.
+// Generated form the TEXTINCLUDE 3 resource.
 //
 
 

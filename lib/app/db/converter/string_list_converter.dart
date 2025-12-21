@@ -9,7 +9,7 @@ class StringListConverter extends TypeConverter<List<String>, String>
 
   @override
   List<String> fromSql(String fromDb) {
-    // Convert the string from the database back to a List<String>
+    // Convert the string form the database back to a List<String>
     if (fromDb.isEmpty) {
       return [];
     }

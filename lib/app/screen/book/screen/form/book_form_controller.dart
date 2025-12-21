@@ -1,0 +1,108 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/service/toast_service.dart';
+import 'package:tele_book/app/util/pick_file_util.dart';
+import 'package:tele_book/app/util/request_state.dart';
+
+class BookFormController extends GetxController {
+  final source = Rxn<BookFormSources>(null);
+  final formController = FormController();
+  final submitFormState = Rx<RequestState<void>>(Idle());
+  final filePathController = TextEditingController();
+  final Map<String, dynamic> formData = {
+    'source': null,
+    'url': null,
+    'file': null,
+  };
+  final Map<String, dynamic> formItemNotify = {
+    'source': '',
+    'url': '',
+    'file': '',
+  };
+  late final Map<String, TDFormValidation> validationRules = {
+    'source': TDFormValidation(
+        validate: (value) {
+          if (value == null || value.isEmpty) {
+            return 'empty';
+          }
+          return null;
+        },
+        errorMessage: '请选择来源',
+        type: TDFormItemType.cascader),
+    'url': TDFormValidation(
+        validate: (value) {
+          if (formData['source'] == BookFormSources.web.value) {
+            if (value == null || value.isEmpty) {
+              return 'empty';
+            }
+          }
+          return null;
+        },
+        errorMessage: '请输入网址',
+        type: TDFormItemType.input),
+    'file': TDFormValidation(
+        validate: (value) {
+          if (formData['source'] == BookFormSources.archive.value) {
+            if (value == null || value.isEmpty) {
+              return 'empty';
+            }
+          }
+          return null;
+        },
+        errorMessage: '请输入文件路径',
+        type: TDFormItemType.input),
+  };
+
+  Future<void> submitForm(Map<String, dynamic> formData, bool isValid) async {
+    if (!isValid) {
+      return;
+    }
+
+    final sourceValue = formData['source'];
+    if (sourceValue == BookFormSources.web.value) {
+      final url = formData['url'] as String;
+      // 然后打开解析页面
+      Get.toNamed("/parse", arguments: url);
+    }
+    if (sourceValue == BookFormSources.archive.value) {
+      final file = formData['file'] as String;
+      Get.toNamed('/parse/archive', arguments: file);
+    }
+  }
+
+  Future<void> pickArchiveFile() async {
+    final result = await PickFileUtil.pickerFile(
+      type: FileType.custom,
+      allowedExtensions: ['zip', 'rar', '7z', 'cbz', 'cbr'],
+    );
+    if (result != null && result.files.isNotEmpty) {
+      final filePath = result.files.first.path;
+      if (filePath != null) {
+        formData['file'] = filePath;
+        formItemNotify['file'].upDataForm(filePath);
+        filePathController.text = filePath;
+      }
+    }
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    formData.forEach((key, value) {
+      formItemNotify[key] = FormItemNotifier();
+    });
+  }
+}
+
+enum BookFormSources {
+  web("web", "网页"),
+  archive("archive", "压缩包");
+
+  final String value;
+  final String desc;
+
+  const BookFormSources(this.value, this.desc);
+}
