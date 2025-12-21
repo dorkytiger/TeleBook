@@ -1,28 +1,12 @@
-import 'package:html/parser.dart';
 import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class HtmlUtil {
-  static List<String> getImgUrls(String url, String body) {
-    final document = parse(body);
-    final imgElements = document.querySelectorAll('img');
-    final baseUrl = Uri.parse(url);
-    final imgUrls = imgElements.map((element) {
-      final src = element.attributes['src'] ?? "";
-      final uri = Uri.parse(src);
-      return uri.isAbsolute ? src : baseUrl.resolveUri(uri).toString();
-    }).toList();
-    return imgUrls;
-  }
-
-  static String getTitle(String body) {
-    final document = parse(body);
-    final titleElement = document.querySelector('h1');
-    return titleElement?.text ?? "";
-  }
-
   static Future<String> extractTitleFromWebView(
-      WebViewController controller) async {
+    WebViewController controller,
+  ) async {
     final js = r"""
     (function(){
       try {
@@ -37,23 +21,29 @@ class HtmlUtil {
     if (resObj is String) {
       return resObj.trim();
     } else {
-      return resObj.toString() ?? '';
+      return resObj.toString();
     }
   }
 
- static Future<List<String>> extractImagesFromWebView(
-      WebViewController controller) async {
+  static Future<List<String>> extractImagesFromWebView(
+    WebViewController controller,
+  ) async {
     final js = r"""
     (function(){
       try {
-        var imgs = Array.form(document.images).map(i=>i.src || i.getAttribute('data-src') || '').filter(Boolean);
-        var bgs = Array.form(document.querySelectorAll('*')).map(el=>{
+        var imgs = Array.from(document.images).map(i=>i.src || i.getAttribute('data-src') || '').filter(Boolean);
+        var bgs = Array.from(document.querySelectorAll('*')).map(el=>{
           var bg = getComputedStyle(el).backgroundImage || '';
           if(bg && bg!='none') return bg.replace(/url\((['"])?(.*?)\1\)/g,'$2');
           return '';
         }).filter(Boolean);
-        return JSON.stringify(Array.form(new Set(imgs.concat(bgs))));
-      } catch(e) { return JSON.stringify([]); }
+        var result = Array.from(new Set(imgs.concat(bgs)));
+        console.log('Extracted ' + result.length + ' images');
+        return JSON.stringify(result);
+      } catch(e) { 
+        console.error('Error extracting images: ' + e.message);
+        return JSON.stringify([]); 
+      }
     })();
   """;
     final resObj = await controller.runJavaScriptReturningResult(js);
@@ -66,7 +56,7 @@ class HtmlUtil {
       // 直接编码为 JSON 字符串
       resString = jsonEncode(resObj);
     } else {
-      resString = resObj.toString() ?? '';
+      resString = resObj.toString();
     }
 
     // 尝试解析为 List\<String\>，兼容已转义或二次转义的 JSON 字符串
@@ -84,5 +74,13 @@ class HtmlUtil {
       // 兜底：返回空列表而不是抛异常
       return <String>[];
     }
+  }
+
+  static Future<String> downloadImageToFile(String url, String saveDir) async {
+    final filePath =
+        '$saveDir/${DateTime.now().microsecondsSinceEpoch}_${url.split('/').last}.jpg';
+    final dio = Dio();
+    await dio.download(url, filePath);
+    return filePath;
   }
 }

@@ -83,10 +83,9 @@ class ParseArchiveController extends GetxController {
         localPaths.add("$groupPath/$fileName");
       }
 
-      await appDatabase.bookTable.insertOnConflictUpdate(BookTableCompanion(
-        name: Value(title),
-        localPaths: Value(localPaths),
-      ));
+      await appDatabase.bookTable.insertOnConflictUpdate(
+        BookTableCompanion(name: Value(title), localPaths: Value(localPaths)),
+      );
       saveToBookState.value = Success(null);
     } catch (e) {
       debugPrint("保存书籍失败：$e");

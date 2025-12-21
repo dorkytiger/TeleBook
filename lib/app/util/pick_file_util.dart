@@ -102,4 +102,93 @@ class PickFileUtil {
     }
     return null;
   }
+  /// 选择文件夹
+  static Future<String?> pickDirectory() async {
+    // 请求存储权限
+    PermissionStatus status = await Permission.storage.status;
+
+    // 如果权限被永久拒绝，提示用户去设置
+    if (status.isPermanentlyDenied) {
+      final result = await Get.dialog<bool>(
+        TDAlertDialog(
+          title: '权限被拒绝',
+          content: '需要存储权限来选择文件夹，请在设置中开启',
+          leftBtn: TDDialogButtonOptions(
+            title: '取消',
+            action: () {
+              Get.back(result: false);
+            },
+          ),
+          rightBtn: TDDialogButtonOptions(
+            title: '去设置',
+            action: () {
+              Get.back(result: true);
+            },
+          ),
+        ),
+      );
+      if (result == true) {
+        await openAppSettings();
+      }
+      return null;
+    }
+
+    // 如果权限未授予，申请权限
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+
+      // Android 11+ 可能需要额外权限
+      if (!status.isGranted) {
+        final manageStatus = await Permission.manageExternalStorage.status;
+        if (!manageStatus.isGranted) {
+          status = await Permission.manageExternalStorage.request();
+        } else {
+          status = manageStatus;
+        }
+      }
+    }
+
+    // 检查权限状态
+    if (status.isGranted) {
+      try {
+        // 使用 getDirectoryPath 选择文件夹
+        final String? selectedDirectory =
+        await FilePicker.platform.getDirectoryPath();
+
+        if (selectedDirectory != null) {
+          ToastService.showSuccess('已选择: $selectedDirectory');
+          return selectedDirectory;
+        }
+      } catch (e) {
+        ToastService.showError('选择文件夹时出错: $e');
+      }
+    } else if (status.isDenied) {
+      ToastService.showText('存储权限被拒绝，无法选择文件夹');
+    } else if (status.isPermanentlyDenied) {
+      final result = await Get.dialog<bool>(
+        TDAlertDialog(
+          title: '权限被拒绝',
+          content: '需要存储权限来选择文件夹，请在设置中开启',
+          leftBtn: TDDialogButtonOptions(
+            title: '取消',
+            action: () {
+              Get.back(result: false);
+            },
+          ),
+          rightBtn: TDDialogButtonOptions(
+            title: '去设置',
+            action: () {
+              Get.back(result: true);
+            },
+          ),
+        ),
+      );
+      if (result == true) {
+        await openAppSettings();
+      }
+    }
+    return null;
+  }
+
+
 }

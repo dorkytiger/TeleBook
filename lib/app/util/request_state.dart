@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 sealed class RequestState<T> {
   const RequestState();
@@ -94,14 +95,16 @@ class DisplayResult<T> extends StatelessWidget {
           if (state is Idle<T>) {
             return onIdle?.call() ?? Container();
           } else if (state is Loading<T>) {
-            return onLoading?.call() ?? Container();
+            return onLoading?.call() ?? Center(child: TDLoading(size: TDLoadingSize.medium),);
           } else if (state is Error<T>) {
             return onError?.call((state as Error<T>).getErrorMessage()) ??
                 Container();
           } else if (state is Success<T>) {
             return onSuccess((state as Success<T>).getSuccessData());
           } else if (state is Empty<T>) {
-            return onEmpty?.call() ?? Container();
+            return onEmpty?.call() ?? TDEmpty(
+              emptyText: '暂无数据',
+            );
           } else {
             return Container();
           }

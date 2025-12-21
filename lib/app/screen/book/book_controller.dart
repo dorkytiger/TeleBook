@@ -11,24 +11,49 @@ class BookController extends GetxController {
 
   final parseUrl = TextEditingController();
   final getBookState = Rx<RequestState<List<BookTableData>>>(Idle());
+  final deleteBookState = Rx<RequestState<void>>(Idle());
   late final String appDirectory;
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
+    appDirectory = (await getApplicationDocumentsDirectory()).path;
+    await fetchBooks();
+  }
 
-    fetchBooks();
+  @override
+  void onReady() {
+    super.onReady();
+    fetchBooks();  // 每次路由激活时自动刷新
   }
 
   Future<void> fetchBooks() async {
     getBookState.value = Loading();
     try {
+      debugPrint("Fetching books from database...");
       final appDatabase = Get.find<AppDatabase>();
-      appDirectory = (await getApplicationDocumentsDirectory()).path;
       final books = await appDatabase.bookTable.select().get();
+      if(books.isEmpty){
+        getBookState.value =Empty();
+        return;
+      }
       getBookState.value = Success(books);
     } catch (e) {
+      debugPrint(e.toString());
       getBookState.value = Error(e.toString());
     }
+  }
+
+  Future<void> deleteBook(int id) async {
+    deleteBookState.value.handleFunction(
+      function: () async {
+        final appDatabase = Get.find<AppDatabase>();
+        await appDatabase.bookTable.deleteWhere((tbl) => tbl.id.equals(id));
+        await fetchBooks();
+      },
+      onStateChanged: (newState) {
+        deleteBookState.value = newState;
+      },
+    );
   }
 }

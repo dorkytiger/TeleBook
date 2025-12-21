@@ -110,12 +110,10 @@ class DownloadFormScreen extends GetView<DownloadFormController> {
               cacheHeight: 200,
               // 缓存高度，减少内存占用
               errorBuilder: (context, error, stackTrace) {
-                return Center(
-                  child: TDText(
-                    "加载失败",
-                    textColor: TDTheme.of(context).errorNormalColor,
-                    style: TextStyle(fontSize: 12),
-                  ),
+                return Icon(
+                  Icons.broken_image,
+                  size: 50,
+                  color: TDTheme.of(context).grayColor4,
                 );
               },
               loadingBuilder: (context, child, loadingProgress) {
