@@ -1,7 +1,7 @@
 # TeleBook 2.0：强大的图书解析与管理工具
 
 **TeleBook** 是一个使用 **Flutter** 开发的跨平台图书解析与管理应用。支持通过 **WebView 网页解析**和*
-*压缩包导入**两种方式快速获取书籍内容，让阅读和管理图书变得更加便捷。
+*压缩包导入**两种方式快速获取书籍内容，已保存在app的图书也可以单个/批量导出，让阅读和管理图书变得更加便捷。
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
