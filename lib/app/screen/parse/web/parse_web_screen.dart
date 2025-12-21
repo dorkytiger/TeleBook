@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
+import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
@@ -16,6 +18,27 @@ class ParseWebScreen extends GetView<ParseWebController> {
       appBar: TDNavBar(
         title: '解析网页',
         rightBarItems: [
+          TDNavBarItem(
+            icon: Icons.refresh,
+            action: () {
+              controller.webViewController.reload();
+            },
+          ),
+          TDNavBarItem(
+            icon: Icons.cleaning_services,
+            action: () async {
+              try {
+                await controller.webViewController.clearCache();
+                if (Platform.isWindows) {
+                  ToastService.showSuccess('已重新加载页面（Windows 平台不支持清除缓存）');
+                } else {
+                  ToastService.showSuccess('缓存已清除');
+                }
+              } catch (e) {
+                ToastService.showError('清除缓存失败: $e');
+              }
+            },
+          ),
           TDNavBarItem(
             icon: Icons.check,
             action: () {
@@ -37,40 +60,77 @@ class ParseWebScreen extends GetView<ParseWebController> {
           children: [
             if (controller.selectBar.value == 0)
               Expanded(
-                child: CrossPlatformWebView(controller: controller.webViewController),
+                child: Column(
+                  children: [
+                    ValueListenableBuilder<int>(
+                      valueListenable:
+                          controller.webViewController.loadingProgressNotifier,
+                      builder: (context, progress, child) {
+                        if (progress > 0 && progress < 100) {
+                          return TDCell(
+                            title: "解析中... $progress%",
+                            descriptionWidget: TDProgress(
+                              type: TDProgressType.linear,
+                              value: progress / 100,
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                    Expanded(
+                      child: CrossPlatformWebView(
+                        controller: controller.webViewController,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             if (controller.selectBar.value == 1)
               Expanded(
-                child: Obx(
-                  () => ListView.builder(
-                    itemBuilder: (context, index) {
-                      final item = controller.images[index];
-                      return TDCell(
-                        title: "图片 $index",
-                        description: item,
-                        leftIconWidget: CustomImageLoader(networkUrl: item),
-                        onClick: (cell) {
-                          TDActionSheet(
-                            context,
-                            visible: true,
-                            onSelected: (actionItem, actionIndex) {
-                              if (actionIndex == 0) {
-                                controller.copyImageUrl(item);
-                              }
-                              if (actionIndex == 1) {
-                                controller.saveImageTo(item);
-                              }
-                            },
-                            items: [
-                              TDActionSheetItem(label: "复制url"),
-                              TDActionSheetItem(label: "保存到..."),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    itemCount: controller.images.length,
-                  ),
+                child: Column(
+                  children: [
+                    TDNoticeBar(
+                      content: "多图片页面可能需要上下滑动加载全部图片后才能完整解析，点击图片可进行操作",
+                      marquee: true,
+                      prefixIcon: Icons.info,
+                    ),
+                    Expanded(
+                      child: Obx(
+                        () => ListView.builder(
+                          itemBuilder: (context, index) {
+                            final item = controller.images[index];
+                            return TDCell(
+                              title: "图片 $index",
+                              description: item,
+                              leftIconWidget: CustomImageLoader(
+                                networkUrl: item,
+                              ),
+                              onClick: (cell) {
+                                TDActionSheet(
+                                  context,
+                                  visible: true,
+                                  onSelected: (actionItem, actionIndex) {
+                                    if (actionIndex == 0) {
+                                      controller.copyImageUrl(item);
+                                    }
+                                    if (actionIndex == 1) {
+                                      controller.saveImageTo(item);
+                                    }
+                                  },
+                                  items: [
+                                    TDActionSheetItem(label: "复制url"),
+                                    TDActionSheetItem(label: "保存到..."),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                          itemCount: controller.images.length,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],

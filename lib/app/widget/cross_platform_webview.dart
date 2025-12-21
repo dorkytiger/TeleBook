@@ -36,12 +36,15 @@ class _CrossPlatformWebViewState extends State<CrossPlatformWebView> {
           widget.controller._inAppWebViewController = controller;
         },
         onProgressChanged: (controller, progress) {
+          widget.controller._loadingProgressNotifier.value = progress;
           widget.controller._onProgress?.call(progress);
         },
         onLoadStart: (controller, url) {
+          widget.controller._loadingProgressNotifier.value = 0;
           widget.controller._onPageStarted?.call(url?.toString() ?? '');
         },
         onLoadStop: (controller, url) {
+          widget.controller._loadingProgressNotifier.value = 100;
           widget.controller._onPageFinished?.call(url?.toString() ?? '');
         },
         onReceivedError: (controller, request, error) {
@@ -84,6 +87,18 @@ class CrossPlatformWebViewController {
   Function(String url)? _onPageFinished;
   Function(String message)? _onConsoleMessage;
 
+  /// 页面加载进度 (0-100) - 使用 ValueNotifier 以支持外部监听
+  final ValueNotifier<int> _loadingProgressNotifier = ValueNotifier<int>(0);
+
+  /// 获取当前加载进度
+  int get loadingProgress => _loadingProgressNotifier.value;
+
+  /// 获取加载进度的 ValueNotifier (用于监听)
+  ValueNotifier<int> get loadingProgressNotifier => _loadingProgressNotifier;
+
+  /// 是否正在加载
+  bool get isLoading => _loadingProgressNotifier.value > 0 && _loadingProgressNotifier.value < 100;
+
   CrossPlatformWebViewController({required this.initialUrl}) {
     // 如果不是 Windows，初始化 webview_flutter
     if (!kIsWeb && !Platform.isWindows) {
@@ -111,12 +126,15 @@ class CrossPlatformWebViewController {
       _webViewController!.setNavigationDelegate(
         webview_flutter.NavigationDelegate(
           onProgress: (int progress) {
+            _loadingProgressNotifier.value = progress;
             _onProgress?.call(progress);
           },
           onPageStarted: (String url) {
+            _loadingProgressNotifier.value = 0;
             _onPageStarted?.call(url);
           },
           onPageFinished: (String url) {
+            _loadingProgressNotifier.value = 100;
             _onPageFinished?.call(url);
           },
           onWebResourceError: (webview_flutter.WebResourceError error) {
@@ -150,11 +168,22 @@ class CrossPlatformWebViewController {
 
   /// 清除缓存
   Future<void> clearCache() async {
-    if (_webViewController != null) {
-      await _webViewController!.clearCache();
-      await _webViewController!.clearLocalStorage();
-    } else if (_inAppWebViewController != null) {
-      await _inAppWebViewController!.clearCache();
+    try {
+      if (_webViewController != null) {
+        await _webViewController!.clearCache();
+        await _webViewController!.clearLocalStorage();
+      } else if (_inAppWebViewController != null) {
+        // Windows 平台不支持 clearAllCache，使用重新加载作为替代
+        if (Platform.isWindows) {
+          debugPrint('Windows 平台不支持清除缓存，将重新加载页面');
+          await reload();
+        } else {
+          await InAppWebViewController.clearAllCache();
+        }
+      }
+    } catch (e) {
+      debugPrint('清除缓存失败: $e');
+      // 清除缓存失败不影响使用，只记录错误
     }
   }
 
@@ -163,7 +192,7 @@ class CrossPlatformWebViewController {
     if (_webViewController != null) {
       final result =
           await _webViewController!.runJavaScriptReturningResult(javascript);
-      return result?.toString();
+      return result.toString();
     } else if (_inAppWebViewController != null) {
       final result =
           await _inAppWebViewController!.evaluateJavascript(source: javascript);
