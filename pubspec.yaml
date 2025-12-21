@@ -3,7 +3,7 @@ version: 2.0.0+1
 publish_to: none
 description: Simple way that download the telegraph Book.
 environment: 
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: '>=3.6.0 <4.0.0'
 
 dependencies:
   cupertino_icons: ^1.0.2
@@ -31,7 +31,7 @@ dependencies:
 dev_dependencies: 
   build_runner: ^2.4.15
   drift_dev: ^2.26.0
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
 
