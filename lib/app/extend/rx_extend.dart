@@ -41,19 +41,21 @@ extension RxExtend on Rx<RequestState> {
     });
   }
 
-  void listenWithSuccess({bool showLoading = true, Function()? onSuccess}) {
+  void listenWithSuccess({bool showLoadingToast = true,bool showSuccessToast=true,String successMsg='操作成功', Function()? onSuccess}) {
     ever<RequestState>(this, (state) {
       // 不需要在这里使用 addPostFrameCallback
       // ToastService 内部已经有完善的处理机制
       switch (state) {
         case Loading():
-          if (showLoading) {
+          if (showLoadingToast) {
             ToastService.showLoading("正在加载...");
           }
           break;
         case Success():
           ToastService.dismiss();
-          ToastService.showSuccess("操作成功");
+          if(showSuccessToast){
+            ToastService.showSuccess(successMsg);
+          }
           if (onSuccess != null) {
             onSuccess();
           }

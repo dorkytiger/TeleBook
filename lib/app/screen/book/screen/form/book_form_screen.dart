@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_controller.dart';
@@ -53,8 +52,10 @@ class BookFormScreen extends GetView<BookFormController> {
                     formItemNotifier: controller.formItemNotify['url'],
                     label: "网址",
                     labelWidth: 82.0,
-                    child: TDInput(
+
+                    child: TDTextarea(
                       hintText: "请输入数据网址",
+                      bordered: false,
                       onChanged: (value) {
                         controller.formItemNotify['url'].upDataForm(value);
                       },
@@ -78,6 +79,27 @@ class BookFormScreen extends GetView<BookFormController> {
                           type: TDButtonType.text,
                           onTap: () async {
                             await controller.pickArchiveFile();
+                          },
+                        )),
+                  ),
+                if (controller.source.value != null &&
+                    controller.source.value == BookFormSources.batchArchive)
+                  TDFormItem(
+                    type: TDFormItemType.input,
+                    name: 'folder',
+                    formItemNotifier: controller.formItemNotify['folder'],
+                    label: "文件夹",
+                    labelWidth: 82.0,
+                    child: TDInput(
+                        hintText: "请选择文件夹",
+                        controller: controller.folderPathController,
+                        readOnly: true,
+                        rightBtn: TDButton(
+                          text: "选择文件夹",
+                          theme: TDButtonTheme.primary,
+                          type: TDButtonType.text,
+                          onTap: () async {
+                            await controller.pickFolder();
                           },
                         )),
                   )

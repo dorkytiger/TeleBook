@@ -3,12 +3,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:tele_book/app/screen/parse/parse_controller.dart';
+import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
+
 import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 
 class DownloadFormController extends GetxController {
-  late final ParseResult parseResult;
+  late final ParseWebResult parseResult;
 
   // 用于强制刷新图片的版本号，key 是图片索引
   final imageVersions = <int, RxInt>{}.obs;
@@ -23,7 +24,7 @@ class DownloadFormController extends GetxController {
   void onInit() {
     super.onInit();
     final parseResultStr = Get.arguments as String;
-    parseResult = ParseResult.fromJson(jsonDecode(parseResultStr));
+    parseResult = ParseWebResult.fromJson(jsonDecode(parseResultStr));
     debugPrint('DownloadFormController onInit: $parseResult');
 
     // 初始化图片列表

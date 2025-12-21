@@ -4,16 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 class CustomImageLoader extends StatefulWidget {
-  final bool isLocal;
-  final String networkUrl;
-  final String localUrl;
+  final String? networkUrl;
+  final String? localUrl;
 
-  const CustomImageLoader({
-    super.key,
-    required this.isLocal,
-    required this.networkUrl,
-    required this.localUrl,
-  });
+  const CustomImageLoader({super.key, this.networkUrl, this.localUrl});
 
   @override
   _CustomImageLoaderState createState() => _CustomImageLoaderState();
@@ -35,8 +29,16 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
   }
 
   void _setUrl() {
+    if (widget.networkUrl == null && widget.localUrl == null) {
+      throw ArgumentError('Both networkUrl and localUrl cannot be null');
+    }
+
     setState(() {
-      _url = widget.isLocal ? widget.localUrl : widget.networkUrl;
+      if (widget.localUrl != null) {
+        _url = widget.localUrl!;
+      } else {
+        _url = widget.networkUrl!;
+      }
     });
   }
 
@@ -46,40 +48,46 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
     });
     Future.delayed(Duration.zero, () {
       setState(() {
-        _url = widget.isLocal
-            ? widget.localUrl
-            : widget.networkUrl; // Reset the URL to retry loading
+        if (widget.localUrl != null) {
+          _url = widget.localUrl!;
+        } else {
+          _url = widget.networkUrl!;
+        }
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return widget.isLocal
-        ? Image.file(File(_url))
-        : Image.network(_url,
-            loadingBuilder: (context, widget, loadingProgress) {
-            if (loadingProgress == null) {
-              return widget;
-            }
-            return const Center(
-              child: TDLoading(size: TDLoadingSize.small),
-            );
-          }, errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: TDLoading(
-                size: TDLoadingSize.small,
-                text: '加载失败',
-                refreshWidget: GestureDetector(
-                  onTap: _retryLoading,
-                  child: TDText(
-                    '刷新',
-                    font: TDTheme.of(context).fontBodySmall,
-                    textColor: TDTheme.of(context).brandNormalColor,
-                  ),
-                ),
-              ),
-            );
-          });
+    if (widget.localUrl != null) {
+      return SizedBox(height: 100, width: 80, child: Image.file(File(_url)));
+    }
+    return SizedBox(
+      height: 100,
+      width: 80,
+      child: Image.network(
+        _url,
+        loadingBuilder: (context, widget, loadingProgress) {
+          if (loadingProgress == null) {
+            return widget;
+          }
+          return const Center(
+            child: TDLoading(
+              size: TDLoadingSize.small,
+              icon: TDLoadingIcon.activity,
+            ),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return TDResult(
+            icon: Icon(
+              Icons.broken_image,
+              size: 50,
+              color: TDTheme.of(context).grayColor4,
+            ),
+          );
+        },
+      ),
+    );
   }
 }

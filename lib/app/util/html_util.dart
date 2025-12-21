@@ -1,11 +1,11 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:tele_book/app/widget/cross_platform_webview.dart';
 
 class HtmlUtil {
   static Future<String> extractTitleFromWebView(
-    WebViewController controller,
+    CrossPlatformWebViewController controller,
   ) async {
     final js = r"""
     (function(){
@@ -26,7 +26,7 @@ class HtmlUtil {
   }
 
   static Future<List<String>> extractImagesFromWebView(
-    WebViewController controller,
+    CrossPlatformWebViewController controller,
   ) async {
     final js = r"""
     (function(){

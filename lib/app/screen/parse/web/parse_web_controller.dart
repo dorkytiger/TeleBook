@@ -8,12 +8,13 @@ import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/widget/cross_platform_webview.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-class ParseController extends GetxController {
+class ParseWebController extends GetxController {
   final parseUrl = Get.arguments as String;
   final selectBar =0.obs;
-  late final WebViewController webViewController;
+  late final CrossPlatformWebViewController webViewController;
   late final RxList<String> images = <String>[].obs;
   late final Rx<String> title = ''.obs;
   final parseState = Rx<RequestState<void>>(Idle());
@@ -28,7 +29,7 @@ class ParseController extends GetxController {
         Get.offAndToNamed(
           "/download/form",
           arguments: jsonEncode(
-            ParseResult(title: title.value, images: images.toList()).toJson(),
+            ParseWebResult(title: title.value, images: images.toList()).toJson(),
           ),
         );
       },
@@ -38,48 +39,23 @@ class ParseController extends GetxController {
   }
 
   void _initWebView() {
-    webViewController = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onProgress: (int progress) {
-            parseProgress.value = progress;
-          },
-          onPageStarted: (String url) {},
-          onPageFinished: (String url) {
-            _handlePageFinished(url);
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint('WebView资源错误: ${error.description}');
-          },
-          onNavigationRequest: (NavigationRequest request) {
-            final uri = Uri.parse(request.url);
+    webViewController = CrossPlatformWebViewController(initialUrl: parseUrl);
 
-            // 处理非标准 scheme (如 weixin://, tel: 等)
-            if (uri.scheme != 'http' && uri.scheme != 'https') {
-              debugPrint('阻止打开非标准 scheme: ${request.url}');
-              return NavigationDecision.prevent;
-            }
+    webViewController.setNavigationDelegate(
+      onProgress: (int progress) {
+        parseProgress.value = progress;
+      },
+      onPageStarted: (String url) {},
+      onPageFinished: (String url) {
+        _handlePageFinished(url);
+      },
+      onConsoleMessage: (String message) {
+        debugPrint('WebView Console: $message');
+      },
+    );
 
-            // // 阻止跳转到其他域名
-            // final initialUri = Uri.parse(parseUrl);
-            // if (uri.host != initialUri.host) {
-            //   debugPrint('阻止跨域跳转: ${request.url}');
-            //   return NavigationDecision.prevent;
-            // }
-
-            // 允许同域名的页面加载
-            return NavigationDecision.navigate;
-          },
-        ),
-      )
-      ..setOnConsoleMessage((message) {
-        debugPrint('WebView Console: ${message.message}');
-      })
-      ..clearCache()
-      ..clearLocalStorage()
-      ..enableZoom(false)
-      ..loadRequest(Uri.parse(parseUrl));
+    webViewController.clearCache();
+    webViewController.loadUrl();
   }
 
   Future<void> _handlePageFinished(String url) async {
@@ -126,18 +102,18 @@ class ParseController extends GetxController {
   }
 }
 
-class ParseResult {
+class ParseWebResult {
   final String title;
   final List<String> images;
 
-  ParseResult({required this.title, required this.images});
+  ParseWebResult({required this.title, required this.images});
 
   Map<String, dynamic> toJson() {
     return {'title': title, 'images': images};
   }
 
-  factory ParseResult.fromJson(Map<String, dynamic> json) {
-    return ParseResult(
+  factory ParseWebResult.fromJson(Map<String, dynamic> json) {
+    return ParseWebResult(
       title: json['title'] as String,
       images: List<String>.from(json['images'] as List),
     );

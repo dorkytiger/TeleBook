@@ -24,9 +24,9 @@ class DownloadTaskInfo {
     TaskStatus? initialStatus,
     double? initialProgress,
     String? initialSavePath,
-  })  : status = Rx<TaskStatus>(initialStatus ?? TaskStatus.enqueued),
-        progress = RxDouble(initialProgress ?? 0.0),
-        savePath = RxString(initialSavePath ?? '');
+  }) : status = Rx<TaskStatus>(initialStatus ?? TaskStatus.enqueued),
+       progress = RxDouble(initialProgress ?? 0.0),
+       savePath = RxString(initialSavePath ?? '');
 }
 
 /// 下载组信息
@@ -45,11 +45,11 @@ class DownloadGroupInfo {
     int? total,
     int? completed,
     int? failed,
-  })  : totalCount = RxInt(total ?? 0),
-        completedCount = RxInt(completed ?? 0),
-        failedCount = RxInt(failed ?? 0),
-        groupProgress = RxDouble(0.0),
-        createTime = Rx<DateTime>(DateTime.now());
+  }) : totalCount = RxInt(total ?? 0),
+       completedCount = RxInt(completed ?? 0),
+       failedCount = RxInt(failed ?? 0),
+       groupProgress = RxDouble(0.0),
+       createTime = Rx<DateTime>(DateTime.now());
 
   double get progressPercent =>
       totalCount.value > 0 ? completedCount.value / totalCount.value : 0.0;
@@ -80,18 +80,9 @@ class DownloadService extends GetxService {
         '{displayName}',
         'Downloading: {progress}%',
       ),
-      complete: const TaskNotification(
-        '{displayName}',
-        'Download complete',
-      ),
-      error: const TaskNotification(
-        '{displayName}',
-        'Download failed',
-      ),
-      paused: const TaskNotification(
-        '{displayName}',
-        'Download paused',
-      ),
+      complete: const TaskNotification('{displayName}', 'Download complete'),
+      error: const TaskNotification('{displayName}', 'Download failed'),
+      paused: const TaskNotification('{displayName}', 'Download paused'),
     );
 
     appDatabase.downloadGroupTable.select().get().then((groupRows) {
@@ -115,9 +106,13 @@ class DownloadService extends GetxService {
           groupId: taskRow.groupId ?? 'default',
           url: taskRow.url,
           filename: taskRow.fileName,
+          initialProgress: taskRow.status == TaskStatus.complete.name
+              ? 1.0
+              : 0.0,
           initialStatus: TaskStatus.values.firstWhere(
-              (e) => e.name == taskRow.status,
-              orElse: () => TaskStatus.enqueued),
+            (e) => e.name == taskRow.status,
+            orElse: () => TaskStatus.enqueued,
+          ),
           initialSavePath: taskRow.filePath,
         );
       }
@@ -132,7 +127,8 @@ class DownloadService extends GetxService {
       if (update is TaskProgressUpdate) {
         taskInfo.progress.value = update.progress;
         debugPrint(
-            'Task ${update.task.taskId} progress: ${(update.progress * 100).toStringAsFixed(1)}%');
+          'Task ${update.task.taskId} progress: ${(update.progress * 100).toStringAsFixed(1)}%',
+        );
 
         // 更新组进度
         _updateGroupProgress(taskInfo.groupId);
@@ -236,11 +232,11 @@ class DownloadService extends GetxService {
             (appDatabase.downloadGroupTable.update()
                   ..where((tbl) => tbl.id.equals(finalGroupId)))
                 .write(
-              DownloadGroupTableCompanion(
-                totalCount: Value(groups[finalGroupId]!.totalCount.value),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
+                  DownloadGroupTableCompanion(
+                    totalCount: Value(groups[finalGroupId]!.totalCount.value),
+                    updatedAt: Value(DateTime.now()),
+                  ),
+                );
           }
         }
 
@@ -250,7 +246,8 @@ class DownloadService extends GetxService {
             groupId: Value(finalGroupId),
             url: Value(url),
             fileName: Value(finalFilename),
-            filePath: Value(relativePath), // 保存相对路径
+            filePath: Value(relativePath),
+            // 保存相对路径
             status: Value(TaskStatus.enqueued.name),
             createdAt: Value(DateTime.now()),
           ),
@@ -314,7 +311,8 @@ class DownloadService extends GetxService {
     }
 
     debugPrint(
-        'Batch download started: ${taskIds.length}/${urls.length} tasks');
+      'Batch download started: ${taskIds.length}/${urls.length} tasks',
+    );
     return groupInfo;
   }
 
@@ -448,12 +446,14 @@ class DownloadService extends GetxService {
   /// 删除指定组（包括已下载的文件）
   Future<void> deleteGroup(String groupId) async {
     final groupTasks = getTasksByGroup(groupId);
-   await appDatabase.downloadGroupTable
-        .deleteWhere((tbl) => tbl.id.equals(groupId));
+    await appDatabase.downloadGroupTable.deleteWhere(
+      (tbl) => tbl.id.equals(groupId),
+    );
 
     for (final taskInfo in groupTasks) {
-      await appDatabase.downloadTaskTable
-          .deleteWhere((tbl) => tbl.id.equals(taskInfo.taskId));
+      await appDatabase.downloadTaskTable.deleteWhere(
+        (tbl) => tbl.id.equals(taskInfo.taskId),
+      );
       // 如果下载完成，删除文件
       if (taskInfo.status.value == TaskStatus.complete) {
         final filePath = await getFilePath(taskInfo.taskId);
@@ -517,10 +517,8 @@ class DownloadService extends GetxService {
     await (appDatabase.downloadTaskTable.update()
           ..where((tbl) => tbl.id.equals(taskId)))
         .write(
-      DownloadTaskTableCompanion(
-        status: Value(TaskStatus.complete.name),
-      ),
-    );
+          DownloadTaskTableCompanion(status: Value(TaskStatus.complete.name)),
+        );
   }
 
   /// 下载失败回调
@@ -529,10 +527,8 @@ class DownloadService extends GetxService {
     (appDatabase.downloadTaskTable.update()
           ..where((tbl) => tbl.id.equals(taskId)))
         .write(
-      DownloadTaskTableCompanion(
-        status: Value(TaskStatus.failed.name),
-      ),
-    );
+          DownloadTaskTableCompanion(status: Value(TaskStatus.failed.name)),
+        );
     debugPrint('Download failed: $taskId');
   }
 
@@ -565,7 +561,6 @@ class DownloadService extends GetxService {
       debugPrint('Error resuming tasks: $e');
     }
   }
-
 
   /// 从 URL 提取文件名
   String _getFilenameFromUrl(String url) {
@@ -634,17 +629,17 @@ class DownloadService extends GetxService {
     (appDatabase.downloadGroupTable.update()
           ..where((tbl) => tbl.id.equals(groupId)))
         .write(
-      DownloadGroupTableCompanion(
-        totalCount: Value(groupInfo.totalCount.value),
-        completedCount: Value(completed),
-        failedCount: Value(failed),
-        runningCount: Value(running),
-        updatedAt: Value(DateTime.now()),
-        completedAt: Value(
-          completed == groupInfo.totalCount.value ? DateTime.now() : null,
-        ),
-      ),
-    );
+          DownloadGroupTableCompanion(
+            totalCount: Value(groupInfo.totalCount.value),
+            completedCount: Value(completed),
+            failedCount: Value(failed),
+            runningCount: Value(running),
+            updatedAt: Value(DateTime.now()),
+            completedAt: Value(
+              completed == groupInfo.totalCount.value ? DateTime.now() : null,
+            ),
+          ),
+        );
 
     // 更新组整体进度
     _updateGroupProgress(groupId);
@@ -670,10 +665,10 @@ class DownloadService extends GetxService {
     (appDatabase.downloadGroupTable.update()
           ..where((tbl) => tbl.id.equals(groupId)))
         .write(
-      DownloadGroupTableCompanion(
-        groupProgress: Value(progress),
-        updatedAt: Value(DateTime.now()),
-      ),
-    );
+          DownloadGroupTableCompanion(
+            groupProgress: Value(progress),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
   }
 }

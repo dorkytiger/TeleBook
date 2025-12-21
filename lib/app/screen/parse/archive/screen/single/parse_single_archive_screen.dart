@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/screen/parse/archive/parse_archive_controller.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_controller.dart';
 
-class ParseArchiveScreen extends GetView<ParseArchiveController> {
-  const ParseArchiveScreen({super.key});
+import 'package:tele_book/app/widget/custom_image_loader.dart';
+
+class ParseSingleArchiveScreen extends GetView<ParseSingleArchiveController> {
+  const ParseSingleArchiveScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +17,7 @@ class ParseArchiveScreen extends GetView<ParseArchiveController> {
         title: '解析归档',
         rightBarItems: [
           TDNavBarItem(
-            icon: Icons.edit,
+            icon: Icons.save,
             action: () {
               TDActionSheet(
                 context,
@@ -42,11 +44,7 @@ class ParseArchiveScreen extends GetView<ParseArchiveController> {
             return TDCell(
               title: archive.path.split('/').last,
               description: '路径: ${archive.path}',
-              leftIconWidget: SizedBox(
-                height: 100,
-                width: 80,
-                child: Image.file(archive),
-              ),
+              leftIconWidget: CustomImageLoader(localUrl: archive.path,),
               onClick: (cell) {},
               onLongPress: (cell) {},
             );

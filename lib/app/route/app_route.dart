@@ -11,27 +11,62 @@ import 'package:tele_book/app/screen/download/screen/form/download_form_binding.
 import 'package:tele_book/app/screen/download/screen/form/download_form_screen.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_binding.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_screen.dart';
-import 'package:tele_book/app/screen/parse/archive/parse_archive_binding.dart';
-import 'package:tele_book/app/screen/parse/archive/parse_archive_screen.dart';
-import 'package:tele_book/app/screen/parse/parse_binding.dart';
-import 'package:tele_book/app/screen/parse/parse_screen.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_binding.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_screen.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_binding.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_screen.dart' ;
+import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_binding.dart';
+import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_screen.dart';
+import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
+import 'package:tele_book/app/screen/parse/web/parse_web_screen.dart';
 
 class AppRoute {
   static final pages = [
     GetPage(name: '/book', page: () => BookScreen(), binding: BookBinding()),
-    GetPage(name: '/book/form', page: () => BookFormScreen(), binding: BookFormBinding()),
-    GetPage(name: '/book/page', page: () => BookPageScreen(), binding: BookPageBinding()),
-    GetPage(name: '/parse', page: () => ParseScreen(), binding: ParseBinding()),
-    GetPage(name: '/parse/archive', page: () => ParseArchiveScreen(), binding: ParseArchiveBinding()),
     GetPage(
-        name: '/download',
-        page: () => DownloadScreen(),
-        binding: DownloadBinding()),
+      name: '/book/form',
+      page: () => BookFormScreen(),
+      binding: BookFormBinding(),
+    ),
     GetPage(
-        name: '/download/form',
-        page: () => DownloadFormScreen(),
-        binding: DownloadFormBinding()),
-    GetPage(name: '/download/task', page: () => DownloadTaskScreen(), binding: DownloadTaskBinding()),
-
+      name: '/book/page',
+      page: () => BookPageScreen(),
+      binding: BookPageBinding(),
+    ),
+    GetPage(
+      name: '/parse/web',
+      page: () => ParseWebScreen(),
+      binding: ParseWebBinding(),
+    ),
+    GetPage(
+      name: '/parse/archive/single',
+      page: () => ParseSingleArchiveScreen(),
+      binding: ParseSingleArchiveBinding(),
+    ),
+    GetPage(
+      name: '/parse/archive/batch',
+      page: () => ParseBatchArchiveScreen(),
+      binding: ParseBatchArchiveBinding(),
+    ),
+    GetPage(
+      name: '/parse/archive/batch/edit',
+      page: () =>  EditArchiveFilesScreen(),
+      binding: EditArchiveFilesBinding(),
+    ),
+    GetPage(
+      name: '/download',
+      page: () => DownloadScreen(),
+      binding: DownloadBinding(),
+    ),
+    GetPage(
+      name: '/download/form',
+      page: () => DownloadFormScreen(),
+      binding: DownloadFormBinding(),
+    ),
+    GetPage(
+      name: '/download/task',
+      page: () => DownloadTaskScreen(),
+      binding: DownloadTaskBinding(),
+    ),
   ];
 }

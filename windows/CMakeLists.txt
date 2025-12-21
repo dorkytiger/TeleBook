@@ -10,6 +10,9 @@ set(BINARY_NAME "wo_nas")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# 保证 CMake 允许 add_custom_command(TARGET) 使用 DEPENDS，消除 flutter 插件的警告
+cmake_policy(SET CMP0175 NEW)
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
@@ -106,3 +109,21 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
+
+# 检查 NuGet 可执行文件（允许在项目 tools/nuget 目录或系统 PATH 中查找）
+find_program(NUGET_EXECUTABLE
+  NAMES nuget.exe nuget
+  HINTS
+    "${CMAKE_SOURCE_DIR}/tools/nuget"
+  PATHS
+    ENV PATH
+)
+
+if(NOT NUGET_EXECUTABLE)
+  message(FATAL_ERROR
+    "\nNuGet 未找到！flutter_inappwebview_windows 插件需要 NuGet。\n\
+请运行 D:\\StudioProjects\\TeleBook\\tools\\install_nuget.ps1 以下载 nuget.exe，\n\
+或按照 https://inappwebview.dev/docs/intro#setup-windows 进行手动安装。\n\n\
+下载后请将 nuget.exe 所在目录加入系统 PATH，或在环境变量中设置 NUGET_EXECUTABLE 指向 nuget.exe 的完整路径。\n"
+  )
+endif()

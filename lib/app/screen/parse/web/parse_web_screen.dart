@@ -3,11 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/screen/parse/parse_controller.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
+import 'package:tele_book/app/widget/cross_platform_webview.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
-class ParseScreen extends GetView<ParseController> {
-  const ParseScreen({super.key});
+class ParseWebScreen extends GetView<ParseWebController> {
+  const ParseWebScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +22,7 @@ class ParseScreen extends GetView<ParseController> {
               Get.offAndToNamed(
                 "/download/form",
                 arguments: jsonEncode(
-                  ParseResult(
+                  ParseWebResult(
                     title: controller.title.value,
                     images: controller.images.toList(),
                   ).toJson(),
@@ -36,7 +37,7 @@ class ParseScreen extends GetView<ParseController> {
           children: [
             if (controller.selectBar.value == 0)
               Expanded(
-                child: WebViewWidget(controller: controller.webViewController),
+                child: CrossPlatformWebView(controller: controller.webViewController),
               ),
             if (controller.selectBar.value == 1)
               Expanded(
@@ -47,21 +48,7 @@ class ParseScreen extends GetView<ParseController> {
                       return TDCell(
                         title: "图片 $index",
                         description: item,
-                        leftIconWidget: SizedBox(
-                          height: 100,
-                          width: 80,
-                          child: Image.network(
-                            item,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.broken_image,
-                                size: 50,
-                                color: TDTheme.of(context).grayColor4,
-                              );
-                            },
-                          ),
-                        ),
+                        leftIconWidget: CustomImageLoader(networkUrl: item),
                         onClick: (cell) {
                           TDActionSheet(
                             context,

@@ -42,15 +42,23 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                               File(snapshot.data!),
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.broken_image, size: 50);
+                                return Icon(
+                                  Icons.broken_image,
+                                  size: 50,
+                                  color: TDTheme.of(context).grayColor4,
+                                );
                               },
                             ),
                           );
                         }
-                        return const SizedBox(
+                        return SizedBox(
                           height: 100,
                           width: 80,
-                          child: Icon(Icons.image, size: 50),
+                          child: Icon(
+                            Icons.image,
+                            size: 50,
+                            color: TDTheme.of(context).grayColor4,
+                          ),
                         );
                       },
                     );
@@ -63,10 +71,9 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                         child: SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(
+                          child: TDProgress(
                             value: task.progress.value,
-                            color: TDTheme.of(context).brandNormalColor,
-                            strokeWidth: 3,
+                            type: TDProgressType.circular,
                           ),
                         ),
                       ),

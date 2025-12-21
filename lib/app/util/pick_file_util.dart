@@ -1,15 +1,13 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
-
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/service/toast_service.dart';
 
 class PickFileUtil {
   static Future<FilePickerResult?> pickerFile({
     FileType type = FileType.custom,
     List<String>? allowedExtensions,
-}) async {
+  }) async {
     // 根据 Android 版本请求不同的权限
     PermissionStatus status;
 
@@ -67,15 +65,15 @@ class PickFileUtil {
       try {
         final result = await FilePicker.platform.pickFiles(
           type: type,
-          allowedExtensions: allowedExtensions
+          allowedExtensions: allowedExtensions,
         );
         return result;
       } catch (e) {
-        ToastService.showError('选择文件时出错: $e');
+        throw Exception('选择文件时出错: $e');
       }
     } else if (status.isDenied) {
       // 权限被拒绝
-      ToastService.showText('存储权限被拒绝，无法选择文件');
+      throw Exception('存储权限被拒绝，无法选择文件');
     } else if (status.isPermanentlyDenied) {
       // 权限被永久拒绝，提示用户去设置中开启
       final result = await Get.dialog<bool>(
@@ -102,6 +100,7 @@ class PickFileUtil {
     }
     return null;
   }
+
   /// 选择文件夹
   static Future<String?> pickDirectory() async {
     // 请求存储权限
@@ -152,18 +151,17 @@ class PickFileUtil {
     if (status.isGranted) {
       try {
         // 使用 getDirectoryPath 选择文件夹
-        final String? selectedDirectory =
-        await FilePicker.platform.getDirectoryPath();
+        final String? selectedDirectory = await FilePicker.platform
+            .getDirectoryPath();
 
         if (selectedDirectory != null) {
-          ToastService.showSuccess('已选择: $selectedDirectory');
           return selectedDirectory;
         }
       } catch (e) {
-        ToastService.showError('选择文件夹时出错: $e');
+        throw Exception('选择文件夹时出错: $e');
       }
     } else if (status.isDenied) {
-      ToastService.showText('存储权限被拒绝，无法选择文件夹');
+      throw Exception('存储权限被拒绝，无法选择文件夹');
     } else if (status.isPermanentlyDenied) {
       final result = await Get.dialog<bool>(
         TDAlertDialog(
@@ -189,6 +187,4 @@ class PickFileUtil {
     }
     return null;
   }
-
-
 }
