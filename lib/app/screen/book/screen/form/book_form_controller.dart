@@ -77,15 +77,15 @@ class BookFormController extends GetxController {
     if (sourceValue == BookFormSources.web.value) {
       final url = formData['url'] as String;
       // 然后打开解析页面
-      Get.toNamed("/parse/web", arguments: url);
+      Get.offAndToNamed("/parse/web", arguments: url);
     }
     if (sourceValue == BookFormSources.archive.value) {
       final file = formData['file'] as String;
-      Get.toNamed('/parse/archive/single', arguments: file);
+      Get.offAndToNamed('/parse/archive/single', arguments: file);
     }
     if (sourceValue == BookFormSources.batchArchive.value) {
       final folder = formData['folder'] as String;
-      Get.toNamed('/parse/archive/batch', arguments: folder);
+      Get.offAndToNamed('/parse/archive/batch', arguments: folder);
     }
   }
 

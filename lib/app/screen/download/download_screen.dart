@@ -77,7 +77,7 @@ class DownloadScreen extends GetView<DownloadController> {
                       TDActionSheetItem(label: "继续下载"),
                       TDActionSheetItem(label: "删除下载"),
                       TDActionSheetItem(label: "重新下载"),
-                      TDActionSheetItem(label: "保持为书籍"),
+                      TDActionSheetItem(label: "保存为书籍"),
                     ],
                   );
                 },
