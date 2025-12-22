@@ -147,18 +147,30 @@ class BookController extends GetxController {
     try {
       final appDir = await getApplicationDocumentsDirectory();
 
+      debugPrint('📦 开始导出书籍: ${data.name} (${data.localPaths.length} 个文件)');
+
       // 读取所有文件内容
       final List<MapEntry<String, Uint8List>> fileContents = [];
       int index = 1;
+      int notFoundCount = 0;
+
       for (final path in data.localPaths) {
-        final file = File("${appDir.path}/$path");
-        if (await file.exists()) {
+        final fullPath = "${appDir.path}/$path";
+        final file = File(fullPath);
+        final exists = await file.exists();
+
+        if (exists) {
           final fileName = "${index.toString().padLeft(8, '0')}.jpg";
           final fileBytes = await file.readAsBytes();
           fileContents.add(MapEntry(fileName, fileBytes));
           index++;
+        } else {
+          notFoundCount++;
+          debugPrint('❌ 文件不存在: $fullPath');
         }
       }
+
+      debugPrint('📊 导出统计: 成功 ${fileContents.length} 个，缺失 $notFoundCount 个');
 
       if (fileContents.isEmpty) {
         onError?.call('没有可导出的文件');
@@ -170,8 +182,12 @@ class BookController extends GetxController {
         RegExp(r'[:\s\.]'),
         '_',
       );
-      final zipFileName = '${data.name}_$timestamp.zip';
+      // 清理文件名中的非法字符（双引号、斜杠、反斜杠、冒号、星号、问号、尖括号、竖线等）
+      final sanitizedName = data.name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final zipFileName = '${sanitizedName}_$timestamp.zip';
       final zipPath = p.join(exportDir, zipFileName);
+
+      debugPrint('💾 导出文件名: $zipFileName');
 
       // 在后台线程中执行压缩操作，避免阻塞 UI
       final zipBytes = await compute(_compressFiles, fileContents);

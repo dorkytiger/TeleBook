@@ -700,8 +700,16 @@ class DownloadService extends GetxService {
       return;
     }
 
-    // 相对路径已经在创建任务时设置，无需更新
-    debugPrint('Download complete: ${taskInfo.savePath.value}');
+    // 验证文件实际存在
+    final fullPath = await getFullPath(taskInfo.savePath.value);
+    final file = File(fullPath);
+    final exists = await file.exists();
+
+    if (exists) {
+      debugPrint('✅ 下载完成: ${taskInfo.filename}');
+    } else {
+      debugPrint('⚠️ 下载完成但文件不存在: ${taskInfo.savePath.value}');
+    }
 
     // 使用 update 方法更新状态
     await (appDatabase.downloadTaskTable.update()
