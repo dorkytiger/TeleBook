@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:tele_book/app/screen/book/book_binding.dart';
 import 'package:tele_book/app/screen/book/book_screen.dart';
+import 'package:tele_book/app/screen/book/screen/edit/book_edit_binding.dart';
+import 'package:tele_book/app/screen/book/screen/edit/book_edit_screen.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_binding.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_screen.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_binding.dart';
@@ -14,7 +16,7 @@ import 'package:tele_book/app/screen/download/screen/task/download_task_screen.d
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_binding.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_screen.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_binding.dart';
-import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_screen.dart' ;
+import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_screen.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_binding.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
@@ -27,6 +29,11 @@ class AppRoute {
       name: '/book/form',
       page: () => BookFormScreen(),
       binding: BookFormBinding(),
+    ),
+    GetPage(
+      name: '/book/edit',
+      page: () => BookEditScreen(),
+      binding: BookEditBinding(),
     ),
     GetPage(
       name: '/book/page',
@@ -50,7 +57,7 @@ class AppRoute {
     ),
     GetPage(
       name: '/parse/archive/batch/edit',
-      page: () =>  EditArchiveFilesScreen(),
+      page: () => EditArchiveFilesScreen(),
       binding: EditArchiveFilesBinding(),
     ),
     GetPage(

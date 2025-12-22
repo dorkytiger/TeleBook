@@ -42,6 +42,21 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
 
+      - name: Decode and setup signing keys
+        run: |
+          # 解码 keystore 文件（从 base64）
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+          
+          # 创建 key.properties 文件
+          cat > android/key.properties << EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=upload-keystore.jks
+          EOF
+          
+          echo "✅ Signing keys configured"
+
       - name: Update pubspec.yaml version
         run: dart run scripts/update_version.dart
 

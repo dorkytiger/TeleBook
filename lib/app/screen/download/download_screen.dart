@@ -35,8 +35,11 @@ class DownloadScreen extends GetView<DownloadController> {
           ),
         ],
       ),
-      body: Obx(
-        () => ListView.builder(
+      body: Obx(() {
+        if (controller.downloadService.groups.entries.isEmpty) {
+          return Center(child: TDEmpty(emptyText: "暂无下载任务"));
+        }
+        return ListView.builder(
           itemBuilder: (context, index) {
             final item = controller.downloadService.groups.entries.elementAt(
               index,
@@ -85,8 +88,8 @@ class DownloadScreen extends GetView<DownloadController> {
             );
           },
           itemCount: controller.downloadService.groups.entries.length,
-        ),
-      ),
+        );
+      }),
     );
   }
 }

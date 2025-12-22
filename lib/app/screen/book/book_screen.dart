@@ -95,11 +95,22 @@ class BookScreen extends GetView<BookController> {
                             TDActionSheet(
                               context,
                               visible: true,
-                              onSelected: (actionItem, actionIndex) {
+                              onSelected: (actionItem, actionIndex) async {
                                 if (actionIndex == 0) {
-                                  controller.exportSingleBook(data[index]);
+                                  Future.delayed(
+                                    Duration(milliseconds: 100),
+                                    () {
+                                      Get.toNamed(
+                                        '/book/edit',
+                                        arguments: data[index].id,
+                                      );
+                                    },
+                                  );
                                 }
                                 if (actionIndex == 1) {
+                                  controller.exportSingleBook(data[index]);
+                                }
+                                if (actionIndex == 2) {
                                   Future.delayed(
                                     const Duration(milliseconds: 100),
                                     () {
@@ -131,6 +142,7 @@ class BookScreen extends GetView<BookController> {
                                 }
                               },
                               items: [
+                                TDActionSheetItem(label: "编辑"),
                                 TDActionSheetItem(label: "导出"),
                                 TDActionSheetItem(label: "刪除"),
                               ],

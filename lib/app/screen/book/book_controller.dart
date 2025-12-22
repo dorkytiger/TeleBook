@@ -88,7 +88,6 @@ class BookController extends GetxController {
 
     if (exportDir != null) {
       exportBookState.value = Loading();
-      ToastService.showSuccess('开始导出，请稍候...');
 
       // 使用 unawaited 让导出操作在后台执行，不阻塞 UI
       unawaited(
@@ -97,10 +96,12 @@ class BookController extends GetxController {
           data,
           onError: (error) {
             exportBookState.value = Error(error);
+            ToastService.dismiss();
             ToastService.showError('导出失败: $error');
           },
           onSuccess: (path) {
             exportBookState.value = Success(null);
+            ToastService.dismiss();
             ToastService.showSuccess('导出成功');
           },
         ),
