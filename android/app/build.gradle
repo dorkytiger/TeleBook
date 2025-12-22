@@ -22,6 +22,29 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def updatePubspecVersion() {
+    def versionPropsFile = file('../../version.properties')
+    if (versionPropsFile.canRead()) {
+        def Properties versionProps = new Properties()
+        versionProps.load(new FileInputStream(versionPropsFile))
+
+        def versionName = versionProps['VERSION_NAME']
+        def versionCode = versionProps['VERSION_CODE']
+
+        def pubspecFile = file('../../pubspec.yaml')
+        def pubspecContent = pubspecFile.text
+        def newContent = pubspecContent.replaceAll(
+                /version:\s*[\d.]+\+\d+/,
+                "version: ${versionName}+${versionCode}"
+        )
+        pubspecFile.text = newContent
+    }
+}
+
+preBuild.doFirst {
+    updatePubspecVersion()
+}
+
 android {
     namespace "com.dorkytiger.tele_book"
     compileSdkVersion flutter.compileSdkVersion

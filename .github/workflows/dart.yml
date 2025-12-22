@@ -23,9 +23,15 @@ jobs:
       - name: Read version from properties
         id: version
         run: |
-          VERSION=$(grep '^version=' version.properties | cut -d'=' -f2)
-          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: v$VERSION"
+          VERSION_NAME=$(grep '^VERSION_NAME=' version.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^VERSION_CODE=' version.properties | cut -d'=' -f2)
+          echo "VERSION=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -65,9 +71,16 @@ jobs:
         id: version
         shell: powershell
         run: |
-          $version = (Get-Content version.properties | Select-String '^version=').ToString().Split('=')[1]
-          echo "VERSION=v$version" >> $env:GITHUB_OUTPUT
-          echo "Version: v$version"
+          $versionName = (Get-Content version.properties | Select-String '^VERSION_NAME=').ToString().Split('=')[1]
+          $versionCode = (Get-Content version.properties | Select-String '^VERSION_CODE=').ToString().Split('=')[1]
+          echo "VERSION=v$versionName" >> $env:GITHUB_OUTPUT
+          echo "VERSION_NAME=$versionName" >> $env:GITHUB_OUTPUT
+          echo "VERSION_CODE=$versionCode" >> $env:GITHUB_OUTPUT
+          echo "Version: v$versionName ($versionCode)"
+
+      - name: Update pubspec.yaml version
+        shell: powershell
+        run: .\scripts\update_version.ps1
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -105,9 +118,15 @@ jobs:
       - name: Read version from properties
         id: version
         run: |
-          VERSION=$(grep '^version=' version.properties | cut -d'=' -f2)
-          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: v$VERSION"
+          VERSION_NAME=$(grep '^VERSION_NAME=' version.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^VERSION_CODE=' version.properties | cut -d'=' -f2)
+          echo "VERSION=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -149,19 +168,22 @@ jobs:
       - name: Read version from properties
         id: version
         run: |
-          VERSION=$(grep '^version=' version.properties | cut -d'=' -f2)
-          echo "VERSION=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: v$VERSION"
+          VERSION_NAME=$(grep '^VERSION_NAME=' version.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^VERSION_CODE=' version.properties | cut -d'=' -f2)
+          echo "VERSION=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
 
       - name: Check if tag exists
         id: check_tag
         run: |
-          if git ls-remote --tags origin | grep -q "refs/tags/v${{ steps.version.outputs.VERSION }}"; then
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ steps.version.outputs.VERSION }}"; then
             echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
-            echo "Tag v${{ steps.version.outputs.VERSION }} already exists"
+            echo "Tag ${{ steps.version.outputs.VERSION }} already exists"
           else
             echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
-            echo "Tag v${{ steps.version.outputs.VERSION }} does not exist"
+            echo "Tag ${{ steps.version.outputs.VERSION }} does not exist"
           fi
 
       - name: Download Android APK

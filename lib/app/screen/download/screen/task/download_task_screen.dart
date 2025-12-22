@@ -113,10 +113,10 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                         }
                       },
                       items: [
-                        TDActionSheetItem(label: "继续下载"),
-                        TDActionSheetItem(label: "暂停下载"),
-                        TDActionSheetItem(label: "删除任务"),
-                        TDActionSheetItem(label: "重试下载"),
+                        TDActionSheetItem(label: "继续"),
+                        TDActionSheetItem(label: "暂停"),
+                        TDActionSheetItem(label: "删除"),
+                        TDActionSheetItem(label: "重试"),
                       ],
                     );
                   },

@@ -75,17 +75,26 @@ class BookFormController extends GetxController {
 
     final sourceValue = formData['source'];
     if (sourceValue == BookFormSources.web.value) {
-      final url = formData['url'] as String;
+      final url = formData['url'];
+      if (url == null || url.toString().trim().isEmpty) {
+        return;
+      }
       // 然后打开解析页面
-      Get.offAndToNamed("/parse/web", arguments: url);
+      Get.offAndToNamed("/parse/web", arguments: url.toString());
     }
     if (sourceValue == BookFormSources.archive.value) {
-      final file = formData['file'] as String;
-      Get.offAndToNamed('/parse/archive/single', arguments: file);
+      final file = formData['file'];
+      if (file == null || file.toString().trim().isEmpty) {
+        return;
+      }
+      Get.offAndToNamed('/parse/archive/single', arguments: file.toString());
     }
     if (sourceValue == BookFormSources.batchArchive.value) {
-      final folder = formData['folder'] as String;
-      Get.offAndToNamed('/parse/archive/batch', arguments: folder);
+      final folder = formData['folder'];
+      if (folder == null || folder.toString().trim().isEmpty) {
+        return;
+      }
+      Get.offAndToNamed('/parse/archive/batch', arguments: folder.toString());
     }
   }
 

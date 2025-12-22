@@ -1,5 +1,5 @@
 name: tele_book
-version: 2.0.2+1
+version: 2.0.4+1
 publish_to: none
 description: Simple way that download the telegraph Book.
 environment: 

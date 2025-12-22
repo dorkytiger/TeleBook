@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:tele_book/app/db/app_database.dart';
 
 /// 下载任务状态
@@ -66,6 +67,10 @@ class DownloadService extends GetxService {
   // 所有下载组
   final groups = <String, DownloadGroupInfo>{}.obs;
 
+  // 自动重试次数
+  final _retryCount = <String, int>{};
+  static const int maxRetryCount = 3;
+
   @override
   void onInit() {
     super.onInit();
@@ -74,49 +79,92 @@ class DownloadService extends GetxService {
 
   /// 初始化下载器
   Future<void> _initDownloader() async {
-    // 配置下载器
-    FileDownloader().configureNotification(
-      running: const TaskNotification(
-        '{displayName}',
-        'Downloading: {progress}%',
-      ),
-      complete: const TaskNotification('{displayName}', 'Download complete'),
-      error: const TaskNotification('{displayName}', 'Download failed'),
-      paused: const TaskNotification('{displayName}', 'Download paused'),
+    // 请求通知权限（Android 13+ 需要）
+    await _requestNotificationPermission();
+
+    // 配置下载器 - 启用后台下载支持
+    await FileDownloader().configure(
+      globalConfig: [
+        (Config.requestTimeout, const Duration(seconds: 100)),
+      ],
+      androidConfig: [
+        (Config.useCacheDir, Config.whenAble),
+        (Config.runInForeground, Config.always), // 使用前台服务保持后台下载
+      ],
+      iOSConfig: [
+        (Config.localize, {'Cancel': '取消', 'Pause': '暂停'}),
+      ],
     );
 
-    appDatabase.downloadGroupTable.select().get().then((groupRows) {
-      for (final groupRow in groupRows) {
-        groups[groupRow.id] = DownloadGroupInfo(
-          groupId: groupRow.id,
-          name: groupRow.name,
-          total: groupRow.totalCount,
-          completed: groupRow.completedCount,
-          failed: groupRow.failedCount,
-        );
-        // 恢复组进度
-        groups[groupRow.id]!.groupProgress.value = groupRow.groupProgress;
-      }
-    });
+    debugPrint('✅ 下载器已配置');
 
-    appDatabase.downloadTaskTable.select().get().then((taskRows) {
-      for (final taskRow in taskRows) {
-        tasks[taskRow.id] = DownloadTaskInfo(
-          taskId: taskRow.id,
-          groupId: taskRow.groupId ?? 'default',
-          url: taskRow.url,
-          filename: taskRow.fileName,
-          initialProgress: taskRow.status == TaskStatus.complete.name
-              ? 1.0
-              : 0.0,
-          initialStatus: TaskStatus.values.firstWhere(
-            (e) => e.name == taskRow.status,
-            orElse: () => TaskStatus.enqueued,
-          ),
-          initialSavePath: taskRow.filePath,
-        );
-      }
-    });
+    // 配置通知 - 使用批量下载格式
+    FileDownloader().configureNotificationForGroup(
+      FileDownloader.defaultGroup,
+      // 批量下载进行中
+      running: const TaskNotification(
+        'TeleBook',
+        '正在下载 ({numFinished}/{numTotal}) - {progress}%',
+      ),
+      // 全部完成
+      complete: const TaskNotification(
+        'TeleBook - 下载完成',
+        '已完成 {numTotal} 个文件',
+      ),
+      // 部分失败
+      error: const TaskNotification(
+        'TeleBook - 下载完成',
+        '成功: {numSucceeded} | 失败: {numFailed}',
+      ),
+      // 已暂停
+      paused: const TaskNotification(
+        'TeleBook - 已暂停',
+        '已下载: {numFinished}/{numTotal}',
+      ),
+      progressBar: true,
+      groupNotificationId: 'download_group', // 使用组通知ID，合并通知
+    );
+
+    // 先从数据库恢复组信息
+    final groupRows = await appDatabase.downloadGroupTable.select().get();
+    for (final groupRow in groupRows) {
+      groups[groupRow.id] = DownloadGroupInfo(
+        groupId: groupRow.id,
+        name: groupRow.name,
+        total: groupRow.totalCount,
+        completed: groupRow.completedCount,
+        failed: groupRow.failedCount,
+      );
+      // 恢复组进度
+      groups[groupRow.id]!.groupProgress.value = groupRow.groupProgress;
+    }
+
+    // 然后恢复任务信息
+    final taskRows = await appDatabase.downloadTaskTable.select().get();
+    for (final taskRow in taskRows) {
+      tasks[taskRow.id] = DownloadTaskInfo(
+        taskId: taskRow.id,
+        groupId: taskRow.groupId ?? 'default',
+        url: taskRow.url,
+        filename: taskRow.fileName,
+        initialProgress: taskRow.status == TaskStatus.complete.name
+            ? 1.0
+            : 0.0,
+        initialStatus: TaskStatus.values.firstWhere(
+          (e) => e.name == taskRow.status,
+          orElse: () => TaskStatus.enqueued,
+        ),
+        initialSavePath: taskRow.filePath,
+      );
+    }
+
+    // ✅ 重要：恢复后重新计算所有组的统计信息
+    // 因为任务状态可能在应用重启前后发生变化
+    for (final groupId in groups.keys) {
+      _recalculateGroupStats(groupId);
+    }
+
+    debugPrint('✅ 已恢复 ${groups.length} 个下载组和 ${tasks.length} 个任务');
 
     // 监听下载进度和状态更新
     FileDownloader().updates.listen((update) {
@@ -142,9 +190,31 @@ class DownloadService extends GetxService {
         if (update.status == TaskStatus.complete) {
           _onDownloadComplete(update.task.taskId);
           _updateGroupStats(taskInfo.groupId);
+          // 清除重试计数
+          _retryCount.remove(update.task.taskId);
         } else if (update.status == TaskStatus.failed) {
-          _onDownloadFailed(update.task.taskId);
-          _updateGroupStats(taskInfo.groupId);
+          // 自动重试失败的任务
+          final retries = _retryCount[update.task.taskId] ?? 0;
+          if (retries < maxRetryCount) {
+            _retryCount[update.task.taskId] = retries + 1;
+            debugPrint(
+              'Task ${update.task.taskId} failed, auto retry ${retries + 1}/$maxRetryCount',
+            );
+            // 延迟2秒后重试
+            Future.delayed(const Duration(seconds: 2), () {
+              retry(update.task.taskId);
+            });
+          } else {
+            debugPrint(
+              'Task ${update.task.taskId} failed after $maxRetryCount retries',
+            );
+            _onDownloadFailed(update.task.taskId);
+            _updateGroupStats(taskInfo.groupId);
+            _retryCount.remove(update.task.taskId);
+          }
+        } else if (update.status == TaskStatus.canceled) {
+          // 清除重试计数
+          _retryCount.remove(update.task.taskId);
         }
       }
     });
@@ -180,6 +250,8 @@ class DownloadService extends GetxService {
         updates: Updates.statusAndProgress,
         allowPause: true,
         metaData: finalGroupId, // 使用 metaData 存储 groupId
+        displayName: finalFilename, // 设置显示名称，用于通知
+        group: finalGroupId, // 设置任务组，同组任务会合并通知
       );
 
       // 创建任务信息，savePath 存储相对路径
@@ -282,6 +354,34 @@ class DownloadService extends GetxService {
       total: urls.length,
     );
     groups[finalGroupId] = groupInfo;
+
+    // 为这个下载组配置专门的通知
+    FileDownloader().configureNotificationForGroup(
+      finalGroupId,
+      // 批量下载进行中
+      running: TaskNotification(
+        groupInfo.name,
+        '正在下载 ({numFinished}/{numTotal}) - {progress}%',
+      ),
+      // 全部完成
+      complete: TaskNotification(
+        '${groupInfo.name} - 完成',
+        '已下载 {numTotal} 个文件',
+      ),
+      // 部分失败
+      error: TaskNotification(
+        '${groupInfo.name} - 完成',
+        '成功: {numSucceeded} | 失败: {numFailed}',
+      ),
+      // 已暂停
+      paused: TaskNotification(
+        '${groupInfo.name} - 已暂停',
+        '已下载: {numFinished}/{numTotal}',
+      ),
+      progressBar: true,
+      groupNotificationId: finalGroupId, // 使用唯一的组ID
+    );
+
     await appDatabase.downloadGroupTable.insertOnConflictUpdate(
       DownloadGroupTableCompanion(
         id: Value(finalGroupId),
@@ -365,10 +465,27 @@ class DownloadService extends GetxService {
   Future<String?> retry(String taskId) async {
     final taskInfo = tasks[taskId];
     if (taskInfo == null) return null;
+
+    // 确保该组的通知配置存在
+    await _ensureGroupNotificationConfigured(taskInfo.groupId);
+
+    // 先取消旧任务
+    await FileDownloader().cancelTaskWithId(taskId);
+
+    // 从任务列表中移除
+    tasks.remove(taskId);
+
+    // 删除旧的数据库记录
+    await appDatabase.downloadTaskTable.deleteWhere(
+      (tbl) => tbl.id.equals(taskId),
+    );
+
+    // 创建新的下载任务
     return await download(
       url: taskInfo.url,
       filename: taskInfo.filename,
       groupId: taskInfo.groupId,
+      updateGroupCount: false, // 不增加组计数，因为是重试
     );
   }
 
@@ -414,16 +531,67 @@ class DownloadService extends GetxService {
 
   /// 恢复指定组的所有任务
   Future<int> resumeGroup(String groupId) async {
+    // 确保该组的通知配置存在
+    await _ensureGroupNotificationConfigured(groupId);
+
     final groupTasks = getTasksByGroup(groupId);
     int count = 0;
 
     for (final taskInfo in groupTasks) {
-      if (taskInfo.status.value == TaskStatus.paused) {
-        final success = await resume(taskInfo.taskId);
-        if (success) count++;
+      // 跳过已完成和正在运行的任务
+      if (taskInfo.status.value == TaskStatus.complete ||
+          taskInfo.status.value == TaskStatus.running) {
+        continue;
       }
+
+      bool success = false;
+
+      // 对于暂停的任务，直接恢复
+      if (taskInfo.status.value == TaskStatus.paused) {
+        success = await resume(taskInfo.taskId);
+        if (success) {
+          debugPrint('Resumed paused task: ${taskInfo.taskId}');
+        }
+      }
+      // 对于失败或取消的任务，重新下载
+      else if (taskInfo.status.value == TaskStatus.failed ||
+          taskInfo.status.value == TaskStatus.canceled ||
+          taskInfo.status.value == TaskStatus.notFound) {
+        final newTaskId = await retry(taskInfo.taskId);
+        success = newTaskId != null;
+        if (success) {
+          debugPrint('Retried failed/canceled task: ${taskInfo.taskId}');
+        }
+      }
+      // 对于其他状态的任务（如 enqueued），检查是否在队列中
+      else {
+        // 检查任务是否还在下载器中
+        final task = await FileDownloader().taskForId(taskInfo.taskId);
+        if (task != null && task is DownloadTask) {
+          // 任务存在，尝试恢复
+          success = await FileDownloader().resume(task);
+          if (success) {
+            debugPrint('Resumed enqueued task: ${taskInfo.taskId}');
+          }
+        } else {
+          // 任务不存在，重新创建
+          final newTaskId = await download(
+            url: taskInfo.url,
+            filename: taskInfo.filename,
+            groupId: taskInfo.groupId,
+            updateGroupCount: false,
+          );
+          success = newTaskId != null;
+          if (success) {
+            debugPrint('Re-created missing task: ${taskInfo.taskId}');
+          }
+        }
+      }
+
+      if (success) count++;
     }
 
+    debugPrint('Resumed $count tasks in group $groupId');
     return count;
   }
 
@@ -433,13 +601,24 @@ class DownloadService extends GetxService {
     int count = 0;
 
     for (final taskInfo in groupTasks) {
-      final success = await cancel(taskInfo.taskId);
-      if (success) count++;
+      // 只取消正在运行或排队的任务
+      if (taskInfo.status.value == TaskStatus.running ||
+          taskInfo.status.value == TaskStatus.enqueued ||
+          taskInfo.status.value == TaskStatus.waitingToRetry) {
+        final task = await FileDownloader().taskForId(taskInfo.taskId);
+        if (task != null) {
+          final success = await FileDownloader().cancelTaskWithId(taskInfo.taskId);
+          if (success) {
+            taskInfo.status.value = TaskStatus.canceled;
+            count++;
+            debugPrint('Canceled task: ${taskInfo.taskId}');
+          }
+        }
+      }
     }
 
-    // 移除组信息
-    groups.remove(groupId);
-
+    // 不移除组信息，保留以便重新下载
+    debugPrint('Canceled $count tasks in group $groupId');
     return count;
   }
 
@@ -473,18 +652,29 @@ class DownloadService extends GetxService {
     groups.remove(groupId);
   }
 
-  /// 重试指定组的所有失败任务
+  /// 重新下载指定组的所有任务（清空已完成的任务，重新开始）
   Future<int> retryGroup(String groupId) async {
+    // 确保该组的通知配置存在
+    await _ensureGroupNotificationConfigured(groupId);
+
     final groupTasks = getTasksByGroup(groupId);
     int count = 0;
+
     for (final taskInfo in groupTasks) {
-      if (taskInfo.status.value == TaskStatus.failed) {
-        final newTaskId = await retry(taskInfo.taskId);
-        if (newTaskId != null) {
-          count++;
-        }
+      // 跳过正在运行的任务
+      if (taskInfo.status.value == TaskStatus.running) {
+        continue;
+      }
+
+      // 对于所有其他状态的任务（完成、失败、取消等），都重新下载
+      final newTaskId = await retry(taskInfo.taskId);
+      if (newTaskId != null) {
+        count++;
+        debugPrint('Re-downloading task: ${taskInfo.filename}');
       }
     }
+
+    debugPrint('Started re-downloading $count tasks in group $groupId');
     return count;
   }
 
@@ -535,28 +725,72 @@ class DownloadService extends GetxService {
   /// 恢复之前的下载任务
   Future<void> _resumePreviousTasks() async {
     try {
-      final allTasks = await FileDownloader().allTasks();
+      // 从数据库加载所有未完成的任务
+      final dbTasks = await appDatabase.downloadTaskTable.select().get();
 
-      for (final task in allTasks) {
-        if (task is DownloadTask) {
-          // 从 metaData 恢复 groupId，如果没有则使用默认值
-          final groupId = task.metaData.isNotEmpty ? task.metaData : 'default';
+      // 用于跟踪哪些组需要配置通知
+      final Set<String> groupsToConfig = {};
 
+      for (final dbTask in dbTasks) {
+        // 只恢复未完成的任务
+        if (dbTask.status == TaskStatus.complete.name) {
+          continue;
+        }
+
+        final groupId = dbTask.groupId ?? 'default';
+        groupsToConfig.add(groupId);
+
+        // 检查任务是否还在下载器中
+        final existingTask = await FileDownloader().taskForId(dbTask.id);
+
+        if (existingTask != null && existingTask is DownloadTask) {
+          // 任务存在，恢复任务信息
           final taskInfo = DownloadTaskInfo(
-            taskId: task.taskId,
+            taskId: dbTask.id,
             groupId: groupId,
-            url: task.url,
-            filename: task.filename,
+            url: dbTask.url,
+            filename: dbTask.fileName,
+            initialSavePath: dbTask.filePath,
+            initialStatus: TaskStatus.values.firstWhere(
+              (e) => e.name == dbTask.status,
+              orElse: () => TaskStatus.enqueued,
+            ),
           );
-          tasks[task.taskId] = taskInfo;
+          tasks[dbTask.id] = taskInfo;
 
-          // 获取任务状态
-          final status = await FileDownloader().taskForId(task.taskId);
-          if (status != null) {
-            debugPrint('Resumed task: ${task.taskId} in group: $groupId');
+          // 如果任务是暂停状态，尝试恢复
+          if (dbTask.status == TaskStatus.paused.name) {
+            await FileDownloader().resume(existingTask);
+            debugPrint('Resumed paused task: ${dbTask.id}');
+          }
+        } else {
+          // 任务不存在，可能需要重新创建
+          // 对于失败或取消的任务，不自动重试
+          if (dbTask.status == TaskStatus.failed.name ||
+              dbTask.status == TaskStatus.canceled.name) {
+            // 保留任务信息但不重新下载
+            final taskInfo = DownloadTaskInfo(
+              taskId: dbTask.id,
+              groupId: groupId,
+              url: dbTask.url,
+              filename: dbTask.fileName,
+              initialSavePath: dbTask.filePath,
+              initialStatus: TaskStatus.values.firstWhere(
+                (e) => e.name == dbTask.status,
+                orElse: () => TaskStatus.failed,
+              ),
+            );
+            tasks[dbTask.id] = taskInfo;
           }
         }
       }
+
+      // 为所有涉及的组配置通知
+      for (final groupId in groupsToConfig) {
+        await _ensureGroupNotificationConfigured(groupId);
+      }
+
+      debugPrint('Resumed ${tasks.length} tasks from database');
     } catch (e) {
       debugPrint('Error resuming tasks: $e');
     }
@@ -645,6 +879,70 @@ class DownloadService extends GetxService {
     _updateGroupProgress(groupId);
   }
 
+  /// 重新计算组的统计信息（用于应用重启后）
+  void _recalculateGroupStats(String groupId) {
+    final groupInfo = groups[groupId];
+    if (groupInfo == null) return;
+
+    final groupTasks = getTasksByGroup(groupId);
+
+    // 重新计算总数（以实际任务数为准）
+    final actualTotal = groupTasks.length;
+    if (actualTotal != groupInfo.totalCount.value) {
+      debugPrint('⚠️ Group $groupId total count mismatch: '
+          'expected ${groupInfo.totalCount.value}, actual $actualTotal');
+      groupInfo.totalCount.value = actualTotal;
+    }
+
+    int completed = 0;
+    int failed = 0;
+    int running = 0;
+    double totalProgress = 0.0;
+
+    for (final task in groupTasks) {
+      // 累加进度
+      totalProgress += task.progress.value;
+
+      // 统计状态
+      if (task.status.value == TaskStatus.complete) {
+        completed++;
+      } else if (task.status.value == TaskStatus.failed) {
+        failed++;
+      } else if (task.status.value == TaskStatus.running) {
+        running++;
+      }
+    }
+
+    // 更新统计信息
+    groupInfo.completedCount.value = completed;
+    groupInfo.failedCount.value = failed;
+
+    // 计算整体进度
+    final progress = groupTasks.isNotEmpty ? totalProgress / groupTasks.length : 0.0;
+    groupInfo.groupProgress.value = progress;
+
+    debugPrint('📊 Group $groupId stats: '
+        'total=$actualTotal, completed=$completed, failed=$failed, '
+        'progress=${(progress * 100).toStringAsFixed(1)}%');
+
+    // 同步到数据库
+    (appDatabase.downloadGroupTable.update()
+          ..where((tbl) => tbl.id.equals(groupId)))
+        .write(
+          DownloadGroupTableCompanion(
+            totalCount: Value(actualTotal),
+            completedCount: Value(completed),
+            failedCount: Value(failed),
+            runningCount: Value(running),
+            groupProgress: Value(progress),
+            updatedAt: Value(DateTime.now()),
+            completedAt: Value(
+              completed == actualTotal && actualTotal > 0 ? DateTime.now() : null,
+            ),
+          ),
+        );
+  }
+
   /// 更新组整体进度
   void _updateGroupProgress(String groupId) {
     final groupInfo = groups[groupId];
@@ -670,5 +968,97 @@ class DownloadService extends GetxService {
             updatedAt: Value(DateTime.now()),
           ),
         );
+  }
+
+  /// 请求通知权限
+  Future<void> _requestNotificationPermission() async {
+    try {
+      // Android 13+ (API 33+) 需要通知权限
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+
+        if (status.isDenied) {
+          debugPrint('📢 请求通知权限...');
+          final result = await Permission.notification.request();
+
+          if (result.isGranted) {
+            debugPrint('✅ 通知权限已授予');
+          } else if (result.isDenied) {
+            debugPrint('❌ 通知权限被拒绝');
+            debugPrint('💡 请在系统设置中手动授予通知权限以查看下载进度');
+          } else if (result.isPermanentlyDenied) {
+            debugPrint('❌ 通知权限被永久拒绝');
+            debugPrint('💡 请前往：系统设置 → 应用 → TeleBook → 通知 → 允许通知');
+
+            // 可选：引导用户去设置
+            // await openAppSettings();
+          }
+        } else if (status.isGranted) {
+          debugPrint('✅ 通知权限已授予');
+        } else if (status.isPermanentlyDenied) {
+          debugPrint('❌ 通知权限被永久拒绝，请在系统设置中授予');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ 检查通知权限时出错: $e');
+    }
+  }
+
+  /// 检查通知权限状态
+  Future<bool> checkNotificationPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+        return status.isGranted;
+      }
+      return true; // iOS 不需要此权限
+    } catch (e) {
+      debugPrint('检查通知权限失败: $e');
+      return false;
+    }
+  }
+
+  /// 打开应用设置（用于授予权限）
+  Future<void> openNotificationSettings() async {
+    try {
+      await openAppSettings();
+      debugPrint('已打开应用设置页面');
+    } catch (e) {
+      debugPrint('打开设置失败: $e');
+    }
+  }
+
+  /// 确保下载组的通知配置存在
+  Future<void> _ensureGroupNotificationConfigured(String groupId) async {
+    final groupInfo = groups[groupId];
+    if (groupInfo == null) {
+      debugPrint('⚠️ Group $groupId not found, using default notification config');
+      return;
+    }
+
+    // 为该组配置通知
+    FileDownloader().configureNotificationForGroup(
+      groupId,
+      running: TaskNotification(
+        groupInfo.name,
+        '正在下载 ({numFinished}/{numTotal}) - {progress}%',
+      ),
+      complete: TaskNotification(
+        '${groupInfo.name} - 完成',
+        '已下载 {numTotal} 个文件',
+      ),
+      error: TaskNotification(
+        '${groupInfo.name} - 完成',
+        '成功: {numSucceeded} | 失败: {numFailed}',
+      ),
+      paused: TaskNotification(
+        '${groupInfo.name} - 已暂停',
+        '已下载: {numFinished}/{numTotal}',
+      ),
+      progressBar: true,
+      groupNotificationId: groupId,
+    );
+
+    debugPrint('✅ Configured notification for group: $groupId');
   }
 }
