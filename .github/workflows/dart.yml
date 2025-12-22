@@ -30,9 +30,6 @@ jobs:
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
 
-      - name: Update pubspec.yaml version
-        run: dart run scripts/update_version.dart
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -44,6 +41,9 @@ jobs:
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
 
       - name: Install dependencies
         run: flutter pub get
@@ -125,14 +125,14 @@ jobs:
           echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
           echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
 
-      - name: Update pubspec.yaml version
-        run: dart run scripts/update_version.dart
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
 
       - name: Install dependencies
         run: flutter pub get
