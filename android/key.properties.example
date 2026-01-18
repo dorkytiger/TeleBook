@@ -1,0 +1,4 @@
+storePassword=1234abcD
+keyPassword=1234abcD
+keyAlias=dorkytiger
+storeFile=upload-keystore.jks

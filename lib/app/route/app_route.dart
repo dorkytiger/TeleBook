@@ -19,6 +19,8 @@ import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit
 import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_screen.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_binding.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_screen.dart';
+import 'package:tele_book/app/screen/parse/pdf/parse_pdf_binding.dart';
+import 'package:tele_book/app/screen/parse/pdf/parse_pdf_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_screen.dart';
 
@@ -44,6 +46,11 @@ class AppRoute {
       name: '/parse/web',
       page: () => ParseWebScreen(),
       binding: ParseWebBinding(),
+    ),
+    GetPage(
+      name: '/parse/pdf',
+      page: () => ParsePdfScreen(),
+      binding: ParsePdfBinding(),
     ),
     GetPage(
       name: '/parse/archive/single',

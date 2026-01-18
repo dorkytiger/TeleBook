@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
-extension RxExtend on Rx<RequestState> {
+extension RxExtend<T> on Rx<RequestState<T>> {
   void listen({
     Function()? onLoading,
     Function()? onSuccess,
@@ -41,10 +41,13 @@ extension RxExtend on Rx<RequestState> {
     });
   }
 
-  void listenWithSuccess({bool showLoadingToast = true,bool showSuccessToast=true,String successMsg='操作成功', Function()? onSuccess}) {
+  void listenWithSuccess({
+    bool showLoadingToast = true,
+    bool showSuccessToast = true,
+    String successMsg = '操作成功',
+    Function()? onSuccess,
+  }) {
     ever<RequestState>(this, (state) {
-      // 不需要在这里使用 addPostFrameCallback
-      // ToastService 内部已经有完善的处理机制
       switch (state) {
         case Loading():
           if (showLoadingToast) {
@@ -53,7 +56,7 @@ extension RxExtend on Rx<RequestState> {
           break;
         case Success():
           ToastService.dismiss();
-          if(showSuccessToast){
+          if (showSuccessToast) {
             ToastService.showSuccess(successMsg);
           }
           if (onSuccess != null) {
@@ -70,5 +73,16 @@ extension RxExtend on Rx<RequestState> {
           break;
       }
     });
+  }
+
+  Future<void> runFuture(Future<T> Function() futureFunc) async {
+    try {
+      value = Loading();
+      final result = await futureFunc();
+      value = Success(result);
+    } catch (e) {
+      value = Error(e.toString());
+      rethrow;
+    }
   }
 }

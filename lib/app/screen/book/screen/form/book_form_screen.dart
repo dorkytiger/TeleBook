@@ -102,6 +102,27 @@ class BookFormScreen extends GetView<BookFormController> {
                             await controller.pickFolder();
                           },
                         )),
+                  ),
+                if (controller.source.value != null &&
+                    controller.source.value == BookFormSources.pdf)
+                  TDFormItem(
+                    type: TDFormItemType.input,
+                    name: 'pdf',
+                    formItemNotifier: controller.formItemNotify['pdf'],
+                    label: "PDF文件",
+                    labelWidth: 82.0,
+                    child: TDInput(
+                        hintText: "请选择PDF文件",
+                        controller: controller.pdfPathController,
+                        readOnly: true,
+                        rightBtn: TDButton(
+                          text: "选择文件",
+                          theme: TDButtonTheme.primary,
+                          type: TDButtonType.text,
+                          onTap: () async {
+                            await controller.pickPdf();
+                          },
+                        )),
                   )
               ],
               rules: controller.validationRules,
