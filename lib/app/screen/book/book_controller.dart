@@ -8,7 +8,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/enum/setting/setting_key.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
@@ -16,17 +19,25 @@ import 'package:tele_book/app/util/request_state.dart';
 
 class BookController extends GetxController {
   final parseUrl = TextEditingController();
+  final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
   final getBookState = Rx<RequestState<List<BookTableData>>>(Idle());
+  final getCollectionState = Rx<RequestState<List<CollectionTableData>>>(
+    Idle(),
+  );
+  final addBookToCollectionState = Rx<RequestState<void>>(Idle());
   final deleteBookState = Rx<RequestState<void>>(Idle());
   final exportBookState = Rx<RequestState<void>>(Idle());
   final exportMultipleBookState = Rx<RequestState<void>>(Idle());
   final exportAllBookProgress = 0.obs;
   final exportAllBookTotal = 0.obs;
   late final String appDirectory;
+  late final SharedPreferences prefs;
 
   @override
   void onInit() async {
     super.onInit();
+    prefs = await SharedPreferences.getInstance();
+    initBookLayout();
     appDirectory = (await getApplicationDocumentsDirectory()).path;
     exportBookState.listenWithSuccess(showSuccessToast: false);
     await fetchBooks();
@@ -36,6 +47,12 @@ class BookController extends GetxController {
   void onReady() {
     super.onReady();
     fetchBooks(); // 每次路由激活时自动刷新
+  }
+
+  Future<void> initBookLayout() async {
+    final layoutValue =
+        prefs.getInt(SettingKey.bookLayout) ?? BookLayoutSetting.list.value;
+    bookLayout.value = BookLayoutSetting.fromValue(layoutValue);
   }
 
   Future<void> fetchBooks() async {
@@ -53,6 +70,44 @@ class BookController extends GetxController {
       debugPrint(e.toString());
       getBookState.value = Error(e.toString());
     }
+  }
+
+  Future<void> getCollections() async {
+    await getCollectionState.runFuture(() async {
+      final appDatabase = Get.find<AppDatabase>();
+      final query = appDatabase.collectionTable.select()
+        ..orderBy([
+          (t) => OrderingTerm(expression: t.order, mode: OrderingMode.asc),
+          (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
+        ]);
+      final collections = await query.get();
+      return collections;
+    });
+  }
+
+  Future<void> addBookToCollection(int bookId, int collectionId) async {
+    await addBookToCollectionState.runFuture(() async {
+      final appDatabase = Get.find<AppDatabase>();
+      final existingEntry =
+          await (appDatabase.bookCollectionTable.select()..where(
+                (tbl) =>
+                    tbl.bookId.equals(bookId) &
+                    tbl.collectionId.equals(collectionId),
+              ))
+              .getSingleOrNull();
+
+      if (existingEntry != null) {
+        // 已存在，不需要重复添加
+        return;
+      }
+
+      await appDatabase.bookCollectionTable.insertOnConflictUpdate(
+        BookCollectionTableCompanion.insert(
+          bookId: bookId,
+          collectionId: collectionId,
+        ),
+      );
+    });
   }
 
   Future<void> deleteBook(int id) async {

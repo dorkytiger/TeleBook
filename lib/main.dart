@@ -6,8 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/book/book_binding.dart';
-import 'package:tele_book/app/screen/book/book_screen.dart';
+import 'package:tele_book/app/screen/home/home_bind.dart';
+import 'package:tele_book/app/screen/home/home_screen.dart';
 import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 
@@ -17,8 +17,8 @@ void main() {
   runApp(
     GetMaterialApp(
         title: "Application",
-        initialBinding: BookBinding(),
-        home: BookScreen(),
+        initialBinding: HomeBind(),
+        home: HomeScreen(),
         getPages: [...AppRoute.pages],
         debugShowCheckedModeBanner: false,
         navigatorKey: NavigatorService.navigatorKey,

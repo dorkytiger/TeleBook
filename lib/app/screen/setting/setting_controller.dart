@@ -1,0 +1,36 @@
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/enum/setting/setting_key.dart';
+import 'package:tele_book/app/screen/book/book_controller.dart';
+
+class SettingController extends GetxController {
+  late final SharedPreferences prefs;
+  final settingDataState = SettingData().obs;
+
+  @override
+  void onInit() async {
+    super.onInit();
+    prefs = await SharedPreferences.getInstance();
+  }
+
+  Future<void> initSettingData() async {
+    final layoutValue =
+        prefs.getInt(SettingKey.bookLayout) ?? BookLayoutSetting.list.value;
+    settingDataState.update((val) {
+      val?.bookLayoutSetting = BookLayoutSetting.fromValue(layoutValue);
+    });
+    final bookController = Get.find<BookController>();
+    bookController.bookLayout.value = BookLayoutSetting.fromValue(layoutValue);
+  }
+
+  Future<void> setBookLayout(BookLayoutSetting layout) async {
+    await prefs.setInt(SettingKey.bookLayout, layout.value);
+    final bookController = Get.find<BookController>();
+    bookController.bookLayout.value = layout;
+  }
+}
+
+class SettingData {
+  BookLayoutSetting bookLayoutSetting = BookLayoutSetting.list;
+}
