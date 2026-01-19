@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
 import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
   const ParseBatchArchiveScreen({super.key});
@@ -122,6 +123,9 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
   ) {
     return TDCell(
       title: archiveFolder.title,
+      leftIconWidget: CustomImageLoader(
+        localUrl: archiveFolder.files.firstOrNull?.path ?? '${controller.appDirectory}/${archiveFolder.files.first.path}',
+      ),
       note: '共 ${archiveFolder.files.length} 个文件',
       arrow: true,
       onClick: (cell) {

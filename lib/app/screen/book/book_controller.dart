@@ -38,8 +38,9 @@ class BookController extends GetxController {
     super.onInit();
     prefs = await SharedPreferences.getInstance();
     initBookLayout();
+    addBookToCollectionState.listenWithSuccess();
     appDirectory = (await getApplicationDocumentsDirectory()).path;
-    exportBookState.listenWithSuccess(showSuccessToast: false);
+    exportBookState.listenWithSuccess();
     await fetchBooks();
   }
 
@@ -89,7 +90,7 @@ class BookController extends GetxController {
     await addBookToCollectionState.runFuture(() async {
       final appDatabase = Get.find<AppDatabase>();
       final existingEntry =
-          await (appDatabase.bookCollectionTable.select()..where(
+          await (appDatabase.collectionBookTable.select()..where(
                 (tbl) =>
                     tbl.bookId.equals(bookId) &
                     tbl.collectionId.equals(collectionId),
@@ -101,8 +102,8 @@ class BookController extends GetxController {
         return;
       }
 
-      await appDatabase.bookCollectionTable.insertOnConflictUpdate(
-        BookCollectionTableCompanion.insert(
+      await appDatabase.collectionBookTable.insertOnConflictUpdate(
+        CollectionBookTableCompanion.insert(
           bookId: bookId,
           collectionId: collectionId,
         ),

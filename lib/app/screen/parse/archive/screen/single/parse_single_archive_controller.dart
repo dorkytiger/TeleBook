@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
@@ -27,7 +28,7 @@ class ParseSingleArchiveController extends GetxController {
     saveToBookState.listenWithSuccess(onSuccess: () {
       final bookController = Get.find<BookController>();
       bookController.fetchBooks();
-      Get.offAndToNamed("/book");
+      Get.offAndToNamed(AppRoute.book);
     });
     unawaited(extractArchive());
   }

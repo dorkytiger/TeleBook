@@ -9,6 +9,8 @@ import 'package:tele_book/app/screen/book/screen/page/book_page_binding.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_screen.dart';
 import 'package:tele_book/app/screen/collection/collection_bind.dart';
 import 'package:tele_book/app/screen/collection/collection_screen.dart';
+import 'package:tele_book/app/screen/collection/screen/book/collection_book_bind.dart';
+import 'package:tele_book/app/screen/collection/screen/book/collection_book_screen.dart';
 import 'package:tele_book/app/screen/download/download_binding.dart';
 import 'package:tele_book/app/screen/download/download_screen.dart';
 import 'package:tele_book/app/screen/download/screen/form/download_form_binding.dart';
@@ -47,6 +49,7 @@ class AppRoute {
   static const downloadTask = "/download/task";
 
   static const collection = "/collection";
+  static const collectionBook = "/collection/book";
 
   static final pages = [
     GetPage(name: home, page: () => HomeScreen(), binding: HomeBind()),
@@ -110,6 +113,11 @@ class AppRoute {
       name: collection,
       page: () => CollectionScreen(),
       binding: CollectionBind(),
+    ),
+    GetPage(
+      name: collectionBook,
+      page: () => CollectionBookScreen(),
+      binding: CollectionBookBind(),
     ),
   ];
 }

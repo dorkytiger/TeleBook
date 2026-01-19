@@ -15,9 +15,6 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
     return Scaffold(
       appBar: TDNavBar(
         title: controller.archiveFolder.title,
-        onBack: () {
-          Get.back();
-        },
         rightBarItems: [
           TDNavBarItem(
             icon: Icons.check,

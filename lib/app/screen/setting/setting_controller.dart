@@ -5,13 +5,12 @@ import 'package:tele_book/app/enum/setting/setting_key.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 
 class SettingController extends GetxController {
-  late final SharedPreferences prefs;
+  final SharedPreferences prefs = Get.find<SharedPreferences>();
   final settingDataState = SettingData().obs;
 
   @override
   void onInit() async {
     super.onInit();
-    prefs = await SharedPreferences.getInstance();
   }
 
   Future<void> initSettingData() async {

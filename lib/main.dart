@@ -16,22 +16,23 @@ void main() {
   _init();
   runApp(
     GetMaterialApp(
-        title: "Application",
-        initialBinding: HomeBind(),
-        home: HomeScreen(),
-        getPages: [...AppRoute.pages],
-        debugShowCheckedModeBanner: false,
-        navigatorKey: NavigatorService.navigatorKey,
-        theme: ThemeData(
-          useMaterial3: true,
-          scaffoldBackgroundColor: const Color(0xfff3f3f3),
-        )),
+      title: "Application",
+      initialBinding: HomeBind(),
+      home: HomeScreen(),
+      getPages: [...AppRoute.pages],
+      debugShowCheckedModeBanner: false,
+      navigatorKey: NavigatorService.navigatorKey,
+      theme: ThemeData(
+        useMaterial3: true,
+        scaffoldBackgroundColor: const Color(0xfff3f3f3),
+      ),
+    ),
   );
 }
 
 void _init() async {
   Get.put(AppDatabase());
-  Get.put(SharedPreferences.getInstance());
+  await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
   // 初始化后台下载服务
   Get.put(DownloadService());
 

@@ -75,10 +75,17 @@ extension RxExtend<T> on Rx<RequestState<T>> {
     });
   }
 
-  Future<void> runFuture(Future<T> Function() futureFunc) async {
+  Future<void> runFuture(
+    Future<T> Function() futureFunc, {
+    bool Function(T result)? isEmpty,
+  }) async {
     try {
       value = Loading();
       final result = await futureFunc();
+      if (isEmpty != null && isEmpty(result)) {
+        value = Empty();
+        return;
+      }
       value = Success(result);
     } catch (e) {
       value = Error(e.toString());

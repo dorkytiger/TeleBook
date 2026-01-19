@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/td/td_cell_group_title_widge.dart';
 import 'collection_controller.dart';
@@ -38,7 +39,18 @@ class CollectionScreen extends GetView<CollectionController> {
                 children: [
                   ...data.map(
                     (collection) => TDSwipeCell(
-                      cell: TDCell(title: collection.name),
+                      cell: TDCell(
+                        title: collection.name,
+                        onClick: (cell) {
+                          Get.toNamed(
+                            AppRoute.collectionBook,
+                            arguments: {
+                              "collectionId": collection.id,
+                              "collectionName": collection.name,
+                            },
+                          );
+                        },
+                      ),
                       right: TDSwipeCellPanel(
                         children: [
                           TDSwipeCellAction(

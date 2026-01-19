@@ -17,7 +17,7 @@ part 'app_database.g.dart';
   DownloadTaskTable,
   DownloadGroupTable,
   CollectionTable,
-  BookCollectionTable,
+  CollectionBookTable,
 ])
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.

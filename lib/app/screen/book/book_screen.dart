@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
@@ -121,13 +122,15 @@ class BookScreen extends GetView<BookController> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: TDText(
-                      data[index].name,
-                      textColor: TDTheme.of(context).fontGyColor3,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: TDText(
+                        data[index].name,
+                        textColor: TDTheme.of(context).fontGyColor3,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
                   TDButton(
@@ -160,7 +163,7 @@ class BookScreen extends GetView<BookController> {
       onSelected: (actionItem, actionIndex) async {
         if (actionIndex == 0) {
           Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed('/book/edit', arguments: book.id);
+            Get.toNamed(AppRoute.bookEdit, arguments: book.id);
           });
         }
         if (actionIndex == 1) {

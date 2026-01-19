@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
@@ -21,10 +22,13 @@ class ParseBatchArchiveController extends GetxController {
   final extractArchiveTotal = 0.obs;
   final archiveFolders = <ArchiveFolder>[].obs;
   final appDatabase = Get.find<AppDatabase>();
+  late final String appDirectory;
 
   @override
-  void onInit() {
+  void onInit() async {
     super.onInit();
+     appDirectory =
+        (await getApplicationDocumentsDirectory()).path;
     extractArchivesState.listenWithSuccess(
       showLoadingToast: false,
       showSuccessToast: false,
@@ -33,7 +37,7 @@ class ParseBatchArchiveController extends GetxController {
       onSuccess: () {
         final bookController = Get.find<BookController>();
         bookController.fetchBooks();
-        Get.offAndToNamed("/book");
+        Get.offAndToNamed(AppRoute.home);
       },
     );
     unawaited(_scanAndExtractArchives());
@@ -132,7 +136,7 @@ class ParseBatchArchiveController extends GetxController {
   /// 编辑文件夹中的文件
   void editArchiveFolder(int index) {
     Get.toNamed(
-      '/parse/archive/batch/edit',
+      AppRoute.parseArchiveBatchEdit,
       arguments: archiveFolders[index],
     )?.then((updatedFolder) {
       if (updatedFolder != null && updatedFolder is ArchiveFolder) {
@@ -150,7 +154,6 @@ class ParseBatchArchiveController extends GetxController {
   Future<void> saveAllBooks() async {
     if (archiveFolders.isEmpty) {
       throw Exception('没有可保存的书籍');
-      return;
     }
 
     saveAllBooksState.value = Loading();

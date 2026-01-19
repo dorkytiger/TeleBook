@@ -51,7 +51,7 @@ class CollectionController extends GetxController {
         ]);
       final collections = await query.get();
       return collections;
-    });
+    }, isEmpty: (result) => result.isEmpty);
   }
 
   Future<void> addCollection() async {
