@@ -29,6 +29,8 @@ dependencies:
   webview_flutter: ^4.13.0
   flutter_inappwebview: ^6.1.5
   pdf_to_image_converter: ^0.0.5
+  dk_util:
+    path: /home/dorkytiger/IdeaProjects/dk_util  # 绝对路径
 
 dev_dependencies: 
   build_runner: ^2.4.15

@@ -5,6 +5,8 @@ import 'package:tele_book/app/db/dao/book/book_table.dart';
 import 'package:tele_book/app/db/dao/collection/book_collection_table.dart';
 import 'package:tele_book/app/db/dao/collection/collection_table.dart';
 import 'package:tele_book/app/db/dao/download/download_task_table.dart';
+import 'package:tele_book/app/db/dao/mark/mark_book_table.dart';
+import 'package:tele_book/app/db/dao/mark/mark_table.dart';
 
 import 'converter/string_list_converter.dart';
 import 'dao/download/download_group_table.dart';
@@ -18,6 +20,8 @@ part 'app_database.g.dart';
   DownloadGroupTable,
   CollectionTable,
   CollectionBookTable,
+  MarkTable,
+  MarkBookTable,
 ])
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.
