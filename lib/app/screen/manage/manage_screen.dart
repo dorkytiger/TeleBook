@@ -43,7 +43,13 @@ class ManageScreen extends GetView<ManageController> {
                   Get.toNamed(AppRoute.collection);
                 },
               ),
-              TDCell(title: '书签管理'),
+              TDCell(
+                title: '书签管理',
+                arrow: true,
+                onClick: (cell) {
+                  Get.toNamed(AppRoute.mark);
+                },
+              ),
             ],
           ),
           TDCellGroup(

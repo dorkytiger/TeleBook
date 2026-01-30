@@ -2052,6 +2052,514 @@ class CollectionBookTableCompanion
   }
 }
 
+class $MarkTableTable extends MarkTable
+    with TableInfo<$MarkTableTable, MarkTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarkTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, description];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mark_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MarkTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MarkTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarkTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+    );
+  }
+
+  @override
+  $MarkTableTable createAlias(String alias) {
+    return $MarkTableTable(attachedDatabase, alias);
+  }
+}
+
+class MarkTableData extends DataClass implements Insertable<MarkTableData> {
+  final int id;
+  final String name;
+  final String? description;
+  const MarkTableData({required this.id, required this.name, this.description});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    return map;
+  }
+
+  MarkTableCompanion toCompanion(bool nullToAbsent) {
+    return MarkTableCompanion(
+      id: Value(id),
+      name: Value(name),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+    );
+  }
+
+  factory MarkTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarkTableData(
+      id: serializer.fromJson<int>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      description: serializer.fromJson<String?>(json['description']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'name': serializer.toJson<String>(name),
+      'description': serializer.toJson<String?>(description),
+    };
+  }
+
+  MarkTableData copyWith({
+    int? id,
+    String? name,
+    Value<String?> description = const Value.absent(),
+  }) => MarkTableData(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    description: description.present ? description.value : this.description,
+  );
+  MarkTableData copyWithCompanion(MarkTableCompanion data) {
+    return MarkTableData(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarkTableData(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, name, description);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarkTableData &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.description == this.description);
+}
+
+class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
+  final Value<int> id;
+  final Value<String> name;
+  final Value<String?> description;
+  const MarkTableCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.description = const Value.absent(),
+  });
+  MarkTableCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.description = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<MarkTableData> custom({
+    Expression<int>? id,
+    Expression<String>? name,
+    Expression<String>? description,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+    });
+  }
+
+  MarkTableCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String?>? description,
+  }) {
+    return MarkTableCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarkTableCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $MarkBookTableTable extends MarkBookTable
+    with TableInfo<$MarkBookTableTable, MarkBookTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MarkBookTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _markIdMeta = const VerificationMeta('markId');
+  @override
+  late final GeneratedColumn<int> markId = GeneratedColumn<int>(
+    'mark_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES mark_table (id)',
+    ),
+  );
+  static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
+  @override
+  late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
+    'book_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES mark_table (id)',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, markId, bookId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mark_book_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<MarkBookTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('mark_id')) {
+      context.handle(
+        _markIdMeta,
+        markId.isAcceptableOrUnknown(data['mark_id']!, _markIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_markIdMeta);
+    }
+    if (data.containsKey('book_id')) {
+      context.handle(
+        _bookIdMeta,
+        bookId.isAcceptableOrUnknown(data['book_id']!, _bookIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bookIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MarkBookTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MarkBookTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      markId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mark_id'],
+      )!,
+      bookId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}book_id'],
+      )!,
+    );
+  }
+
+  @override
+  $MarkBookTableTable createAlias(String alias) {
+    return $MarkBookTableTable(attachedDatabase, alias);
+  }
+}
+
+class MarkBookTableData extends DataClass
+    implements Insertable<MarkBookTableData> {
+  final int id;
+  final int markId;
+  final int bookId;
+  const MarkBookTableData({
+    required this.id,
+    required this.markId,
+    required this.bookId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['mark_id'] = Variable<int>(markId);
+    map['book_id'] = Variable<int>(bookId);
+    return map;
+  }
+
+  MarkBookTableCompanion toCompanion(bool nullToAbsent) {
+    return MarkBookTableCompanion(
+      id: Value(id),
+      markId: Value(markId),
+      bookId: Value(bookId),
+    );
+  }
+
+  factory MarkBookTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MarkBookTableData(
+      id: serializer.fromJson<int>(json['id']),
+      markId: serializer.fromJson<int>(json['markId']),
+      bookId: serializer.fromJson<int>(json['bookId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'markId': serializer.toJson<int>(markId),
+      'bookId': serializer.toJson<int>(bookId),
+    };
+  }
+
+  MarkBookTableData copyWith({int? id, int? markId, int? bookId}) =>
+      MarkBookTableData(
+        id: id ?? this.id,
+        markId: markId ?? this.markId,
+        bookId: bookId ?? this.bookId,
+      );
+  MarkBookTableData copyWithCompanion(MarkBookTableCompanion data) {
+    return MarkBookTableData(
+      id: data.id.present ? data.id.value : this.id,
+      markId: data.markId.present ? data.markId.value : this.markId,
+      bookId: data.bookId.present ? data.bookId.value : this.bookId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarkBookTableData(')
+          ..write('id: $id, ')
+          ..write('markId: $markId, ')
+          ..write('bookId: $bookId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, markId, bookId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MarkBookTableData &&
+          other.id == this.id &&
+          other.markId == this.markId &&
+          other.bookId == this.bookId);
+}
+
+class MarkBookTableCompanion extends UpdateCompanion<MarkBookTableData> {
+  final Value<int> id;
+  final Value<int> markId;
+  final Value<int> bookId;
+  const MarkBookTableCompanion({
+    this.id = const Value.absent(),
+    this.markId = const Value.absent(),
+    this.bookId = const Value.absent(),
+  });
+  MarkBookTableCompanion.insert({
+    this.id = const Value.absent(),
+    required int markId,
+    required int bookId,
+  }) : markId = Value(markId),
+       bookId = Value(bookId);
+  static Insertable<MarkBookTableData> custom({
+    Expression<int>? id,
+    Expression<int>? markId,
+    Expression<int>? bookId,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (markId != null) 'mark_id': markId,
+      if (bookId != null) 'book_id': bookId,
+    });
+  }
+
+  MarkBookTableCompanion copyWith({
+    Value<int>? id,
+    Value<int>? markId,
+    Value<int>? bookId,
+  }) {
+    return MarkBookTableCompanion(
+      id: id ?? this.id,
+      markId: markId ?? this.markId,
+      bookId: bookId ?? this.bookId,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (markId.present) {
+      map['mark_id'] = Variable<int>(markId.value);
+    }
+    if (bookId.present) {
+      map['book_id'] = Variable<int>(bookId.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MarkBookTableCompanion(')
+          ..write('id: $id, ')
+          ..write('markId: $markId, ')
+          ..write('bookId: $bookId')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2065,6 +2573,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $CollectionBookTableTable collectionBookTable =
       $CollectionBookTableTable(this);
+  late final $MarkTableTable markTable = $MarkTableTable(this);
+  late final $MarkBookTableTable markBookTable = $MarkBookTableTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2075,6 +2585,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     downloadGroupTable,
     collectionTable,
     collectionBookTable,
+    markTable,
+    markBookTable,
   ];
 }
 
@@ -3785,6 +4297,532 @@ typedef $$CollectionBookTableTableProcessedTableManager =
       CollectionBookTableData,
       PrefetchHooks Function({bool bookId, bool collectionId})
     >;
+typedef $$MarkTableTableCreateCompanionBuilder =
+    MarkTableCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<String?> description,
+    });
+typedef $$MarkTableTableUpdateCompanionBuilder =
+    MarkTableCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String?> description,
+    });
+
+class $$MarkTableTableFilterComposer
+    extends Composer<_$AppDatabase, $MarkTableTable> {
+  $$MarkTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$MarkTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarkTableTable> {
+  $$MarkTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$MarkTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarkTableTable> {
+  $$MarkTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+}
+
+class $$MarkTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MarkTableTable,
+          MarkTableData,
+          $$MarkTableTableFilterComposer,
+          $$MarkTableTableOrderingComposer,
+          $$MarkTableTableAnnotationComposer,
+          $$MarkTableTableCreateCompanionBuilder,
+          $$MarkTableTableUpdateCompanionBuilder,
+          (
+            MarkTableData,
+            BaseReferences<_$AppDatabase, $MarkTableTable, MarkTableData>,
+          ),
+          MarkTableData,
+          PrefetchHooks Function()
+        > {
+  $$MarkTableTableTableManager(_$AppDatabase db, $MarkTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarkTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarkTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarkTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+              }) => MarkTableCompanion(
+                id: id,
+                name: name,
+                description: description,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<String?> description = const Value.absent(),
+              }) => MarkTableCompanion.insert(
+                id: id,
+                name: name,
+                description: description,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$MarkTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MarkTableTable,
+      MarkTableData,
+      $$MarkTableTableFilterComposer,
+      $$MarkTableTableOrderingComposer,
+      $$MarkTableTableAnnotationComposer,
+      $$MarkTableTableCreateCompanionBuilder,
+      $$MarkTableTableUpdateCompanionBuilder,
+      (
+        MarkTableData,
+        BaseReferences<_$AppDatabase, $MarkTableTable, MarkTableData>,
+      ),
+      MarkTableData,
+      PrefetchHooks Function()
+    >;
+typedef $$MarkBookTableTableCreateCompanionBuilder =
+    MarkBookTableCompanion Function({
+      Value<int> id,
+      required int markId,
+      required int bookId,
+    });
+typedef $$MarkBookTableTableUpdateCompanionBuilder =
+    MarkBookTableCompanion Function({
+      Value<int> id,
+      Value<int> markId,
+      Value<int> bookId,
+    });
+
+final class $$MarkBookTableTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $MarkBookTableTable, MarkBookTableData> {
+  $$MarkBookTableTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $MarkTableTable _markIdTable(_$AppDatabase db) =>
+      db.markTable.createAlias(
+        $_aliasNameGenerator(db.markBookTable.markId, db.markTable.id),
+      );
+
+  $$MarkTableTableProcessedTableManager get markId {
+    final $_column = $_itemColumn<int>('mark_id')!;
+
+    final manager = $$MarkTableTableTableManager(
+      $_db,
+      $_db.markTable,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_markIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $MarkTableTable _bookIdTable(_$AppDatabase db) =>
+      db.markTable.createAlias(
+        $_aliasNameGenerator(db.markBookTable.bookId, db.markTable.id),
+      );
+
+  $$MarkTableTableProcessedTableManager get bookId {
+    final $_column = $_itemColumn<int>('book_id')!;
+
+    final manager = $$MarkTableTableTableManager(
+      $_db,
+      $_db.markTable,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$MarkBookTableTableFilterComposer
+    extends Composer<_$AppDatabase, $MarkBookTableTable> {
+  $$MarkBookTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$MarkTableTableFilterComposer get markId {
+    final $$MarkTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.markId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableFilterComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MarkTableTableFilterComposer get bookId {
+    final $$MarkTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableFilterComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkBookTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $MarkBookTableTable> {
+  $$MarkBookTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$MarkTableTableOrderingComposer get markId {
+    final $$MarkTableTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.markId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableOrderingComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MarkTableTableOrderingComposer get bookId {
+    final $$MarkTableTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableOrderingComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkBookTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MarkBookTableTable> {
+  $$MarkBookTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  $$MarkTableTableAnnotationComposer get markId {
+    final $$MarkTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.markId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$MarkTableTableAnnotationComposer get bookId {
+    final $$MarkTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.bookId,
+      referencedTable: $db.markTable,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.markTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$MarkBookTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $MarkBookTableTable,
+          MarkBookTableData,
+          $$MarkBookTableTableFilterComposer,
+          $$MarkBookTableTableOrderingComposer,
+          $$MarkBookTableTableAnnotationComposer,
+          $$MarkBookTableTableCreateCompanionBuilder,
+          $$MarkBookTableTableUpdateCompanionBuilder,
+          (MarkBookTableData, $$MarkBookTableTableReferences),
+          MarkBookTableData,
+          PrefetchHooks Function({bool markId, bool bookId})
+        > {
+  $$MarkBookTableTableTableManager(_$AppDatabase db, $MarkBookTableTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MarkBookTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MarkBookTableTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MarkBookTableTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> markId = const Value.absent(),
+                Value<int> bookId = const Value.absent(),
+              }) => MarkBookTableCompanion(
+                id: id,
+                markId: markId,
+                bookId: bookId,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int markId,
+                required int bookId,
+              }) => MarkBookTableCompanion.insert(
+                id: id,
+                markId: markId,
+                bookId: bookId,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MarkBookTableTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({markId = false, bookId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (markId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.markId,
+                                referencedTable: $$MarkBookTableTableReferences
+                                    ._markIdTable(db),
+                                referencedColumn: $$MarkBookTableTableReferences
+                                    ._markIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+                    if (bookId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.bookId,
+                                referencedTable: $$MarkBookTableTableReferences
+                                    ._bookIdTable(db),
+                                referencedColumn: $$MarkBookTableTableReferences
+                                    ._bookIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$MarkBookTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $MarkBookTableTable,
+      MarkBookTableData,
+      $$MarkBookTableTableFilterComposer,
+      $$MarkBookTableTableOrderingComposer,
+      $$MarkBookTableTableAnnotationComposer,
+      $$MarkBookTableTableCreateCompanionBuilder,
+      $$MarkBookTableTableUpdateCompanionBuilder,
+      (MarkBookTableData, $$MarkBookTableTableReferences),
+      MarkBookTableData,
+      PrefetchHooks Function({bool markId, bool bookId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3799,4 +4837,8 @@ class $AppDatabaseManager {
       $$CollectionTableTableTableManager(_db, _db.collectionTable);
   $$CollectionBookTableTableTableManager get collectionBookTable =>
       $$CollectionBookTableTableTableManager(_db, _db.collectionBookTable);
+  $$MarkTableTableTableManager get markTable =>
+      $$MarkTableTableTableManager(_db, _db.markTable);
+  $$MarkBookTableTableTableManager get markBookTable =>
+      $$MarkBookTableTableTableManager(_db, _db.markBookTable);
 }

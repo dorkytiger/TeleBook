@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:dk_util/config/dk_config.dart';
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_util.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
@@ -31,6 +34,8 @@ void main() {
 }
 
 void _init() async {
+  await DKLog.initFileLog();
+  DkConfig.setShowStateLog(true);
   Get.put(AppDatabase());
   await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
   // 初始化后台下载服务
