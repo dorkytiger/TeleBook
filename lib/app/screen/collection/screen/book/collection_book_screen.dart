@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/collection/screen/book/collection_book_controller.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
@@ -14,13 +15,10 @@ class CollectionBookScreen extends GetView<CollectionBookController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: TDNavBar(title: "收藏书籍"),
-      body: Obx(
-        () => DisplayResult(
-          state: controller.getCollectionBooksState.value,
-          onSuccess: (data) {
-            return _buildBooksGrid(data);
-          },
-        ),
+      body: controller.getCollectionBooksState.displaySuccess(
+        successBuilder: (data) {
+          return _buildBooksGrid(data);
+        },
       ),
     );
   }

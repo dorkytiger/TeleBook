@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/route/app_route.dart';
+import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/widget/td/td_cell_group_title_widge.dart';
 import 'setting_controller.dart';
 
@@ -20,26 +22,49 @@ class SettingScreen extends GetView<SettingController> {
               theme: TDCellGroupTheme.cardTheme,
               cells: [
                 TDCell(
-                  title: '书籍列表样式',
+                  title: '下载列表',
                   arrow: true,
+                  noteWidget: Obx(
+                    () => DownloadService.instance.tasks.isNotEmpty
+                        ? TDBadge(
+                            TDBadgeType.message,
+                            count: DownloadService.instance.tasks.length
+                                .toString(),
+                          )
+                        : SizedBox.shrink(),
+                  ),
+
                   onClick: (cell) {
-                    TDActionSheet.showListActionSheet(
-                      context,
-                      onSelected: (item, index) {
-                        index == 0
-                            ? controller.setBookLayout(BookLayoutSetting.list)
-                            : controller.setBookLayout(BookLayoutSetting.grid);
-                      },
-                      items: [
-                        TDActionSheetItem(label: '列表视图'),
-                        TDActionSheetItem(label: '网格视图'),
-                      ],
-                    );
+                    Get.toNamed(AppRoute.download);
                   },
                 ),
-                TDCell(title: '通知设置'),
-                TDCell(title: '隐私政策'),
-                TDCell(title: '关于我们'),
+                TDCell(
+                  title: '导出管理',
+                  arrow: true,
+                  noteWidget: Obx(() {
+                    final count = controller.exportService.records.length;
+                    return count > 0
+                        ? TDBadge(TDBadgeType.message, count: count.toString())
+                        : SizedBox.shrink();
+                  }),
+                  onClick: (cell) {
+                    Get.toNamed(AppRoute.export);
+                  },
+                ),
+                TDCell(
+                  title: '收藏夹管理',
+                  arrow: true,
+                  onClick: (cell) {
+                    Get.toNamed(AppRoute.collection);
+                  },
+                ),
+                TDCell(
+                  title: '书签管理',
+                  arrow: true,
+                  onClick: (cell) {
+                    Get.toNamed(AppRoute.mark);
+                  },
+                ),
               ],
             ),
           ],

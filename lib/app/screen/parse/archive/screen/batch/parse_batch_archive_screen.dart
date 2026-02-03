@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
@@ -27,7 +26,7 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
       ),
       body: Obx(() {
         final state = controller.extractArchivesState.value;
-        if (state.isError()) {
+        if (state.isError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -54,7 +53,7 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
                     fontWeight: FontWeight.bold,
                   ),
 
-                  if (state.isLoading()) ...[
+                  if (state.isLoading) ...[
                     const SizedBox(height: 8),
                     TDProgress(
                       type: TDProgressType.linear,
@@ -82,7 +81,7 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
             ),
             Obx(() {
               final saveState = controller.saveAllBooksState.value;
-              if (saveState.isLoading()) {
+              if (saveState.isLoading) {
                 return Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -124,7 +123,9 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
     return TDCell(
       title: archiveFolder.title,
       leftIconWidget: CustomImageLoader(
-        localUrl: archiveFolder.files.firstOrNull?.path ?? '${controller.appDirectory}/${archiveFolder.files.first.path}',
+        localUrl:
+            archiveFolder.files.firstOrNull?.path ??
+            '${controller.appDirectory}/${archiveFolder.files.first.path}',
       ),
       note: '共 ${archiveFolder.files.length} 个文件',
       arrow: true,

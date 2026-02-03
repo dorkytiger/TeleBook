@@ -12,11 +12,12 @@ import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/home/home_bind.dart';
 import 'package:tele_book/app/screen/home/home_screen.dart';
 import 'package:tele_book/app/service/download_service.dart';
+import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _init();
+  await _init();
   runApp(
     GetMaterialApp(
       title: "Application",
@@ -33,13 +34,14 @@ void main() {
   );
 }
 
-void _init() async {
+Future<void> _init() async {
   await DKLog.initFileLog();
   DkConfig.setShowStateLog(true);
   Get.put(AppDatabase());
   await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
   // 初始化后台下载服务
   Get.put(DownloadService());
+  Get.put<ExportService>(ExportService());
 
   // 清理临时目录
   await _cleanupTempDirectory();

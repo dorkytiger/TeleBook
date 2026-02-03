@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tele_book/app/screen/error_log/error_log_screen.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 
 enum ToastType {
@@ -221,6 +222,37 @@ class _ToastWidget extends StatefulWidget {
   State<_ToastWidget> createState() => _ToastWidgetState();
 }
 
+/// 检查文本是否超过指定行数
+class _TextLengthChecker extends StatelessWidget {
+  final String text;
+  final TextStyle style;
+  final int maxLines;
+  final Widget Function(bool isOverflow) builder;
+
+  const _TextLengthChecker({
+    required this.text,
+    required this.style,
+    required this.maxLines,
+    required this.builder,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textPainter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          maxLines: maxLines,
+          textDirection: TextDirection.ltr,
+        )..layout(maxWidth: constraints.maxWidth);
+
+        final isOverflow = textPainter.didExceedMaxLines;
+        return builder(isOverflow);
+      },
+    );
+  }
+}
+
 class _ToastWidgetState extends State<_ToastWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
@@ -254,6 +286,14 @@ class _ToastWidgetState extends State<_ToastWidget>
 
   @override
   Widget build(BuildContext context) {
+    const textStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 14,
+      decoration: TextDecoration.none,
+      fontWeight: FontWeight.normal,
+      height: 1.4,
+    );
+
     return FadeTransition(
       opacity: _fadeAnimation,
       child: ScaleTransition(
@@ -266,7 +306,7 @@ class _ToastWidgetState extends State<_ToastWidget>
               child: Container(
                 constraints: const BoxConstraints(
                   minWidth: 120,
-                  maxWidth: 280,
+                  maxWidth: 320,
                   minHeight: 120,
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -280,15 +320,59 @@ class _ToastWidgetState extends State<_ToastWidget>
                     _buildIcon(),
                     if (widget.message.isNotEmpty) ...[
                       const SizedBox(height: 12),
-                      Text(
-                        widget.message,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          decoration: TextDecoration.none,
-                          fontWeight: FontWeight.normal,
-                        ),
+                      // 使用 _TextLengthChecker 检测文本是否超过3行
+                      _TextLengthChecker(
+                        text: widget.message,
+                        style: textStyle,
+                        maxLines: 3,
+                        builder: (isOverflow) {
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                widget.message,
+                                textAlign: TextAlign.center,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: textStyle,
+                              ),
+                              if (isOverflow) ...[
+                                const SizedBox(height: 8),
+                                GestureDetector(
+                                  onTap: () => _showDetailLog(context),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '查看更多',
+                                          style: textStyle.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.arrow_forward_ios,
+                                          size: 10,
+                                          color: Colors.white,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ],
@@ -299,6 +383,35 @@ class _ToastWidgetState extends State<_ToastWidget>
         ),
       ),
     );
+  }
+
+  void _showDetailLog(BuildContext context) {
+    // 先关闭当前 Toast
+    widget.onDismiss?.call();
+
+
+
+    // 延迟一帧再打开详情页面，确保 Toast 已关闭
+    Future.delayed(const Duration(milliseconds: 100), () {
+      ErrorLogScreen.show(
+        title: _getTitle(),
+        message: widget.message,
+        timestamp: DateTime.now(),
+      );
+    });
+  }
+
+  String _getTitle() {
+    switch (widget.type) {
+      case ToastType.error:
+        return '错误详情';
+      case ToastType.success:
+        return '成功信息';
+      case ToastType.loading:
+        return '加载信息';
+      case ToastType.text:
+        return '详细信息';
+    }
   }
 
   Widget _buildIcon() {

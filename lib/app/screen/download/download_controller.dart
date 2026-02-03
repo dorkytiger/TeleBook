@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
@@ -13,13 +15,13 @@ import 'package:tele_book/app/util/request_state.dart';
 class DownloadController extends GetxController {
   final downloadService = Get.find<DownloadService>();
   final appDatabase = Get.find<AppDatabase>();
-  final saveToBookState = Rx<RequestState>(Idle());
+  final saveToBookState = Rx<DKStateEvent>(DKStateEventIdle());
 
   @override
   void onInit() {
     super.onInit();
-    saveToBookState.listenWithSuccess(
-      onSuccess: () {
+    saveToBookState.listenEvent(
+      onSuccess: (_) {
         final bookController = Get.find<BookController>();
         bookController.fetchBooks();
       },
@@ -27,8 +29,8 @@ class DownloadController extends GetxController {
   }
 
   Future<void> savaToBook(String groupId) async {
-    saveToBookState.value.handleFunction(
-      function: () async {
+    saveToBookState.triggerEvent(
+      event: () async {
         final group = downloadService.groups[groupId];
         if (group == null) {
           throw Exception("未找到下载组 $groupId");
@@ -58,7 +60,9 @@ class DownloadController extends GetxController {
           }
         }
 
-        debugPrint('📊 有效文件: ${validSavePaths.length}/${tasks.length}，缺失: $notFoundCount');
+        debugPrint(
+          '📊 有效文件: ${validSavePaths.length}/${tasks.length}，缺失: $notFoundCount',
+        );
 
         if (validSavePaths.isEmpty) {
           throw Exception('没有找到任何有效的下载文件');
@@ -70,9 +74,6 @@ class DownloadController extends GetxController {
             localPaths: Value(validSavePaths),
           ),
         );
-      },
-      onStateChanged: (newState) {
-        saveToBookState.value = newState;
       },
     );
   }

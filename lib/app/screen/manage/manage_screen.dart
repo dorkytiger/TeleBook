@@ -37,6 +37,13 @@ class ManageScreen extends GetView<ManageController> {
                 },
               ),
               TDCell(
+                title: '导出管理',
+                arrow: true,
+                onClick: (cell) {
+                  Get.toNamed(AppRoute.export);
+                },
+              ),
+              TDCell(
                 title: '收藏夹管理',
                 arrow: true,
                 onClick: (cell) {

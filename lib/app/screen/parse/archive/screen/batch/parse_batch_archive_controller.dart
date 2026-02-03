@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Value;
@@ -16,8 +18,8 @@ import 'package:tele_book/app/util/request_state.dart';
 
 class ParseBatchArchiveController extends GetxController {
   final folderPath = Get.arguments as String;
-  final extractArchivesState = Rx<RequestState<void>>(Idle());
-  final saveAllBooksState = Rx<RequestState<void>>(Idle());
+  final extractArchivesState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final saveAllBooksState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final extractArchiveProgress = 0.obs;
   final extractArchiveTotal = 0.obs;
   final archiveFolders = <ArchiveFolder>[].obs;
@@ -27,14 +29,10 @@ class ParseBatchArchiveController extends GetxController {
   @override
   void onInit() async {
     super.onInit();
-     appDirectory =
-        (await getApplicationDocumentsDirectory()).path;
-    extractArchivesState.listenWithSuccess(
-      showLoadingToast: false,
-      showSuccessToast: false,
-    );
-    saveAllBooksState.listenWithSuccess(
-      onSuccess: () {
+    appDirectory = (await getApplicationDocumentsDirectory()).path;
+    extractArchivesState.listenEvent();
+    saveAllBooksState.listenEvent(
+      onSuccess: (data) {
         final bookController = Get.find<BookController>();
         bookController.fetchBooks();
         Get.offAndToNamed(AppRoute.home);
@@ -45,47 +43,42 @@ class ParseBatchArchiveController extends GetxController {
 
   /// 扫描文件夹中的所有压缩文件并解压
   Future<void> _scanAndExtractArchives() async {
-    extractArchivesState.value = Loading();
-    try {
-      final folder = Directory(folderPath);
-      if (!await folder.exists()) {
-        throw Exception('文件夹不存在');
-      }
-
-      // 扫描所有压缩文件
-      final files = await folder
-          .list()
-          .where((entity) => entity is File)
-          .map((entity) => entity as File)
-          .where((file) {
-            final ext = p.extension(file.path).toLowerCase();
-            return ['.zip', '.cbz'].contains(ext);
-          })
-          .toList();
-      extractArchiveTotal.value = files.length;
-      if (files.isEmpty) {
-        extractArchivesState.value = Error('没有找到压缩文件');
-        return;
-      }
-
-      // 逐个解压
-      for (final file in files) {
-        try {
-          final archiveFolder = await _extractSingleArchive(file);
-          archiveFolders.add(archiveFolder);
-          extractArchiveProgress.value += 1;
-        } catch (e) {
-          debugPrint('解压失败: ${file.path}, 错误: $e');
+    extractArchivesState.triggerEvent(
+      event: () async {
+        final folder = Directory(folderPath);
+        if (!await folder.exists()) {
+          throw Exception('文件夹不存在');
         }
-      }
-      extractArchiveProgress.value = 0;
-      extractArchiveTotal.value = 0;
 
-      extractArchivesState.value = Success(null);
-    } catch (e) {
-      extractArchivesState.value = Error(e.toString());
-      ToastService.showError('扫描失败: $e');
-    }
+        // 扫描所有压缩文件
+        final files = await folder
+            .list()
+            .where((entity) => entity is File)
+            .map((entity) => entity as File)
+            .where((file) {
+              final ext = p.extension(file.path).toLowerCase();
+              return ['.zip', '.cbz'].contains(ext);
+            })
+            .toList();
+        extractArchiveTotal.value = files.length;
+        if (files.isEmpty) {
+          throw Exception('未找到压缩文件');
+        }
+
+        // 逐个解压
+        for (final file in files) {
+          try {
+            final archiveFolder = await _extractSingleArchive(file);
+            archiveFolders.add(archiveFolder);
+            extractArchiveProgress.value += 1;
+          } catch (e) {
+            debugPrint('解压失败: ${file.path}, 错误: $e');
+          }
+        }
+        extractArchiveProgress.value = 0;
+        extractArchiveTotal.value = 0;
+      },
+    );
   }
 
   /// 解压单个压缩文件
@@ -152,53 +145,48 @@ class ParseBatchArchiveController extends GetxController {
 
   /// 保存所有书籍
   Future<void> saveAllBooks() async {
-    if (archiveFolders.isEmpty) {
-      throw Exception('没有可保存的书籍');
-    }
+    saveAllBooksState.triggerEvent(
+      event: () async {
+        if (archiveFolders.isEmpty) {
+          throw Exception('没有可保存的书籍');
+        }
 
-    saveAllBooksState.value = Loading();
+        final appDocDir = await getApplicationDocumentsDirectory();
 
-    try {
-      final appDocDir = await getApplicationDocumentsDirectory();
+        for (final archiveFolder in archiveFolders) {
+          final groupPath =
+              "${archiveFolder.title}-${DateTime.now().microsecondsSinceEpoch}";
+          final saveDir = p.join(appDocDir.path, groupPath);
 
-      for (final archiveFolder in archiveFolders) {
-        final groupPath =
-            "${archiveFolder.title}-${DateTime.now().microsecondsSinceEpoch}";
-        final saveDir = p.join(appDocDir.path, groupPath);
+          final localPaths = <String>[];
+          int index = 1;
 
-        final localPaths = <String>[];
-        int index = 1;
+          for (final archiveFile in archiveFolder.files) {
+            final file = File(archiveFile.path);
+            if (await file.exists()) {
+              final fileName = "${index.toString().padLeft(8, '0')}.jpg";
+              final savePath = p.join(saveDir, fileName);
 
-        for (final archiveFile in archiveFolder.files) {
-          final file = File(archiveFile.path);
-          if (await file.exists()) {
-            final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-            final savePath = p.join(saveDir, fileName);
+              final saveFile = File(savePath);
+              await saveFile.parent.create(recursive: true);
+              await file.copy(savePath);
 
-            final saveFile = File(savePath);
-            await saveFile.parent.create(recursive: true);
-            await file.copy(savePath);
+              localPaths.add(p.join(groupPath, fileName));
+              index++;
+            }
+          }
 
-            localPaths.add(p.join(groupPath, fileName));
-            index++;
+          if (localPaths.isNotEmpty) {
+            await appDatabase.bookTable.insertOnConflictUpdate(
+              BookTableCompanion(
+                name: Value(archiveFolder.title),
+                localPaths: Value(localPaths),
+              ),
+            );
           }
         }
-
-        if (localPaths.isNotEmpty) {
-          await appDatabase.bookTable.insertOnConflictUpdate(
-            BookTableCompanion(
-              name: Value(archiveFolder.title),
-              localPaths: Value(localPaths),
-            ),
-          );
-        }
-      }
-
-      saveAllBooksState.value = Success(null);
-    } catch (e) {
-      debugPrint("批量保存失败：$e");
-      saveAllBooksState.value = Error(e.toString());
-    }
+      },
+    );
   }
 }
 

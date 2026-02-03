@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_event_get.dart';
+import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
@@ -19,15 +22,15 @@ class BookEditController extends GetxController {
   late final String appDirectory;
   final bookName = TextEditingController();
   final imageList = <String>[].obs;
-  final getBookState = Rx<RequestState<BookTableData>>(Idle());
-  final saveState = Rx<RequestState<void>>(Idle());
+  final getBookState = Rx<DKStateQuery<BookTableData>>(DkStateQueryIdle());
+  final saveState = Rx<DKStateEvent<void>>(DKStateEventIdle());
 
   @override
   void onInit() async {
     super.onInit();
     appDirectory = (await getApplicationDocumentsDirectory()).path;
-    saveState.listenWithSuccess(
-      onSuccess: () {
+    saveState.listenEventToast(
+      onSuccess: (data) {
         final bookController = Get.find<BookController>();
         bookController.fetchBooks();
         Get.back(result: true);
@@ -44,8 +47,8 @@ class BookEditController extends GetxController {
 
   /// 加载书籍数据
   Future<void> loadBook() async {
-    getBookState.value.handleFunction(
-      function: () async {
+    getBookState.triggerQuery(
+      query: () async {
         final book =
             await (appDatabase.bookTable.select()
                   ..where((tbl) => tbl.id.equals(bookId)))
@@ -54,9 +57,6 @@ class BookEditController extends GetxController {
         bookName.text = book.name;
         imageList.value = List.from(book.localPaths);
         return book;
-      },
-      onStateChanged: (newState) {
-        getBookState.value = newState;
       },
     );
   }
@@ -132,8 +132,8 @@ class BookEditController extends GetxController {
       return;
     }
 
-    saveState.value.handleFunction(
-      function: () async {
+    saveState.triggerEvent(
+      event: () async {
         // 清理名称中的非法字符
         final sanitizedName = bookName.text.trim().replaceAll(
           RegExp(r'[<>:"/\\|?*]'),
@@ -149,9 +149,6 @@ class BookEditController extends GetxController {
             createdAt: DateTime.now(),
           ),
         );
-      },
-      onStateChanged: (newState) {
-        saveState.value = newState;
       },
     );
   }

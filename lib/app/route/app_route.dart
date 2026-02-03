@@ -31,9 +31,12 @@ import 'package:tele_book/app/screen/parse/pdf/parse_pdf_binding.dart';
 import 'package:tele_book/app/screen/parse/pdf/parse_pdf_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_screen.dart';
+import 'package:tele_book/app/screen/export/export_binding.dart';
+import 'package:tele_book/app/screen/export/export_screen.dart';
 
 class AppRoute {
   static const home = "/home";
+  static const export = "/export";
 
   static const book = "/book";
   static const bookForm = "/book/form";
@@ -59,6 +62,7 @@ class AppRoute {
   static final pages = [
     GetPage(name: home, page: () => HomeScreen(), binding: HomeBind()),
     GetPage(name: book, page: () => BookScreen(), binding: BookBinding()),
+    GetPage(name: export, page: () => ExportScreen(), binding: ExportBinding()),
     GetPage(
       name: bookForm,
       page: () => BookFormScreen(),

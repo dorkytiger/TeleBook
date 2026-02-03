@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/td/td_cell_group_title_widge.dart';
@@ -26,89 +27,80 @@ class CollectionScreen extends GetView<CollectionController> {
           ),
         ],
       ),
-      body: Obx(
-        () => DisplayResult(
-          state: controller.getCollectionState.value,
-          onSuccess: (data) {
-            return Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  ...data.map(
-                    (collection) => TDSwipeCell(
-                      cell: TDCell(
-                        title: collection.name,
-                        onClick: (cell) {
-                          Get.toNamed(
-                            AppRoute.collectionBook,
-                            arguments: {
-                              "collectionId": collection.id,
-                              "collectionName": collection.name,
-                            },
-                          );
-                        },
-                      ),
-                      right: TDSwipeCellPanel(
-                        children: [
-                          TDSwipeCellAction(
-                            label: '编辑',
-                            backgroundColor: TDTheme.of(
-                              context,
-                            ).brandNormalColor,
-                            onPressed: (context) {
-                              controller.collectionNameController.text =
-                                  collection.name;
-                              Get.bottomSheet(
-                                _editCollectionForm(
-                                  true,
-                                  collectionId: collection.id,
-                                ),
-                                isScrollControlled: true,
-                              );
-                            },
-                          ),
-                          TDSwipeCellAction(
-                            label: '删除',
-                            backgroundColor: TDTheme.of(
-                              context,
-                            ).errorNormalColor,
-                            onPressed: (context) {
-                              showGeneralDialog(
-                                context: context,
-                                pageBuilder:
-                                    (
-                                      BuildContext buildContext,
-                                      Animation<double> animation,
-                                      Animation<double> secondaryAnimation,
-                                    ) {
-                                      return TDAlertDialog(
-                                        title: '删除收藏夹',
-                                        content: '确定要删除该收藏夹吗？',
-                                        leftBtnAction: () {
-                                          Get.back();
-                                        },
-                                        rightBtnAction: () {
-                                          controller.deleteCollection(
-                                            collection.id,
-                                          );
-                                        },
-                                      );
-                                    },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+      body: controller.getCollectionState.displaySuccess(
+        successBuilder: (data) {
+          return Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                ...data.map(
+                  (collection) => TDSwipeCell(
+                    cell: TDCell(
+                      title: collection.name,
+                      onClick: (cell) {
+                        Get.toNamed(
+                          AppRoute.collectionBook,
+                          arguments: {
+                            "collectionId": collection.id,
+                            "collectionName": collection.name,
+                          },
+                        );
+                      },
+                    ),
+                    right: TDSwipeCellPanel(
+                      children: [
+                        TDSwipeCellAction(
+                          label: '编辑',
+                          backgroundColor: TDTheme.of(context).brandNormalColor,
+                          onPressed: (context) {
+                            controller.collectionNameController.text =
+                                collection.name;
+                            Get.bottomSheet(
+                              _editCollectionForm(
+                                true,
+                                collectionId: collection.id,
+                              ),
+                              isScrollControlled: true,
+                            );
+                          },
+                        ),
+                        TDSwipeCellAction(
+                          label: '删除',
+                          backgroundColor: TDTheme.of(context).errorNormalColor,
+                          onPressed: (context) {
+                            showGeneralDialog(
+                              context: context,
+                              pageBuilder:
+                                  (
+                                    BuildContext buildContext,
+                                    Animation<double> animation,
+                                    Animation<double> secondaryAnimation,
+                                  ) {
+                                    return TDAlertDialog(
+                                      title: '删除收藏夹',
+                                      content: '确定要删除该收藏夹吗？',
+                                      leftBtnAction: () {
+                                        Get.back();
+                                      },
+                                      rightBtnAction: () {
+                                        controller.deleteCollection(
+                                          collection.id,
+                                        );
+                                      },
+                                    );
+                                  },
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

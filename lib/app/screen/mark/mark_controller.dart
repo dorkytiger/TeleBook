@@ -21,7 +21,7 @@ class MarkController extends GetxController {
   }
 
   Future<void> getMarkList() async {
-    getMarkListState.query(
+    getMarkListState.triggerQuery(
       query: () async {
         return db.markTable.select().get();
       },

@@ -3,125 +3,64 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/route/app_route.dart';
+import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
 class BookFormController extends GetxController {
   final source = Rxn<BookFormSources>(null);
-  final formController = FormController();
   final submitFormState = Rx<RequestState<void>>(Idle());
+  final webUrlController = TextEditingController();
   final filePathController = TextEditingController();
   final folderPathController = TextEditingController();
   final pdfPathController = TextEditingController();
-  final Map<String, dynamic> formData = {
-    'source': null,
-    'url': null,
-    'file': null,
-    'folder': null,
-    'pdf': null,
-  };
-  final Map<String, dynamic> formItemNotify = {
-    'source': '',
-    'url': '',
-    'file': '',
-    'folder': '',
-    'pdf': '',
-  };
-  late final Map<String, TDFormValidation> validationRules = {
-    'source': TDFormValidation(
-      validate: (value) {
-        if (value == null || value.isEmpty) {
-          return 'empty';
-        }
-        return null;
-      },
-      errorMessage: '请选择来源',
-      type: TDFormItemType.cascader,
-    ),
-    'url': TDFormValidation(
-      validate: (value) {
-        if (formData['source'] == BookFormSources.web.value) {
-          if (value == null || value.isEmpty) {
-            return 'empty';
-          }
-        }
-        return null;
-      },
-      errorMessage: '请输入网址',
-      type: TDFormItemType.input,
-    ),
-    'file': TDFormValidation(
-      validate: (value) {
-        if (formData['source'] == BookFormSources.archive.value) {
-          if (value == null || value.isEmpty) {
-            return 'empty';
-          }
-        }
-        return null;
-      },
-      errorMessage: '请输入文件路径',
-      type: TDFormItemType.input,
-    ),
-    'folder': TDFormValidation(
-      validate: (value) {
-        if (formData['source'] == BookFormSources.batchArchive.value) {
-          if (value == null || value.isEmpty) {
-            return 'empty';
-          }
-        }
-        return null;
-      },
-      errorMessage: '请选择文件夹',
-      type: TDFormItemType.input,
-    ),
-    'pdf': TDFormValidation(
-      validate: (value) {
-        if (formData['source'] == BookFormSources.pdf.value) {
-          if (value == null || value.isEmpty) {
-            return 'empty';
-          }
-        }
-        return null;
-      },
-      errorMessage: '请选择PDF文件',
-      type: TDFormItemType.input,
-    ),
-  };
 
-  Future<void> submitForm(Map<String, dynamic> formData, bool isValid) async {
-    if (!isValid) {
+  Future<void> submitForm() async {
+    final sourceValue = source.value;
+    if (sourceValue?.value == null) {
+      ToastService.showError("请选择书籍来源");
       return;
     }
 
-    final sourceValue = formData['source'];
-    if (sourceValue == BookFormSources.web.value) {
-      final url = formData['url'];
-      if (url == null || url.toString().trim().isEmpty) {
+    if (sourceValue == BookFormSources.web) {
+      final url = webUrlController.text;
+      if (url.toString().trim().isEmpty) {
+        ToastService.showError("请输入网页地址");
         return;
       }
       // 然后打开解析页面
-      Get.offAndToNamed("/parse/web", arguments: url.toString());
+      Get.offAndToNamed(AppRoute.parseWeb, arguments: url.toString());
     }
-    if (sourceValue == BookFormSources.archive.value) {
-      final file = formData['file'];
-      if (file == null || file.toString().trim().isEmpty) {
+    if (sourceValue == BookFormSources.archive) {
+      final file = filePathController.text;
+      if (file.toString().trim().isEmpty) {
+        ToastService.showError("请选择压缩包文件");
         return;
       }
-      Get.offAndToNamed('/parse/archive/single', arguments: file.toString());
+      Get.offAndToNamed(
+        AppRoute.parseArchiveSingle,
+        arguments: file.toString(),
+      );
     }
-    if (sourceValue == BookFormSources.batchArchive.value) {
-      final folder = formData['folder'];
-      if (folder == null || folder.toString().trim().isEmpty) {
+    if (sourceValue == BookFormSources.batchArchive) {
+      final folder = folderPathController.text;
+      if (folder.toString().trim().isEmpty) {
+        ToastService.showError("请选择压缩包文件夹");
         return;
       }
-      Get.offAndToNamed('/parse/archive/batch', arguments: folder.toString());
+      Get.offAndToNamed(
+        AppRoute.parseArchiveBatch,
+        arguments: folder.toString(),
+      );
     }
-    if (sourceValue == BookFormSources.pdf.value) {
-      final pdf = formData['pdf'];
-      if (pdf == null || pdf.toString().trim().isEmpty) {
+    if (sourceValue == BookFormSources.pdf) {
+      final pdf = pdfPathController.text;
+      if (pdf.toString().trim().isEmpty) {
+        ToastService.showError("请选择PDF文件");
         return;
       }
-      Get.offAndToNamed('/parse/pdf', arguments: {'path': pdf.toString()});
+      Get.offAndToNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
     }
   }
 
@@ -133,8 +72,6 @@ class BookFormController extends GetxController {
     if (result != null && result.files.isNotEmpty) {
       final filePath = result.files.first.path;
       if (filePath != null) {
-        formData['file'] = filePath;
-        formItemNotify['file'].upDataForm(filePath);
         filePathController.text = filePath;
       }
     }
@@ -143,8 +80,6 @@ class BookFormController extends GetxController {
   Future<void> pickFolder() async {
     final folderPath = await PickFileUtil.pickDirectory();
     if (folderPath != null) {
-      formData['folder'] = folderPath;
-      formItemNotify['folder'].upDataForm(folderPath);
       folderPathController.text = folderPath;
     }
   }
@@ -152,18 +87,8 @@ class BookFormController extends GetxController {
   Future<void> pickPdf() async {
     final path = await PdfPicker.pickPdf();
     if (path != null) {
-      formData['pdf'] = path;
-      formItemNotify['pdf'].upDataForm(path);
       pdfPathController.text = path;
     }
-  }
-
-  @override
-  void onInit() {
-    super.onInit();
-    formData.forEach((key, value) {
-      formItemNotify[key] = FormItemNotifier();
-    });
   }
 }
 

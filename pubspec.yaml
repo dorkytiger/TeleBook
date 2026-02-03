@@ -17,7 +17,7 @@ dependencies:
   flutter_launcher_icons: ^0.14.3
   drift: ^2.26.0
   drift_flutter: ^0.2.4
-  tdesign_flutter: ^0.2.6
+  tdesign_flutter: ^0.2.7
   background_downloader: ^9.2.0
   intl: ^0.20.2
   shared_preferences: ^2.5.2
@@ -29,6 +29,8 @@ dependencies:
   webview_flutter: ^4.13.0
   flutter_inappwebview: ^6.1.5
   pdf_to_image_converter: ^0.0.5
+  open_filex: ^4.4.0
+  share_plus: ^12.0.1
   dk_util:
     path: /home/dorkytiger/IdeaProjects/dk_util  # 绝对路径
 

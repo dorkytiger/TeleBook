@@ -1,95 +1,106 @@
+import 'dart:async';
+
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_query_get.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
-extension RxExtend<T> on Rx<RequestState<T>> {
-  void listen({
-    Function()? onLoading,
-    Function()? onSuccess,
-    Function()? onError,
-    Function()? onIdle,
-    Function()? onEmpty,
+extension RxExtend<T> on Rx<DKStateQuery<T>> {
+  Widget displaySuccess({
+    Widget Function()? initialBuilder,
+    Widget Function()? loadingBuilder,
+    Widget Function(String message)? errorBuilder,
+    Widget Function()? emptyBuilder,
+    required Widget Function(T data) successBuilder,
+    Function? onRetry,
   }) {
-    ever<RequestState>(this, (state) {
-      switch (state) {
-        case Loading():
+    return display(
+      initialBuilder: () {
+        return initialBuilder != null
+            ? initialBuilder()
+            : Center(child: TDEmpty(emptyText: "暂无数据"));
+      },
+      loadingBuilder: () {
+        return loadingBuilder != null
+            ? loadingBuilder()
+            : const Center(
+                child: TDLoading(size: TDLoadingSize.large, text: "加载中..."),
+              );
+      },
+      errorBuilder: (message) {
+        ToastService.showError(message);
+        return errorBuilder != null
+            ? errorBuilder(message)
+            : Center(
+                child: TDButton(
+                  text: "加载失败，点击重试",
+                  onTap: () {
+                    ToastService.dismiss();
+                    if (onRetry != null) {
+                      onRetry();
+                    }
+                  },
+                ),
+              );
+      },
+      emptyBuilder: () {
+        return emptyBuilder != null
+            ? emptyBuilder()
+            : Center(child: TDEmpty(emptyText: "暂无数据"));
+      },
+      successBuilder: successBuilder,
+    );
+  }
+}
+
+extension RXDKStateEventExtension<T> on Rx<DKStateEvent<T>> {
+  StreamSubscription<DKStateEvent<T>> listenEventToast({
+    void Function()? onLoading,
+    void Function(T data)? onSuccess,
+    void Function(String message, Object? error, StackTrace? stackTrace)?
+    onError,
+    void Function()? onIdle,
+    void Function()? onComplete,
+    bool showLoadingToast = true,
+    bool showErrorToast = true,
+    bool showSuccessToast = true,
+  }) {
+    return listen((state) {
+      DKStateEventHelper.handleState<T>(
+        state,
+        onLoading: () {
+          ToastService.dismiss();
+          if (showLoadingToast) {
+            ToastService.showLoading("加载中...");
+          }
           if (onLoading != null) {
             onLoading();
           }
-          break;
-        case Success():
-          if (onSuccess != null) {
-            onSuccess();
-          }
-          break;
-        case Error():
-          if (onError != null) {
-            onError();
-          }
-          break;
-        case Idle():
-          if (onIdle != null) {
-            onIdle();
-          }
-          break;
-        case Empty<dynamic>():
-          if (onEmpty != null) {
-            onEmpty();
-          }
-          break;
-      }
-    });
-  }
-
-  void listenWithSuccess({
-    bool showLoadingToast = true,
-    bool showSuccessToast = true,
-    String successMsg = '操作成功',
-    Function()? onSuccess,
-  }) {
-    ever<RequestState>(this, (state) {
-      switch (state) {
-        case Loading():
-          if (showLoadingToast) {
-            ToastService.showLoading("正在加载...");
-          }
-          break;
-        case Success():
+        },
+        onSuccess: (data) {
           ToastService.dismiss();
           if (showSuccessToast) {
-            ToastService.showSuccess(successMsg);
+            ToastService.showSuccess("操作成功");
           }
           if (onSuccess != null) {
-            onSuccess();
+            onSuccess(data);
           }
-          break;
-        case Error(message: var message):
+        },
+        onError: (message, error, stackTrace) {
           ToastService.dismiss();
-          ToastService.showError(message);
-          break;
-        case Idle():
-          break;
-        case Empty<dynamic>():
-          break;
-      }
+          if (showErrorToast) {
+            ToastService.showError(message);
+          }
+          if (onError != null) {
+            onError(message, error, stackTrace);
+          }
+        },
+        onIdle: onIdle,
+        onComplete: onComplete,
+      );
     });
-  }
-
-  Future<void> runFuture(
-    Future<T> Function() futureFunc, {
-    bool Function(T result)? isEmpty,
-  }) async {
-    try {
-      value = Loading();
-      final result = await futureFunc();
-      if (isEmpty != null && isEmpty(result)) {
-        value = Empty();
-        return;
-      }
-      value = Success(result);
-    } catch (e) {
-      value = Error(e.toString());
-      rethrow;
-    }
   }
 }
