@@ -2,26 +2,13 @@ import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart' hide Column;
-import 'package:flutter/cupertino.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/widget/td/td_form_item_title.dart';
-
-final _iconList = [
-  Icons.star,
-  Icons.favorite,
-  Icons.book,
-  Icons.music_note,
-  Icons.movie,
-  Icons.work,
-  Icons.home,
-  Icons.travel_explore,
-  Icons.fitness_center,
-  Icons.pets,
-];
 
 final _colorList = [
   Colors.red,
@@ -53,6 +40,8 @@ class BookMarkPickerWidget extends StatelessWidget {
             action: () {
               Navigator.of(context).push(
                 TDSlidePopupRoute(
+                  focusMove: true,
+                  slideTransitionFrom: SlideTransitionFrom.bottom,
                   builder: (context) {
                     return _buildAddMarkForm(context);
                   },
@@ -62,14 +51,17 @@ class BookMarkPickerWidget extends StatelessWidget {
           ),
         ],
       ),
-      body: controller.getBookMarkState.displaySuccess(
+      body: controller.getMarkState.displaySuccess(
         successBuilder: (data) {
           return Padding(
             padding: EdgeInsets.all(16),
             child: Column(
-              spacing: 16,
+              spacing: 24,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [_buildTitle(context), _buildTagWrap(context, data)],
+              children: [
+                Expanded(child: _buildMarkList(context, data)),
+                _buildAddBookMarkButton(context),
+              ],
             ),
           );
         },
@@ -77,46 +69,48 @@ class BookMarkPickerWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTitle(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TDText("选择标签", font: TDTheme.of(context).fontTitleLarge),
-        TDText(
-          "为书籍添加多个标签",
-          font: TDTheme.of(context).fontTitleMedium,
-          textColor: TDTheme.of(context).grayColor6,
-        ),
-      ],
+  Widget _buildMarkList(BuildContext context, List<MarkTableData> data) {
+    return TDCheckboxGroup(
+      checkedIds: [...controller.selectedMarkIds.map((e) => e.toString())],
+      onChangeGroup: (ids) {
+        controller.selectedMarkIds.value = ids
+            .map((e) => int.parse(e))
+            .toList();
+      },
+      child: Column(
+        children: [
+          ...data.map(
+            (mark) => TDCheckbox(
+              id: mark.id.toString(),
+              customContentBuilder: (context, selected, title) {
+                return TDCell(
+                  imageWidget: Container(
+                    decoration: BoxDecoration(
+                      color: Color(mark.color),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    width: 24,
+                    height: 24,
+                  ),
+                  title: mark.name,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildTagWrap(BuildContext context, List<MarkTableData> data) {
-    return Obx(() {
-      return Wrap(
-        spacing: 8,
-        children: [
-          ...data.map((mark) {
-            final isSelected = controller.selectedMarks.any(
-              (selected) => selected.id == mark.id,
-            );
-            return GestureDetector(
-              child: TDTag(
-                mark.name,
-                size: TDTagSize.large,
-                icon: IconData(mark.icon),
-                textColor: isSelected ? Colors.white : Color(mark.color),
-                backgroundColor: isSelected
-                    ? TDTheme.of(context).brandNormalColor
-                    : Color(mark.color).withOpacity(0.1),
-                shape: TDTagShape.round,
-                needCloseIcon: true,
-              ),
-            );
-          }),
-        ],
-      );
-    });
+  Widget _buildAddBookMarkButton(BuildContext context) {
+    return TDButton(
+      width: double.infinity,
+      theme: TDButtonTheme.primary,
+      text: "保存选择",
+      onTap: () {
+        controller.saveBookMarks();
+      },
+    );
   }
 
   Widget _buildAddMarkForm(BuildContext context) {
@@ -138,33 +132,6 @@ class BookMarkPickerWidget extends StatelessWidget {
             TDInput(
               controller: controller.markNameController,
               hintText: "请输入标签名称",
-            ),
-            TDFormItemTitle(label: "选择图标", required: true),
-            TDRadioGroup(
-              cardMode: true,
-              direction: Axis.horizontal,
-              rowCount: 5,
-              onRadioGroupChange: (id) {
-                final iconData = _iconList.firstWhere(
-                  (icon) => icon.codePoint.toString() == id,
-                );
-                controller.selectedMarkIcon.value = iconData;
-              },
-              directionalTdRadios: [
-                ..._iconList.map(
-                  (iconData) => TDRadio(
-                    id: iconData.codePoint.toString(),
-                    cardMode: true,
-                    backgroundColor: TDTheme.of(context).grayColor1,
-                    customContentBuilder: (context, selected, text) {
-                      return Icon(
-                        iconData,
-                        color: selected ? Colors.blue : Colors.grey,
-                      );
-                    },
-                  ),
-                ),
-              ],
             ),
             TDFormItemTitle(label: "选择颜色", required: true),
             TDRadioGroup(
@@ -200,31 +167,43 @@ class BookMarkPickerWidget extends StatelessWidget {
 }
 
 class BookMarkPickerController extends GetxController {
+  final bookIds = Get.arguments["bookIds"] as List<int>;
   final appDatabase = Get.find<AppDatabase>();
-  final getBookMarkState = Rx<DKStateQuery<List<MarkTableData>>>(
+  final getMarkState = Rx<DKStateQuery<List<MarkTableData>>>(
     DkStateQueryIdle(),
   );
+  final getBookMarkState = Rx<DKStateQuery<List<MarkBookTableData>>>(
+    DkStateQueryIdle(),
+  );
+  final addMarkState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final addBookMarkState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final markNameController = TextEditingController();
   final selectedMarkColor = Rx<Color>(_colorList.first);
-  final selectedMarkIcon = Rx<IconData>(_iconList.first);
-  final selectedMarks = <MarkTableData>[].obs;
+  final selectedMarkIds = <int>[].obs;
 
   @override
   void onInit() {
     super.onInit();
-    addBookMarkState.listenEventToast(
+    addMarkState.listenEventToast(
       onSuccess: (_) {
-        fetchBookMarks();
+        fetchMarks();
         markNameController.clear();
         Get.back();
       },
     );
+    addBookMarkState.listenEventToast(
+      onSuccess: (_) {
+        final controller = Get.find<BookController>();
+        controller.fetchBooks();
+        Get.back();
+      },
+    );
+    fetchMarks();
     fetchBookMarks();
   }
 
-  Future<void> fetchBookMarks() async {
-    await getBookMarkState.triggerQuery(
+  Future<void> fetchMarks() async {
+    await getMarkState.triggerQuery(
       query: () async {
         final query = appDatabase.markTable.select();
         final marks = await query.get();
@@ -234,18 +213,73 @@ class BookMarkPickerController extends GetxController {
     );
   }
 
+  Future<void> fetchBookMarks() async {
+    await getBookMarkState.triggerQuery(
+      query: () async {
+        final query = appDatabase.markBookTable.select()
+          ..where((tbl) => tbl.bookId.isIn(bookIds));
+        final bookMarks = await query.get();
+        if (bookIds.length == 1) {
+          selectedMarkIds.value = bookMarks.map((e) => e.markId).toList();
+        }
+        return bookMarks;
+      },
+      isEmpty: (result) => result.isEmpty,
+    );
+  }
+
   Future<void> addBookMark() async {
-    addBookMarkState.triggerEvent(
+    final markName = markNameController.text.trim();
+
+    if (markName.isEmpty) {
+      Get.showSnackbar(
+        GetSnackBar(message: "标签名称不能为空", duration: Duration(seconds: 2)),
+      );
+      return;
+    }
+
+    addMarkState.triggerEvent(
       event: () async {
+        // 检查是否已存在同名标签
+        final existingMark =
+            await (appDatabase.markTable.select()
+                  ..where((tbl) => tbl.name.equals(markName)))
+                .getSingleOrNull();
+
+        if (existingMark != null) {
+          throw Exception("标签名称已存在，请使用其他名称");
+        }
+
         await appDatabase
             .into(appDatabase.markTable)
             .insert(
               MarkTableCompanion.insert(
-                name: markNameController.text,
-                icon: selectedMarkIcon.value.codePoint,
+                name: markName,
                 color: selectedMarkColor.value.toARGB32(),
               ),
             );
+      },
+    );
+  }
+
+  Future<void> saveBookMarks() async {
+    addBookMarkState.triggerEvent(
+      event: () async {
+        // 先删除已有的书籍标签关联
+        await (appDatabase.markBookTable.delete()
+              ..where((tbl) => tbl.bookId.isIn(bookIds)))
+            .go();
+
+        // 添加新的书籍标签关联
+        for (final bookId in bookIds) {
+          for (final markId in selectedMarkIds) {
+            await appDatabase
+                .into(appDatabase.markBookTable)
+                .insert(
+                  MarkBookTableCompanion.insert(bookId: bookId, markId: markId),
+                );
+          }
+        }
       },
     );
   }

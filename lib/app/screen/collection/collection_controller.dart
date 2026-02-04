@@ -9,6 +9,9 @@ import 'package:tele_book/app/extend/rx_extend.dart';
 
 class CollectionController extends GetxController {
   final collectionNameController = TextEditingController();
+  final selectedCollectionId = Rx<int?>(null);
+  final selectedCollectionIconData = Rx<IconData?>(null);
+  final selectedCollectionColor = Rx<Color?>(null);
   final getCollectionState = Rx<DKStateQuery<List<CollectionTableData>>>(
     DkStateQueryIdle(),
   );
@@ -44,6 +47,22 @@ class CollectionController extends GetxController {
     getCollections();
   }
 
+  void initFormData(CollectionTableData collection) {
+    selectedCollectionId.value = collection.id;
+    collectionNameController.text = collection.name;
+    selectedCollectionColor.value =
+        Color(collection.color);
+    selectedCollectionIconData.value =
+        IconData(collection.icon, fontFamily: 'MaterialIcons');
+  }
+
+  void clearFormData() {
+    selectedCollectionId.value = null;
+    collectionNameController.clear();
+    selectedCollectionColor.value = null;
+    selectedCollectionIconData.value = null;
+  }
+
   Future<void> getCollections() async {
     await getCollectionState.triggerQuery(
       query: () async {
@@ -61,53 +80,69 @@ class CollectionController extends GetxController {
   }
 
   Future<void> addCollection() async {
-    // await addCollectionState.triggerEvent(
-    //   event: () async {
-    //     appDatabase
-    //         .into(appDatabase.collectionTable)
-    //         .insert(
-    //           CollectionTableCompanion.insert(
-    //             id: Value.absent(),
-    //             name: collectionNameController.text,
-    //             order: Value(0),
-    //             createdAt: Value(DateTime.now()),
-    //           ),
-    //         );
-    //   },
-    // );
+    await addCollectionState.triggerEvent(
+      event: () async {
+        if (selectedCollectionColor.value == null) {
+          throw Exception("请选择颜色");
+        }
+        if (selectedCollectionIconData.value == null) {
+          throw Exception("请选择图标");
+        }
+
+        await appDatabase
+            .into(appDatabase.collectionTable)
+            .insert(
+              CollectionTableCompanion.insert(
+                id: Value.absent(),
+                name: collectionNameController.text,
+                color: selectedCollectionColor.value!.toARGB32(),
+                icon: selectedCollectionIconData.value!.codePoint,
+                createdAt: Value(DateTime.now()),
+              ),
+            );
+      },
+    );
   }
 
-  Future<void> editCollection(int id) async {
-    // await editCollectionState.triggerEvent(
-    //   event: () async {
-    //     await appDatabase
-    //         .update(appDatabase.collectionTable)
-    //         .replace(
-    //           CollectionTableData(
-    //             id: id,
-    //             name: collectionNameController.text,
-    //             order: 0,
-    //             createdAt: DateTime.now(),
-    //           ),
-    //         );
-    //   },
-    // );
+  Future<void> editCollection() async {
+    await editCollectionState.triggerEvent(
+      event: () async {
+        if (selectedCollectionId.value == null) {
+          throw Exception("收藏夹ID不能为空");
+        }
+        if (selectedCollectionColor.value == null) {
+          throw Exception("请选择颜色");
+        }
+        if (selectedCollectionIconData.value == null) {
+          throw Exception("请选择图标");
+        }
+
+        await appDatabase
+            .update(appDatabase.collectionTable)
+            .replace(
+              CollectionTableData(
+                id: selectedCollectionId.value!,
+                name: collectionNameController.text,
+                color: selectedCollectionColor.value!.toARGB32(),
+                icon: selectedCollectionIconData.value!.codePoint,
+                order: 0,
+                createdAt: DateTime.now(),
+              ),
+            );
+      },
+    );
   }
 
   Future<void> deleteCollection(int id) async {
-    // await deleteCollectionState.triggerEvent(
-    //   event: () async {
-    //     await appDatabase
-    //         .delete(appDatabase.collectionTable)
-    //         .delete(
-    //           CollectionTableData(
-    //             id: id,
-    //             name: '',
-    //             order: 0,
-    //             createdAt: DateTime.now(),
-    //           ),
-    //         );
-    //   },
-    // );
+    await deleteCollectionState.triggerEvent(
+      event: () async {
+        await (appDatabase.delete(
+          appDatabase.collectionTable,
+        )..where((tbl) => tbl.id.equals(id))).go();
+        await (appDatabase.delete(
+          appDatabase.collectionBookTable,
+        )..where((tbl) => tbl.collectionId.equals(id))).go();
+      },
+    );
   }
 }

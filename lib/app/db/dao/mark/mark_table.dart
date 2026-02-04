@@ -7,7 +7,5 @@ class MarkTable extends Table {
 
   IntColumn get color => integer()();
 
-  IntColumn get icon => integer()();
-
   TextColumn get description => text().nullable()();
 }

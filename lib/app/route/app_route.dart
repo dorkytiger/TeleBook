@@ -9,8 +9,6 @@ import 'package:tele_book/app/screen/book/screen/page/book_page_binding.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_screen.dart';
 import 'package:tele_book/app/screen/collection/collection_bind.dart';
 import 'package:tele_book/app/screen/collection/collection_screen.dart';
-import 'package:tele_book/app/screen/collection/screen/book/collection_book_bind.dart';
-import 'package:tele_book/app/screen/collection/screen/book/collection_book_screen.dart';
 import 'package:tele_book/app/screen/download/download_binding.dart';
 import 'package:tele_book/app/screen/download/download_screen.dart';
 import 'package:tele_book/app/screen/download/screen/form/download_form_binding.dart';
@@ -29,6 +27,10 @@ import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_ar
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_screen.dart';
 import 'package:tele_book/app/screen/parse/pdf/parse_pdf_binding.dart';
 import 'package:tele_book/app/screen/parse/pdf/parse_pdf_screen.dart';
+import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_binding.dart';
+import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_screen.dart';
+import 'package:tele_book/app/screen/parse/image_folder/batch/parse_batch_image_folder_binding.dart';
+import 'package:tele_book/app/screen/parse/image_folder/batch/parse_batch_image_folder_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_screen.dart';
 import 'package:tele_book/app/screen/export/export_binding.dart';
@@ -48,13 +50,14 @@ class AppRoute {
   static const parseArchiveSingle = "/parse/archive/single";
   static const parseArchiveBatch = "/parse/archive/batch";
   static const parseArchiveBatchEdit = "/parse/archive/batch/edit";
+  static const parseImageFolder = "/parse/image_folder";
+  static const parseBatchImageFolder = "/parse/batch_image_folder";
 
   static const download = "/download";
   static const downloadForm = "/download/form";
   static const downloadTask = "/download/task";
 
   static const collection = "/collection";
-  static const collectionBook = "/collection/book";
 
   static const mark = "/mark";
   static const markBook = "/mark/book";
@@ -87,6 +90,16 @@ class AppRoute {
       name: parsePdf,
       page: () => ParsePdfScreen(),
       binding: ParsePdfBinding(),
+    ),
+    GetPage(
+      name: parseImageFolder,
+      page: () => ParseImageFolderScreen(),
+      binding: ParseImageFolderBinding(),
+    ),
+    GetPage(
+      name: parseBatchImageFolder,
+      page: () => ParseBatchImageFolderScreen(),
+      binding: ParseBatchImageFolderBinding(),
     ),
     GetPage(
       name: parseArchiveSingle,
@@ -122,11 +135,6 @@ class AppRoute {
       name: collection,
       page: () => CollectionScreen(),
       binding: CollectionBind(),
-    ),
-    GetPage(
-      name: collectionBook,
-      page: () => CollectionBookScreen(),
-      binding: CollectionBookBind(),
     ),
     GetPage(name: mark, page: () => MarkScreen(), binding: MarkBind()),
   ];

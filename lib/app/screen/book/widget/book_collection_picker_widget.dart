@@ -6,42 +6,17 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/constant/collection_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/screen/collection/widget/collection_edit_form_widget.dart';
 import 'package:tele_book/app/widget/td/td_form_item_title.dart';
 
 class BookCollectionPickerWidget extends StatelessWidget {
-  final Function(CollectionTableData) onCollectionSelected;
-
   final controller = Get.put(BookCollectionPickerController());
 
-  BookCollectionPickerWidget({super.key, required this.onCollectionSelected});
-
-  final iconList = [
-    Icons.star,
-    Icons.favorite,
-    Icons.book,
-    Icons.music_note,
-    Icons.movie,
-    Icons.work,
-    Icons.home,
-    Icons.travel_explore,
-    Icons.fitness_center,
-    Icons.pets,
-  ];
-
-  final colorList = [
-    Colors.red,
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.brown,
-    Colors.cyan,
-    Colors.indigo,
-    Colors.lime,
-  ];
+  BookCollectionPickerWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -84,12 +59,7 @@ class BookCollectionPickerWidget extends StatelessWidget {
           theme: TDButtonTheme.primary,
           width: double.infinity,
           onTap: () {
-            onCollectionSelected(
-              controller.getCollectionsState.value.data.firstWhere(
-                (collection) =>
-                    collection.id == controller.selectedCollectionId.value,
-              ),
-            );
+            controller.addBooksToCollection();
           },
         ),
       ),
@@ -103,36 +73,35 @@ class BookCollectionPickerWidget extends StatelessWidget {
           () => TDRadioGroup(
             selectId: controller.selectedCollectionId.value.toString(),
             direction: Axis.vertical,
-            // cardMode: true,
+            cardMode: true,
             directionalTdRadios: [
               ...data.map((collection) {
-                final iconData = iconList.firstWhere(
+                final iconData = CollectionConstant.iconList.firstWhere(
                   (icon) => icon.codePoint == collection.icon,
                   orElse: () => Icons.book,
                 );
-                final color = colorList.firstWhere(
+                final color = CollectionConstant.colorList.firstWhere(
                   (color) => color.toARGB32() == collection.color,
                   orElse: () => Colors.blue,
                 );
 
                 return TDRadio(
                   id: collection.id.toString(),
-                  // cardMode: true,
+                  cardMode: true,
+                  customSpace: EdgeInsets.only(top: 8),
                   customContentBuilder: (context, selected, text) {
                     return TDCell(
                       disabled: true,
                       imageWidget: Container(
-                        padding: EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
+                        height: 32,
+                        width: 32,
                         child: Icon(iconData, color: color, size: 24),
                       ),
                       title: collection.name,
-                      onClick: (cell) {
-                        onCollectionSelected(collection);
-                      },
                     );
                   },
                 );
@@ -148,90 +117,32 @@ class BookCollectionPickerWidget extends StatelessWidget {
   }
 
   Widget _buildAddCollectionForm(BuildContext context) {
-    return TDPopupBottomConfirmPanel(
-      rightClick: () {
+    return CollectionEditFormWidget(
+      nameController: controller.collectionNameController,
+      onConfirm: () {
         controller.addCollection();
       },
-      leftClick: () {
+      onCancel: () {
         Navigator.of(context).pop();
       },
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 16,
-          children: [
-            TDFormItemTitle(label: "收藏夹名称", required: true),
-            TDInput(
-              controller: controller.collectionNameController,
-              hintText: "请输入收藏夹名称",
-            ),
-            TDFormItemTitle(label: "选择图标", required: true),
-            TDRadioGroup(
-              cardMode: true,
-              direction: Axis.horizontal,
-              rowCount: 5,
-              onRadioGroupChange: (id) {
-                final iconData = iconList.firstWhere(
-                  (icon) => icon.codePoint.toString() == id,
-                );
-                controller.selectedCollectionIcon.value = iconData;
-              },
-              directionalTdRadios: [
-                ...iconList.map(
-                  (iconData) => TDRadio(
-                    id: iconData.codePoint.toString(),
-                    cardMode: true,
-                    backgroundColor: TDTheme.of(context).grayColor1,
-                    customContentBuilder: (context, selected, text) {
-                      return Icon(
-                        iconData,
-                        color: selected ? Colors.blue : Colors.grey,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            TDFormItemTitle(label: "选择颜色", required: true),
-            TDRadioGroup(
-              cardMode: true,
-              direction: Axis.horizontal,
-              rowCount: 5,
-              onRadioGroupChange: (id) {
-                final color = colorList.firstWhere(
-                  (color) => color.toARGB32().toString() == id,
-                );
-                controller.selectedCollectionColor.value = color;
-              },
-              directionalTdRadios: [
-                ...colorList.map(
-                  (color) => TDRadio(
-                    id: color.toARGB32().toString(),
-                    cardMode: true,
-                    backgroundColor: color,
-                    customContentBuilder: (context, selected, text) {
-                      return selected
-                          ? Icon(Icons.check, color: Colors.white)
-                          : SizedBox.shrink();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      onIconSelected: (iconData) {
+        controller.selectedCollectionIcon.value = iconData;
+      },
+      onColorSelected: (color) {
+        controller.selectedCollectionColor.value = color;
+      },
     );
   }
 }
 
 class BookCollectionPickerController extends GetxController {
+  final appDatabase = Get.find<AppDatabase>();
+  final bookIds = Get.arguments["bookIds"] as List<int>;
   final getCollectionsState = Rx<DKStateQuery<List<CollectionTableData>>>(
     DkStateQueryIdle(),
   );
   final addCollectionState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final addBookCollectionState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final collectionNameController = TextEditingController();
   final selectedCollectionIcon = Rxn<IconData>(null);
   final selectedCollectionColor = Rxn<Color>(null);
@@ -246,13 +157,20 @@ class BookCollectionPickerController extends GetxController {
         Get.back();
       },
     );
+    addBookCollectionState.listenEventToast(
+      onSuccess: (_) {
+        final controller = Get.find<BookController>();
+        controller.fetchBooks();
+        Get.back();
+      },
+    );
+
     getCollections();
   }
 
   Future<void> getCollections() async {
     await getCollectionsState.triggerQuery(
       query: () async {
-        final appDatabase = Get.find<AppDatabase>();
         final query = appDatabase.collectionTable.select()
           ..orderBy([
             (t) => OrderingTerm(expression: t.order, mode: OrderingMode.asc),
@@ -260,6 +178,15 @@ class BookCollectionPickerController extends GetxController {
                 OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
           ]);
         final collections = await query.get();
+        if (bookIds.length == 1) {
+          final bookId = bookIds.first;
+          final collectionBookQuery = appDatabase.collectionBookTable.select()
+            ..where((tbl) => tbl.bookId.equals(bookId));
+          final collectionBooks = await collectionBookQuery.get();
+          if (collectionBooks.isNotEmpty) {
+            selectedCollectionId.value = collectionBooks.first.collectionId;
+          }
+        }
         return collections;
       },
       isEmpty: (result) => result.isEmpty,
@@ -292,6 +219,32 @@ class BookCollectionPickerController extends GetxController {
                 color: selectedCollectionColor.value!.toARGB32(),
               ),
             );
+      },
+    );
+  }
+
+  Future<void> addBooksToCollection() async {
+    await addBookCollectionState.triggerEvent(
+      event: () async {
+        if (selectedCollectionId.value == null) {
+          throw Exception('请选择收藏夹');
+        }
+        // 先删除已有的收藏关系
+        await (appDatabase.delete(
+          appDatabase.collectionBookTable,
+        )..where((tbl) => tbl.bookId.isIn(bookIds))).go();
+
+        // 添加新的收藏关系
+        for (final id in bookIds) {
+          await appDatabase
+              .into(appDatabase.collectionBookTable)
+              .insert(
+                CollectionBookTableCompanion.insert(
+                  bookId: id,
+                  collectionId: selectedCollectionId.value!,
+                ),
+              );
+        }
       },
     );
   }

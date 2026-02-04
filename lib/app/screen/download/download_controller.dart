@@ -7,10 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/service/download_service.dart';
-import 'package:tele_book/app/util/request_state.dart';
 
 class DownloadController extends GetxController {
   final downloadService = Get.find<DownloadService>();

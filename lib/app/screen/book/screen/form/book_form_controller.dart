@@ -2,7 +2,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
@@ -15,6 +14,8 @@ class BookFormController extends GetxController {
   final filePathController = TextEditingController();
   final folderPathController = TextEditingController();
   final pdfPathController = TextEditingController();
+  final imageFolderPathController = TextEditingController();
+  final batchImageFolderPathController = TextEditingController();
 
   Future<void> submitForm() async {
     final sourceValue = source.value;
@@ -62,6 +63,28 @@ class BookFormController extends GetxController {
       }
       Get.offAndToNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
     }
+    if (sourceValue == BookFormSources.imageFolder) {
+      final folder = imageFolderPathController.text;
+      if (folder.toString().trim().isEmpty) {
+        ToastService.showError("请选择图片文件夹");
+        return;
+      }
+      Get.offAndToNamed(
+        AppRoute.parseImageFolder,
+        arguments: folder.toString(),
+      );
+    }
+    if (sourceValue == BookFormSources.batchImageFolder) {
+      final folder = batchImageFolderPathController.text;
+      if (folder.toString().trim().isEmpty) {
+        ToastService.showError("请选择包含图片文件夹的父文件夹");
+        return;
+      }
+      Get.offAndToNamed(
+        AppRoute.parseBatchImageFolder,
+        arguments: folder.toString(),
+      );
+    }
   }
 
   Future<void> pickArchiveFile() async {
@@ -90,13 +113,29 @@ class BookFormController extends GetxController {
       pdfPathController.text = path;
     }
   }
+
+  Future<void> pickImageFolder() async {
+    final folderPath = await PickFileUtil.pickDirectory();
+    if (folderPath != null) {
+      imageFolderPathController.text = folderPath;
+    }
+  }
+
+  Future<void> pickBatchImageFolder() async {
+    final folderPath = await PickFileUtil.pickDirectory();
+    if (folderPath != null) {
+      batchImageFolderPathController.text = folderPath;
+    }
+  }
 }
 
 enum BookFormSources {
   web("web", "网页"),
   archive("archive", "压缩包"),
   batchArchive("batch_archive", "批量压缩包"),
-  pdf("pdf", "PDF");
+  pdf("pdf", "PDF"),
+  imageFolder("image_folder", "文件夹图片"),
+  batchImageFolder("batch_image_folder", "批量文件夹图片");
 
   final String value;
   final String desc;

@@ -5,6 +5,7 @@ import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,11 +21,16 @@ class BookController extends GetxController {
   final exportService = Get.find<ExportService>();
   final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
   final multiEditMode = false.obs;
+  final searchBarController = TextEditingController();
   final selectedBookIds = <int>[].obs;
-  final getBookState = Rx<DKStateQuery<List<BookTableData>>>(
+  final selectedCollectionId = Rxn<int>(); // null means show all
+  final selectedMarkIds = <int>[].obs; // empty means show all
+  final getBookState = Rx<DKStateQuery<List<BookUIData>>>(DkStateQueryIdle());
+  final getCollectionState = Rx<DKStateQuery<List<CollectionTableData>>>(
     DkStateQueryIdle(),
   );
-  final getCollectionState = Rx<DKStateQuery<List<CollectionTableData>>>(
+  final showSearchBar = false.obs;
+  final getMarkState = Rx<DKStateQuery<List<MarkTableData>>>(
     DkStateQueryIdle(),
   );
   final addBookToCollectionState = Rx<DKStateEvent<void>>(DKStateEventIdle());
@@ -56,6 +62,9 @@ class BookController extends GetxController {
       },
     );
     appDirectory = (await getApplicationDocumentsDirectory()).path;
+    searchBarController.addListener(() {
+      fetchBooks();
+    });
     await fetchBooks();
   }
 
@@ -71,14 +80,13 @@ class BookController extends GetxController {
     bookLayout.value = BookLayoutSetting.fromValue(layoutValue);
   }
 
-  Future<void> triggerBookLayoutChange() async {
-    if (bookLayout.value == BookLayoutSetting.list) {
-      bookLayout.value = BookLayoutSetting.grid;
-    } else {
-      bookLayout.value = BookLayoutSetting.list;
-    }
-    final layout = bookLayout.value;
+  Future<void> triggerBookLayoutChange(BookLayoutSetting layout) async {
+    bookLayout.value = layout;
     await prefs.setInt(SettingKey.bookLayout, layout.value);
+  }
+
+  void toggleShowSearchBar() {
+    showSearchBar.value = !showSearchBar.value;
   }
 
   void toggleSelectBook(int bookId) {
@@ -89,16 +97,107 @@ class BookController extends GetxController {
     }
   }
 
-  void triggerMultiEditMode() {
-    multiEditMode.value = !multiEditMode.value;
+  void triggerMultiEditMode(bool enable) {
+    multiEditMode.value = enable;
     if (!multiEditMode.value) {
       selectedBookIds.clear();
     }
   }
 
   Future<void> fetchBooks() async {
-    getBookState.triggerQuery(
-      query: () => appDatabase.bookTable.select().get(),
+    await getBookState.triggerQuery(
+      query: () async {
+        final bookData = await appDatabase.bookTable.select().get();
+        final bookIds = bookData.map((e) => e.id).toList();
+        List<MarkBookTableData> markBookTableData;
+        if (bookIds.isNotEmpty) {
+          markBookTableData =
+              await (appDatabase.markBookTable.select()
+                    ..where((tbl) => tbl.bookId.isIn(bookIds)))
+                  .get();
+        } else {
+          markBookTableData = [];
+        }
+        final markIds = markBookTableData.map((e) => e.markId).toSet().toList();
+        List<MarkTableData> markTableData;
+        if (markIds.isNotEmpty) {
+          markTableData =
+              await (appDatabase.markTable.select()
+                    ..where((tbl) => tbl.id.isIn(markIds)))
+                  .get();
+        } else {
+          markTableData = [];
+        }
+        final collectionBookData =
+            await (appDatabase.collectionBookTable.select()
+                  ..where((tbl) => tbl.bookId.isIn(bookIds)))
+                .get();
+        final collectionIds = collectionBookData
+            .map((e) => e.collectionId)
+            .toSet()
+            .toList();
+        List<CollectionTableData> collectionTableData;
+        if (collectionIds.isNotEmpty) {
+          collectionTableData =
+              await (appDatabase.collectionTable.select()
+                    ..where((tbl) => tbl.id.isIn(collectionIds)))
+                  .get();
+        } else {
+          collectionTableData = [];
+        }
+        final List<BookUIData> result = bookData.map((book) {
+          final marksForBook = markBookTableData
+              .where((mb) => mb.bookId == book.id)
+              .map(
+                (mb) =>
+                    markTableData.firstWhereOrNull((m) => m.id == mb.markId),
+              )
+              .whereType<MarkTableData>()
+              .toList();
+          final collectionForBook = collectionBookData
+              .firstWhereOrNull((cb) => cb.bookId == book.id)
+              ?.collectionId;
+          final collectionData = collectionForBook != null
+              ? collectionTableData.firstWhereOrNull(
+                  (c) => c.id == collectionForBook,
+                )
+              : null;
+          return BookUIData(
+            book: book,
+            marks: marksForBook,
+            collection: collectionData,
+          );
+        }).toList();
+
+        // Apply filters
+        var filteredResult = result;
+
+        // Filter by collection
+        if (selectedCollectionId.value != null) {
+          filteredResult = filteredResult.where((bookUI) {
+            return bookUI.collection?.id == selectedCollectionId.value;
+          }).toList();
+        }
+
+        // Filter by marks (if any marks are selected, show books that have at least one of them)
+        if (selectedMarkIds.isNotEmpty) {
+          filteredResult = filteredResult.where((bookUI) {
+            return bookUI.marks.any(
+              (mark) => selectedMarkIds.contains(mark.id),
+            );
+          }).toList();
+        }
+
+        if (searchBarController.text.isNotEmpty) {
+          final query = searchBarController.text.toLowerCase();
+          filteredResult = filteredResult.where((bookUI) {
+            final titleMatch = bookUI.book.name.toLowerCase().contains(query);
+            return titleMatch;
+          }).toList();
+        }
+
+        return filteredResult;
+      },
       isEmpty: (data) => data.isEmpty,
     );
   }
@@ -117,6 +216,41 @@ class BookController extends GetxController {
       },
       isEmpty: (data) => data.isEmpty,
     );
+  }
+
+  Future<void> getMarks() async {
+    await getMarkState.triggerQuery(
+      query: () async {
+        final query = appDatabase.markTable.select();
+        final marks = await query.get();
+        return marks;
+      },
+      isEmpty: (data) => data.isEmpty,
+    );
+  }
+
+  void toggleCollectionFilter(int? collectionId) {
+    if (selectedCollectionId.value == collectionId) {
+      selectedCollectionId.value = null; // Deselect if already selected
+    } else {
+      selectedCollectionId.value = collectionId;
+    }
+    fetchBooks(); // Refresh books with new filter
+  }
+
+  void toggleMarkFilter(int markId) {
+    if (selectedMarkIds.contains(markId)) {
+      selectedMarkIds.remove(markId);
+    } else {
+      selectedMarkIds.add(markId);
+    }
+    fetchBooks(); // Refresh books with new filter
+  }
+
+  void clearAllFilters() {
+    selectedCollectionId.value = null;
+    selectedMarkIds.clear();
+    fetchBooks(); // Refresh books
   }
 
   Future<void> addBookToCollection(int bookId, int collectionId) async {
@@ -246,4 +380,16 @@ class BookController extends GetxController {
       },
     );
   }
+}
+
+class BookUIData {
+  final BookTableData book;
+  final List<MarkTableData> marks;
+  final CollectionTableData? collection;
+
+  BookUIData({
+    required this.book,
+    required this.marks,
+    required this.collection,
+  });
 }

@@ -11,6 +11,7 @@ class BookFormScreen extends GetView<BookFormController> {
     return Scaffold(
       appBar: TDNavBar(
         title: "添加数据",
+        backIconColor: TDTheme.of(context).brandNormalColor,
         onBack: () {
           Get.back();
         },
@@ -93,6 +94,28 @@ class BookFormScreen extends GetView<BookFormController> {
                 controller.source.value = BookFormSources.pdf;
               },
             ),
+            _addDialogItem(
+              context: context,
+              icon: Icons.image,
+              title: "来自图片文件夹",
+              isSelected:
+                  controller.source.value == BookFormSources.imageFolder,
+              description: "从图片文件夹中提取书籍到本地",
+              onTap: () {
+                controller.source.value = BookFormSources.imageFolder;
+              },
+            ),
+            _addDialogItem(
+              context: context,
+              icon: Icons.folder,
+              title: "来自批量图片文件夹",
+              isSelected:
+                  controller.source.value == BookFormSources.batchImageFolder,
+              description: "选择文件夹,从文件夹里面多个图片文件夹中提取书籍到本地",
+              onTap: () {
+                controller.source.value = BookFormSources.batchImageFolder;
+              },
+            ),
           ],
         ),
       ),
@@ -146,6 +169,34 @@ class BookFormScreen extends GetView<BookFormController> {
             theme: TDButtonTheme.primary,
             onTap: () {
               controller.pickPdf();
+            },
+          ),
+        );
+      case BookFormSources.imageFolder:
+        return TDInput(
+          controller: controller.imageFolderPathController,
+          hintText: "请选择图片文件夹",
+          readOnly: true,
+          needClear: false,
+          rightBtn: TDButton(
+            text: "选择文件夹",
+            theme: TDButtonTheme.primary,
+            onTap: () {
+              controller.pickImageFolder();
+            },
+          ),
+        );
+      case BookFormSources.batchImageFolder:
+        return TDInput(
+          controller: controller.batchImageFolderPathController,
+          hintText: "请选择包含图片文件夹的文件夹",
+          readOnly: true,
+          needClear: false,
+          rightBtn: TDButton(
+            text: "选择文件夹",
+            theme: TDButtonTheme.primary,
+            onTap: () {
+              controller.pickBatchImageFolder();
             },
           ),
         );

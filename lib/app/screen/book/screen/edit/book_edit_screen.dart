@@ -15,18 +15,22 @@ class BookEditScreen extends GetView<BookEditController> {
     return Scaffold(
       appBar: TDNavBar(
         title: '编辑书籍',
+        backIconColor: TDTheme.of(context).brandNormalColor,
         rightBarItems: [
           TDNavBarItem(
             icon: Icons.check,
             iconWidget: Obx(() {
               final state = controller.saveState.value;
-              return state is Loading
-                  ? const SizedBox(
+              return state.isLoading
+                  ? SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: TDLoading(size: TDLoadingSize.small),
                     )
-                  : const Icon(Icons.check);
+                  : Icon(
+                      Icons.check,
+                      color: TDTheme.of(context).brandNormalColor,
+                    );
             }),
             action: () => controller.saveChanges(),
           ),
@@ -109,6 +113,7 @@ class ReorderableGridView extends StatelessWidget {
             rightIconWidget: TDButton(
               icon: Icons.delete_outline,
               theme: TDButtonTheme.danger,
+              type: TDButtonType.text,
               size: TDButtonSize.small,
               onTap: () => _showDeleteConfirm(context, index),
             ),

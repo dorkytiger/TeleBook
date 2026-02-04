@@ -2,34 +2,48 @@ import 'dart:io';
 
 import 'package:dk_util/config/dk_config.dart';
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/home/home_bind.dart';
-import 'package:tele_book/app/screen/home/home_screen.dart';
+import 'package:tele_book/app/screen/book/book_binding.dart';
+import 'package:tele_book/app/screen/book/book_screen.dart';
 import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 
+late TDThemeData themeData;
+late TDThemeData darkThemeData;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _init();
+
+  var themeJsonString = await rootBundle.loadString('assets/theme/theme.json');
+  TDTheme.needMultiTheme();
+  themeData =
+      TDThemeData.fromJson(
+        'default',
+        themeJsonString,
+        darkName: 'defaultDark',
+      ) ??
+      TDTheme.defaultData();
+
   runApp(
     GetMaterialApp(
       title: "Application",
-      initialBinding: HomeBind(),
-      home: HomeScreen(),
+      initialBinding: BookBinding(),
+      home: BookScreen(),
       getPages: [...AppRoute.pages],
       debugShowCheckedModeBanner: false,
       navigatorKey: NavigatorService.navigatorKey,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xfff3f3f3),
-      ),
+      theme: themeData.systemThemeDataLight,
+      darkTheme: themeData.systemThemeDataDark,
+      themeMode: ThemeMode.system,
     ),
   );
 }

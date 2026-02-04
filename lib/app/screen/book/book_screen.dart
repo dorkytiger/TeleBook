@@ -9,7 +9,9 @@ import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/screen/book/widget/book_collection_picker_widget.dart';
+import 'package:tele_book/app/screen/book/widget/book_filter_widget.dart';
 import 'package:tele_book/app/screen/book/widget/book_mark_picker_widget.dart';
+import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class BookScreen extends GetView<BookController> {
   const BookScreen({super.key});
@@ -18,83 +20,112 @@ class BookScreen extends GetView<BookController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: TDNavBar(
+        backgroundColor: TDTheme.of(context).brandNormalColor,
+        titleColor: TDTheme.of(context).whiteColor1,
         title: '书籍管理',
         useDefaultBack: false,
         rightBarItems: [
           TDNavBarItem(
-            iconWidget: Obx(
-              () => Icon(
-                color: TDTheme.of(context).brandNormalColor,
-                controller.multiEditMode.value ? Icons.close : Icons.edit,
-              ),
-            ),
+            icon: Icons.search,
+            iconColor: TDTheme.of(context).whiteColor1,
             action: () {
-              controller.triggerMultiEditMode();
+              controller.toggleShowSearchBar();
             },
           ),
           TDNavBarItem(
-            iconWidget: Obx(
-              () => Icon(
-                color: TDTheme.of(context).brandNormalColor,
-                controller.bookLayout.value == BookLayoutSetting.list
-                    ? Icons.grid_view
-                    : Icons.view_list,
-              ),
-            ),
+            icon: Icons.filter_alt,
+            iconColor: TDTheme.of(context).whiteColor1,
             action: () {
-              controller.triggerBookLayoutChange();
+              Navigator.of(context).push(
+                TDSlidePopupRoute(
+                  builder: (context) {
+                    return BookFilterWidget();
+                  },
+                ),
+              );
             },
           ),
           TDNavBarItem(
-            icon: Icons.add,
-            iconColor: TDTheme.of(context).brandNormalColor,
+            icon: Icons.more_horiz,
+            iconColor: TDTheme.of(context).whiteColor1,
             action: () {
-              Get.toNamed(AppRoute.bookForm);
+              _onActionMorePressed(context);
             },
           ),
         ],
       ),
       floatingActionButton: Obx(
         () => controller.multiEditMode.value
-            ? TDFab(
-                icon: Icon(
-                  Icons.checklist_sharp,
-                  color: TDTheme.of(context).warningColor1,
-                ),
-                theme: TDFabTheme.primary,
-                onClick: () {
-                  _onBatchEditConfirmedPressed(context);
-                },
+            ? Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 8,
+                children: [
+                  TDFab(
+                    icon: Icon(
+                      Icons.checklist_sharp,
+                      color: TDTheme.of(context).warningColor1,
+                    ),
+                    theme: TDFabTheme.primary,
+                    onClick: () {
+                      _onBatchEditConfirmedPressed(context);
+                    },
+                  ),
+                  TDFab(
+                    icon: Icon(
+                      Icons.close,
+                      color: TDTheme.of(context).warningColor1,
+                    ),
+                    theme: TDFabTheme.danger,
+                    onClick: () {
+                      controller.triggerMultiEditMode(false);
+                    },
+                  ),
+                ],
               )
             : SizedBox.shrink(),
       ),
-      body: controller.getBookState.displaySuccess(
-        successBuilder: (data) {
-          return Obx(() {
-            if (controller.bookLayout.value == BookLayoutSetting.list) {
-              return _buildBookList(data);
-            } else {
-              return _buildBookGrid(data);
-            }
-          });
-        },
+      body: Column(
+        children: [
+          Obx(
+            () => controller.showSearchBar.value
+                ? TDSearchBar(
+                    placeHolder: "搜索书籍名称",
+                    controller: controller.searchBarController,
+                  )
+                : SizedBox.shrink(),
+          ),
+          Expanded(
+            child: controller.getBookState.displaySuccess(
+              successBuilder: (data) {
+                return Obx(() {
+                  if (controller.bookLayout.value == BookLayoutSetting.list) {
+                    return _buildBookList(data);
+                  } else {
+                    return _buildBookGrid(data);
+                  }
+                });
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBookList(List<BookTableData> data) {
+  Widget _buildBookList(List<BookUIData> data) {
     return ListView.builder(
       itemBuilder: (context, index) {
+        final bookData = data[index];
         return Obx(
           () => TDCell(
-            title: data[index].name,
+            title: bookData.book.name,
             disabled: controller.multiEditMode.value,
             imageWidget: SizedBox(
               height: 100,
               width: 80,
               child: Image.file(
                 File(
-                  "${controller.appDirectory}/${data[index].localPaths.first}",
+                  "${controller.appDirectory}/${bookData.book.localPaths.first}",
                 ),
               ),
             ),
@@ -103,10 +134,10 @@ class BookScreen extends GetView<BookController> {
                     padding: EdgeInsets.all(8),
                     child: TDCheckbox(
                       checked: controller.selectedBookIds.contains(
-                        data[index].id,
+                        bookData.book.id,
                       ),
                       onCheckBoxChanged: (checked) {
-                        controller.toggleSelectBook(data[index].id);
+                        controller.toggleSelectBook(bookData.book.id);
                       },
                     ),
                   )
@@ -116,12 +147,57 @@ class BookScreen extends GetView<BookController> {
                     type: TDButtonType.text,
                     theme: TDButtonTheme.primary,
                     onTap: () {
-                      _onMorePressed(context, data[index]);
+                      _onBookMorePressed(context, bookData.book);
                     },
                   ),
-            description: '共 ${data[index].localPaths.length} 页',
+            descriptionWidget: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 8,
+              children: [
+                if (bookData.marks.isNotEmpty)
+                  Row(
+                    spacing: 8,
+                    children: [
+                      ...bookData.marks.map(
+                        (e) => TDTag(
+                          e.name,
+                          size: TDTagSize.small,
+                          backgroundColor: Color(e.color),
+                          textColor: Colors.white,
+                          shape: TDTagShape.square,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (bookData.collection != null)
+                  TDTag(
+                    bookData.collection!.name,
+                    shape: TDTagShape.square,
+                    iconWidget: Icon(
+                      IconData(
+                        bookData.collection!.icon,
+                        fontFamily: 'MaterialIcons',
+                      ),
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    textColor: Colors.white,
+                    backgroundColor: Color(bookData.collection!.color),
+                    isOutline: true,
+                  ),
+                if (bookData.book.readCount == 0)
+                  TDProgress(
+                    type: TDProgressType.linear,
+                    value:
+                        bookData.book.readCount +
+                        1 / bookData.book.localPaths.length,
+                    showLabel: false,
+                    strokeWidth: 3,
+                  ),
+              ],
+            ),
             onClick: (cell) {
-              Get.toNamed(AppRoute.bookPage, arguments: data[index].id);
+              Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
             },
           ),
         );
@@ -130,7 +206,7 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  Widget _buildBookGrid(List<BookTableData> data) {
+  Widget _buildBookGrid(List<BookUIData> data) {
     return GridView.builder(
       padding: EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -140,9 +216,10 @@ class BookScreen extends GetView<BookController> {
         mainAxisSpacing: 16,
       ),
       itemBuilder: (context, index) {
+        final bookData = data[index];
         return GestureDetector(
           onTap: () {
-            Get.toNamed(AppRoute.bookPage, arguments: data[index].id);
+            Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
           },
           child: Container(
             decoration: BoxDecoration(
@@ -159,24 +236,78 @@ class BookScreen extends GetView<BookController> {
             child: Column(
               children: [
                 Expanded(
-                  child: Image.file(
-                    File(
-                      "${controller.appDirectory}/${data[index].localPaths.first}",
-                    ),
-                    fit: BoxFit.cover,
+                  child: Stack(
+                    children: [
+                      Image.file(
+                        File(
+                          "${controller.appDirectory}/${bookData.book.localPaths.first}",
+                        ),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                      if (bookData.collection != null)
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Color(bookData.collection!.color),
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 2,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              IconData(
+                                bookData.collection!.icon,
+                                fontFamily: 'MaterialIcons',
+                              ),
+                              size: 12,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
                       child: Padding(
                         padding: EdgeInsets.all(8),
-                        child: TDText(
-                          data[index].name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 4,
+                          children: [
+                            TDText(
+                              bookData.book.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (bookData.marks.isNotEmpty)
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                spacing: 4,
+                                children: [
+                                  ...bookData.marks.map(
+                                    (e) => TDTag(
+                                      e.name,
+                                      backgroundColor: Color(e.color),
+                                      textColor: Colors.white,
+                                      shape: TDTagShape.square,
+                                      size: TDTagSize.small,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
                         ),
                       ),
                     ),
@@ -186,10 +317,10 @@ class BookScreen extends GetView<BookController> {
                               padding: EdgeInsets.all(8),
                               child: TDCheckbox(
                                 checked: controller.selectedBookIds.contains(
-                                  data[index].id,
+                                  bookData.book.id,
                                 ),
                                 onCheckBoxChanged: (checked) {
-                                  controller.toggleSelectBook(data[index].id);
+                                  controller.toggleSelectBook(bookData.book.id);
                                 },
                               ),
                             )
@@ -199,7 +330,7 @@ class BookScreen extends GetView<BookController> {
                               theme: TDButtonTheme.primary,
                               type: TDButtonType.text,
                               onTap: () {
-                                _onMorePressed(context, data[index]);
+                                _onBookMorePressed(context, bookData.book);
                               },
                             ),
                     ),
@@ -214,17 +345,89 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
+  void _onActionMorePressed(BuildContext context) {
+    TDActionSheet.showGridActionSheet(
+      context,
+      description: "选择一个操作",
+      onSelected: (actionItem, actionIndex) async {
+        if (actionIndex == 0) {
+          controller.triggerMultiEditMode(true);
+        }
+        if (actionIndex == 1) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.toNamed(AppRoute.bookForm);
+          });
+        }
+        if (actionIndex == 2) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.toNamed(AppRoute.download);
+          });
+        }
+        if (actionIndex == 3) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.toNamed(AppRoute.export);
+          });
+        }
+        if (actionIndex == 4) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.toNamed(AppRoute.collection);
+          });
+        }
+        if (actionIndex == 5) {
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.toNamed(AppRoute.mark);
+          });
+        }
+      },
+      items: [
+        TDActionSheetItem(
+          label: "批量操作",
+          icon: TDActionSheetItemIconWidget(iconData: Icons.edit),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "添加书籍",
+          icon: TDActionSheetItemIconWidget(iconData: Icons.add),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "下载历史",
+          icon: TDActionSheetItemIconWidget(iconData: Icons.download),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "导出历史",
+          icon: TDActionSheetItemIconWidget(iconData: Icons.import_export),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "收藏夹管理",
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.star,
+            bgColor: TDTheme.of(context).warningNormalColor,
+          ),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "书签管理",
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.bookmark,
+            bgColor: TDTheme.of(context).successNormalColor,
+          ),
+          group: "操作",
+        ),
+      ],
+    );
+  }
+
   void _onBatchEditConfirmedPressed(BuildContext context) {
     TDActionSheet.showGroupActionSheet(
       context,
       onSelected: (actionItem, actionIndex) async {
         if (actionIndex == 0) {
           Get.to(
-            () => BookCollectionPickerWidget(
-              onCollectionSelected: (data) {
-                controller.addMultipleBooksToCollection(data.id);
-              },
-            ),
+            () => BookCollectionPickerWidget(),
+            arguments: {"bookIds": controller.selectedBookIds.toList()},
           );
         }
         if (actionIndex == 1) {
@@ -261,47 +464,23 @@ class BookScreen extends GetView<BookController> {
       items: [
         TDActionSheetItem(
           label: "加入到收藏夹",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).warningLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.star,
-              color: TDTheme.of(context).warningNormalColor,
-            ),
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.star,
+            bgColor: TDTheme.of(context).warningNormalColor,
           ),
           group: "操作",
         ),
         TDActionSheetItem(
           label: "导出",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).brandLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.file_upload,
-              color: TDTheme.of(context).brandNormalColor,
-            ),
-          ),
+          icon: TDActionSheetItemIconWidget(iconData: Icons.upload),
           group: "操作",
         ),
 
         TDActionSheetItem(
           label: "删除",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).errorLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.delete,
-              color: TDTheme.of(context).errorNormalColor,
-            ),
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.delete,
+            bgColor: TDTheme.of(context).errorNormalColor,
           ),
           group: "操作",
         ),
@@ -309,7 +488,7 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  void _onMorePressed(BuildContext context, BookTableData book) {
+  void _onBookMorePressed(BuildContext context, BookTableData book) {
     TDActionSheet.showGridActionSheet(
       context,
       description: "选择一个操作",
@@ -320,20 +499,26 @@ class BookScreen extends GetView<BookController> {
           });
         }
         if (actionIndex == 1) {
-          Get.to(
-            () => BookCollectionPickerWidget(
-              onCollectionSelected: (data) {
-                controller.addBookToCollection(book.id, data.id);
+          Future.delayed(Duration(milliseconds: 100), () {
+            Get.to(
+              () => BookCollectionPickerWidget(),
+              arguments: {
+                "bookIds": [book.id],
               },
-            ),
-          );
+            );
+          });
         }
         if (actionIndex == 2) {
           controller.exportBook(book);
         }
         if (actionIndex == 3) {
           Future.delayed(Duration(milliseconds: 100), () {
-            Get.to(() => BookMarkPickerWidget());
+            Get.to(
+              () => BookMarkPickerWidget(),
+              arguments: {
+                "bookIds": [book.id],
+              },
+            );
           });
         }
         if (actionIndex == 4) {
@@ -364,108 +549,39 @@ class BookScreen extends GetView<BookController> {
       items: [
         TDActionSheetItem(
           label: "编辑",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).brandLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.edit,
-              color: TDTheme.of(context).brandNormalColor,
-            ),
-          ),
+          icon: TDActionSheetItemIconWidget(iconData: Icons.edit),
           group: "操作",
         ),
         TDActionSheetItem(
           label: "加入到收藏夹",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).warningLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.star,
-              color: TDTheme.of(context).warningNormalColor,
-            ),
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.star,
+            bgColor: TDTheme.of(context).warningNormalColor,
           ),
           group: "操作",
         ),
         TDActionSheetItem(
           label: "导出",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).brandLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.upload,
-              color: TDTheme.of(context).brandNormalColor,
-            ),
-          ),
+          icon: TDActionSheetItemIconWidget(iconData: Icons.upload),
           group: "操作",
         ),
         TDActionSheetItem(
           label: "添加书签",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).brandLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.bookmark,
-              color: TDTheme.of(context).brandNormalColor,
-            ),
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.bookmark,
+            bgColor: TDTheme.of(context).successNormalColor,
           ),
           group: "操作",
         ),
         TDActionSheetItem(
           label: "刪除",
-          icon: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: TDTheme.of(context).errorLightColor,
-            ),
-            padding: EdgeInsets.all(8),
-            child: Icon(
-              Icons.delete,
-              color: TDTheme.of(context).errorNormalColor,
-            ),
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.delete,
+            bgColor: TDTheme.of(context).errorNormalColor,
           ),
           group: "操作",
         ),
       ],
-    );
-  }
-
-  Widget _buildCollectionsList(BuildContext context, int bookId) {
-    return controller.getCollectionState.displaySuccess(
-      successBuilder: (data) {
-        return TDPopupBottomDisplayPanel(
-          backgroundColor: TDTheme.of(context).bgColorPage,
-          title: "选择收藏夹",
-          closeClick: () {
-            Get.back();
-          },
-          child: TDCellGroup(
-            theme: TDCellGroupTheme.cardTheme,
-            cells: [
-              ...data.map(
-                (collection) => TDCell(
-                  title: collection.name,
-                  onClick: (cell) {
-                    controller.addBookToCollection(bookId, collection.id);
-                    Get.back();
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

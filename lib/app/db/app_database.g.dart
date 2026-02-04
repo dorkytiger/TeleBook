@@ -2134,15 +2134,6 @@ class $MarkTableTable extends MarkTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
-  @override
-  late final GeneratedColumn<int> icon = GeneratedColumn<int>(
-    'icon',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _descriptionMeta = const VerificationMeta(
     'description',
   );
@@ -2155,7 +2146,7 @@ class $MarkTableTable extends MarkTable
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, color, icon, description];
+  List<GeneratedColumn> get $columns => [id, name, color, description];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -2187,14 +2178,6 @@ class $MarkTableTable extends MarkTable
     } else if (isInserting) {
       context.missing(_colorMeta);
     }
-    if (data.containsKey('icon')) {
-      context.handle(
-        _iconMeta,
-        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_iconMeta);
-    }
     if (data.containsKey('description')) {
       context.handle(
         _descriptionMeta,
@@ -2225,10 +2208,6 @@ class $MarkTableTable extends MarkTable
         DriftSqlType.int,
         data['${effectivePrefix}color'],
       )!,
-      icon: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}icon'],
-      )!,
       description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}description'],
@@ -2246,13 +2225,11 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
   final int id;
   final String name;
   final int color;
-  final int icon;
   final String? description;
   const MarkTableData({
     required this.id,
     required this.name,
     required this.color,
-    required this.icon,
     this.description,
   });
   @override
@@ -2261,7 +2238,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['color'] = Variable<int>(color);
-    map['icon'] = Variable<int>(icon);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
@@ -2273,7 +2249,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
       id: Value(id),
       name: Value(name),
       color: Value(color),
-      icon: Value(icon),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
@@ -2289,7 +2264,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       color: serializer.fromJson<int>(json['color']),
-      icon: serializer.fromJson<int>(json['icon']),
       description: serializer.fromJson<String?>(json['description']),
     );
   }
@@ -2300,7 +2274,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'color': serializer.toJson<int>(color),
-      'icon': serializer.toJson<int>(icon),
       'description': serializer.toJson<String?>(description),
     };
   }
@@ -2309,13 +2282,11 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     int? id,
     String? name,
     int? color,
-    int? icon,
     Value<String?> description = const Value.absent(),
   }) => MarkTableData(
     id: id ?? this.id,
     name: name ?? this.name,
     color: color ?? this.color,
-    icon: icon ?? this.icon,
     description: description.present ? description.value : this.description,
   );
   MarkTableData copyWithCompanion(MarkTableCompanion data) {
@@ -2323,7 +2294,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       color: data.color.present ? data.color.value : this.color,
-      icon: data.icon.present ? data.icon.value : this.icon,
       description: data.description.present
           ? data.description.value
           : this.description,
@@ -2336,14 +2306,13 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
-          ..write('icon: $icon, ')
           ..write('description: $description')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, color, icon, description);
+  int get hashCode => Object.hash(id, name, color, description);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2351,7 +2320,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
           other.id == this.id &&
           other.name == this.name &&
           other.color == this.color &&
-          other.icon == this.icon &&
           other.description == this.description);
 }
 
@@ -2359,36 +2327,30 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
   final Value<int> id;
   final Value<String> name;
   final Value<int> color;
-  final Value<int> icon;
   final Value<String?> description;
   const MarkTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.color = const Value.absent(),
-    this.icon = const Value.absent(),
     this.description = const Value.absent(),
   });
   MarkTableCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     required int color,
-    required int icon,
     this.description = const Value.absent(),
   }) : name = Value(name),
-       color = Value(color),
-       icon = Value(icon);
+       color = Value(color);
   static Insertable<MarkTableData> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<int>? color,
-    Expression<int>? icon,
     Expression<String>? description,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (color != null) 'color': color,
-      if (icon != null) 'icon': icon,
       if (description != null) 'description': description,
     });
   }
@@ -2397,14 +2359,12 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
     Value<int>? id,
     Value<String>? name,
     Value<int>? color,
-    Value<int>? icon,
     Value<String?>? description,
   }) {
     return MarkTableCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       color: color ?? this.color,
-      icon: icon ?? this.icon,
       description: description ?? this.description,
     );
   }
@@ -2421,9 +2381,6 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
     if (color.present) {
       map['color'] = Variable<int>(color.value);
     }
-    if (icon.present) {
-      map['icon'] = Variable<int>(icon.value);
-    }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
@@ -2436,7 +2393,6 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('color: $color, ')
-          ..write('icon: $icon, ')
           ..write('description: $description')
           ..write(')'))
         .toString();
@@ -4346,7 +4302,6 @@ typedef $$MarkTableTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       required int color,
-      required int icon,
       Value<String?> description,
     });
 typedef $$MarkTableTableUpdateCompanionBuilder =
@@ -4354,7 +4309,6 @@ typedef $$MarkTableTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<int> color,
-      Value<int> icon,
       Value<String?> description,
     });
 
@@ -4379,11 +4333,6 @@ class $$MarkTableTableFilterComposer
 
   ColumnFilters<int> get color => $composableBuilder(
     column: $table.color,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get icon => $composableBuilder(
-    column: $table.icon,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4417,11 +4366,6 @@ class $$MarkTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get icon => $composableBuilder(
-    column: $table.icon,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get description => $composableBuilder(
     column: $table.description,
     builder: (column) => ColumnOrderings(column),
@@ -4445,9 +4389,6 @@ class $$MarkTableTableAnnotationComposer
 
   GeneratedColumn<int> get color =>
       $composableBuilder(column: $table.color, builder: (column) => column);
-
-  GeneratedColumn<int> get icon =>
-      $composableBuilder(column: $table.icon, builder: (column) => column);
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
@@ -4489,13 +4430,11 @@ class $$MarkTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<int> color = const Value.absent(),
-                Value<int> icon = const Value.absent(),
                 Value<String?> description = const Value.absent(),
               }) => MarkTableCompanion(
                 id: id,
                 name: name,
                 color: color,
-                icon: icon,
                 description: description,
               ),
           createCompanionCallback:
@@ -4503,13 +4442,11 @@ class $$MarkTableTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 required int color,
-                required int icon,
                 Value<String?> description = const Value.absent(),
               }) => MarkTableCompanion.insert(
                 id: id,
                 name: name,
                 color: color,
-                icon: icon,
                 description: description,
               ),
           withReferenceMapper: (p0) => p0

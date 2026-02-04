@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/download/download_controller.dart';
+import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class DownloadScreen extends GetView<DownloadController> {
   const DownloadScreen({super.key});
@@ -13,25 +14,48 @@ class DownloadScreen extends GetView<DownloadController> {
         title: '下载管理',
         rightBarItems: [
           TDNavBarItem(
-            iconWidget: Container(
-              child: LayoutBuilder(
-                builder: (context, constr) {
-                  return TDButton(
-                    icon: Icons.question_mark_outlined,
-                    type: TDButtonType.text,
-                    onTap: () {
-                      TDPopover.showPopover(
-                        context: context,
-                        placement: TDPopoverPlacement.bottomRight,
-                        content:
-                            "轻点查看任务列表\n"
-                            "长按弹出操作菜单",
-                      );
-                    },
-                  );
+            icon: Icons.edit,
+            action: () {
+              TDActionSheet.showGroupActionSheet(
+                context,
+                onSelected: (actionItem, actionIndex) {
+                  if (actionIndex == 0) {
+                    controller.downloadService.cancelAll();
+                  }
+                  if (actionIndex == 1) {
+                    controller.downloadService.resumeAll();
+                  }
+                  if (actionIndex == 2) {
+                    controller.downloadService.deleteAll();
+                  }
                 },
-              ),
-            ),
+                items: [
+                  TDActionSheetItem(
+                    label: "取消全部",
+                    icon: TDActionSheetItemIconWidget(iconData: Icons.cancel),
+                    group: "操作",
+                  ),
+                  TDActionSheetItem(
+                    label: "继续全部",
+                    icon: TDActionSheetItemIconWidget(
+                      iconData: Icons.play_arrow,
+                      bgColor: TDTheme.of(context).successLightColor,
+                      iconColor: TDTheme.of(context).successNormalColor,
+                    ),
+                    group: "操作",
+                  ),
+                  TDActionSheetItem(
+                    label: "删除全部",
+                    icon: TDActionSheetItemIconWidget(
+                      iconData: Icons.delete,
+                      bgColor: TDTheme.of(context).errorLightColor,
+                      iconColor: TDTheme.of(context).errorNormalColor,
+                    ),
+                    group: "操作",
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

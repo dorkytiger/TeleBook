@@ -84,9 +84,7 @@ class DownloadService extends GetxService {
 
     // 配置下载器 - 启用后台下载支持
     await FileDownloader().configure(
-      globalConfig: [
-        (Config.requestTimeout, const Duration(seconds: 100)),
-      ],
+      globalConfig: [(Config.requestTimeout, const Duration(seconds: 100))],
       androidConfig: [
         (Config.useCacheDir, Config.whenAble),
         (Config.runInForeground, Config.always), // 使用前台服务保持后台下载
@@ -107,10 +105,7 @@ class DownloadService extends GetxService {
         '正在下载 ({numFinished}/{numTotal}) - {progress}%',
       ),
       // 全部完成
-      complete: const TaskNotification(
-        'TeleBook - 下载完成',
-        '已完成 {numTotal} 个文件',
-      ),
+      complete: const TaskNotification('TeleBook - 下载完成', '已完成 {numTotal} 个文件'),
       // 部分失败
       error: const TaskNotification(
         'TeleBook - 下载完成',
@@ -147,9 +142,7 @@ class DownloadService extends GetxService {
         groupId: taskRow.groupId ?? 'default',
         url: taskRow.url,
         filename: taskRow.fileName,
-        initialProgress: taskRow.status == TaskStatus.complete.name
-            ? 1.0
-            : 0.0,
+        initialProgress: taskRow.status == TaskStatus.complete.name ? 1.0 : 0.0,
         initialStatus: TaskStatus.values.firstWhere(
           (e) => e.name == taskRow.status,
           orElse: () => TaskStatus.enqueued,
@@ -249,8 +242,10 @@ class DownloadService extends GetxService {
         baseDirectory: BaseDirectory.applicationDocuments,
         updates: Updates.statusAndProgress,
         allowPause: true,
-        metaData: finalGroupId, // 使用 metaData 存储 groupId
-        displayName: finalFilename, // 设置显示名称，用于通知
+        metaData: finalGroupId,
+        // 使用 metaData 存储 groupId
+        displayName: finalFilename,
+        // 设置显示名称，用于通知
         group: finalGroupId, // 设置任务组，同组任务会合并通知
       );
 
@@ -461,6 +456,19 @@ class DownloadService extends GetxService {
     tasks.clear();
   }
 
+  Future<void> resumeAll() async {
+    for (final taskId in tasks.keys) {
+      await resume(taskId);
+    }
+  }
+
+  Future<void> deleteAll() async {
+    for (final taskId in tasks.keys) {
+      await cancel(taskId);
+    }
+    tasks.clear();
+  }
+
   /// 重试下载
   Future<String?> retry(String taskId) async {
     final taskInfo = tasks[taskId];
@@ -607,7 +615,9 @@ class DownloadService extends GetxService {
           taskInfo.status.value == TaskStatus.waitingToRetry) {
         final task = await FileDownloader().taskForId(taskInfo.taskId);
         if (task != null) {
-          final success = await FileDownloader().cancelTaskWithId(taskInfo.taskId);
+          final success = await FileDownloader().cancelTaskWithId(
+            taskInfo.taskId,
+          );
           if (success) {
             taskInfo.status.value = TaskStatus.canceled;
             count++;
@@ -690,6 +700,25 @@ class DownloadService extends GetxService {
     return tasks.values
         .where((task) => task.status.value == TaskStatus.complete)
         .toList();
+  }
+
+  /// 清理所有已完成的任务（仅保留任务信息，删除文件）
+  Future<void> clearCompletedTasks() async {
+    final completedTasks = getCompletedTasks();
+    for (final taskInfo in completedTasks) {
+      final filePath = await getFilePath(taskInfo.taskId);
+      if (filePath != null) {
+        final file = File(filePath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      }
+      // 从任务列表和数据库中移除
+      tasks.remove(taskInfo.taskId);
+      await appDatabase.downloadTaskTable.deleteWhere(
+        (tbl) => tbl.id.equals(taskInfo.taskId),
+      );
+    }
   }
 
   /// 下载完成回调
@@ -897,8 +926,10 @@ class DownloadService extends GetxService {
     // 重新计算总数（以实际任务数为准）
     final actualTotal = groupTasks.length;
     if (actualTotal != groupInfo.totalCount.value) {
-      debugPrint('⚠️ Group $groupId total count mismatch: '
-          'expected ${groupInfo.totalCount.value}, actual $actualTotal');
+      debugPrint(
+        '⚠️ Group $groupId total count mismatch: '
+        'expected ${groupInfo.totalCount.value}, actual $actualTotal',
+      );
       groupInfo.totalCount.value = actualTotal;
     }
 
@@ -926,12 +957,16 @@ class DownloadService extends GetxService {
     groupInfo.failedCount.value = failed;
 
     // 计算整体进度
-    final progress = groupTasks.isNotEmpty ? totalProgress / groupTasks.length : 0.0;
+    final progress = groupTasks.isNotEmpty
+        ? totalProgress / groupTasks.length
+        : 0.0;
     groupInfo.groupProgress.value = progress;
 
-    debugPrint('📊 Group $groupId stats: '
-        'total=$actualTotal, completed=$completed, failed=$failed, '
-        'progress=${(progress * 100).toStringAsFixed(1)}%');
+    debugPrint(
+      '📊 Group $groupId stats: '
+      'total=$actualTotal, completed=$completed, failed=$failed, '
+      'progress=${(progress * 100).toStringAsFixed(1)}%',
+    );
 
     // 同步到数据库
     (appDatabase.downloadGroupTable.update()
@@ -945,7 +980,9 @@ class DownloadService extends GetxService {
             groupProgress: Value(progress),
             updatedAt: Value(DateTime.now()),
             completedAt: Value(
-              completed == actualTotal && actualTotal > 0 ? DateTime.now() : null,
+              completed == actualTotal && actualTotal > 0
+                  ? DateTime.now()
+                  : null,
             ),
           ),
         );
@@ -1040,7 +1077,9 @@ class DownloadService extends GetxService {
   Future<void> _ensureGroupNotificationConfigured(String groupId) async {
     final groupInfo = groups[groupId];
     if (groupInfo == null) {
-      debugPrint('⚠️ Group $groupId not found, using default notification config');
+      debugPrint(
+        '⚠️ Group $groupId not found, using default notification config',
+      );
       return;
     }
 
