@@ -4,6 +4,7 @@ import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
+import 'package:tele_book/app/constant/collection_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 
@@ -50,10 +51,11 @@ class CollectionController extends GetxController {
   void initFormData(CollectionTableData collection) {
     selectedCollectionId.value = collection.id;
     collectionNameController.text = collection.name;
-    selectedCollectionColor.value =
-        Color(collection.color);
-    selectedCollectionIconData.value =
-        IconData(collection.icon, fontFamily: 'MaterialIcons');
+    selectedCollectionColor.value = Color(collection.color);
+    selectedCollectionIconData.value = CollectionConstant.iconList.firstWhere(
+      (iconData) => iconData.codePoint == collection.icon,
+      orElse: () => CollectionConstant.iconList.first,
+    );
   }
 
   void clearFormData() {

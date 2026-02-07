@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/constant/collection_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
@@ -129,9 +130,9 @@ class BookScreen extends GetView<BookController> {
                     bookData.collection!.name,
                     shape: TDTagShape.square,
                     iconWidget: Icon(
-                      IconData(
-                        bookData.collection!.icon,
-                        fontFamily: 'MaterialIcons',
+                      CollectionConstant.iconList.firstWhere(
+                        (icon) => icon.codePoint == bookData.collection!.icon,
+                        orElse: () => CollectionConstant.iconList.first,
                       ),
                       size: 14,
                       color: Colors.white,
@@ -223,9 +224,12 @@ class BookScreen extends GetView<BookController> {
                               ],
                             ),
                             child: Icon(
-                              IconData(
-                                bookData.collection!.icon,
-                                fontFamily: 'MaterialIcons',
+                              CollectionConstant.iconList.firstWhere(
+                                (icon) =>
+                                    icon.codePoint ==
+                                    bookData.collection!.icon,
+                                orElse: () =>
+                                    CollectionConstant.iconList.first,
                               ),
                               size: 12,
                               color: Colors.white,
