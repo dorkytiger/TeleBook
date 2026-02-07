@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:dk_util/config/dk_config.dart';
@@ -15,6 +16,7 @@ import 'package:tele_book/app/screen/book/book_screen.dart';
 import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
+import 'package:tele_book/app/service/update_service.dart';
 
 late TDThemeData themeData;
 late TDThemeData darkThemeData;
@@ -56,6 +58,8 @@ Future<void> _init() async {
   // 初始化后台下载服务
   Get.put(DownloadService());
   Get.put<ExportService>(ExportService());
+  UpdateService.init();
+  unawaited(UpdateService.checkForUpdates());
 
   // 清理临时目录
   await _cleanupTempDirectory();

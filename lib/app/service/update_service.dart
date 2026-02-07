@@ -1,5 +1,4 @@
 import 'package:dk_util/log/dk_log.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:restart_app/restart_app.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
@@ -8,9 +7,9 @@ import 'package:tdesign_flutter/tdesign_flutter.dart';
 class UpdateService {
   UpdateService._();
 
-  final _shorebird = ShorebirdUpdater();
+  static final _shorebird = ShorebirdUpdater();
 
-  void init() {
+  static void init() {
     _shorebird.readCurrentPatch().then((currentPatch) {
       if (currentPatch != null) {
         DKLog.d("当前补丁版本: ${currentPatch.number}");
@@ -20,7 +19,7 @@ class UpdateService {
     });
   }
 
-  Future<void> checkForUpdates() async {
+  static Future<void> checkForUpdates() async {
     try {
       final status = await _shorebird.checkForUpdate();
       if (status == UpdateStatus.outdated) {
