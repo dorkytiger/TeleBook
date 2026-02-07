@@ -24,18 +24,12 @@ class BookScreen extends GetView<BookController> {
         useDefaultBack: false,
         rightBarItems: [
           TDNavBarItem(
-            icon: Icons.search,
-            iconColor: TDTheme.of(context).brandNormalColor,
-            action: () {
-              controller.toggleShowSearchBar();
-            },
-          ),
-          TDNavBarItem(
             icon: Icons.filter_alt,
             iconColor: TDTheme.of(context).brandNormalColor,
             action: () {
               Navigator.of(context).push(
                 TDSlidePopupRoute(
+                  focusMove: true,
                   builder: (context) {
                     return BookFilterWidget();
                   },
@@ -55,14 +49,6 @@ class BookScreen extends GetView<BookController> {
       floatingActionButton: _buildFab(context),
       body: Column(
         children: [
-          Obx(
-            () => controller.showSearchBar.value
-                ? TDSearchBar(
-                    placeHolder: "搜索书籍名称",
-                    controller: controller.searchBarController,
-                  )
-                : SizedBox.shrink(),
-          ),
           Expanded(
             child: controller.getBookState.displaySuccess(
               successBuilder: (data) {

@@ -29,7 +29,6 @@ class BookController extends GetxController {
   final getCollectionState = Rx<DKStateQuery<List<CollectionTableData>>>(
     DkStateQueryIdle(),
   );
-  final showSearchBar = false.obs;
   final getMarkState = Rx<DKStateQuery<List<MarkTableData>>>(
     DkStateQueryIdle(),
   );
@@ -83,10 +82,6 @@ class BookController extends GetxController {
   Future<void> triggerBookLayoutChange(BookLayoutSetting layout) async {
     bookLayout.value = layout;
     await prefs.setInt(SettingKey.bookLayout, layout.value);
-  }
-
-  void toggleShowSearchBar() {
-    showSearchBar.value = !showSearchBar.value;
   }
 
   void toggleSelectBook(int bookId) {

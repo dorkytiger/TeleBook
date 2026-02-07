@@ -33,6 +33,11 @@ class BookFilterWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 16,
             children: [
+              TDFormItemTitle(label: "搜索"),
+              TDSearchBar(
+                placeHolder: "搜索书籍名称",
+                controller: controller.searchBarController,
+              ),
               TDFormItemTitle(label: "显示方式"),
               Obx(
                 () => Row(

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
+import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -18,7 +19,7 @@ import 'package:tele_book/app/util/request_state.dart';
 
 class ParseSingleArchiveController extends GetxController {
   final file = Get.arguments as String;
-  final extractArchiveState = Rx<DKStateEventIdle<void>>(DKStateEventIdle());
+  final extractArchiveState = Rx<DKStateQuery<void>>(DkStateQueryIdle());
   final saveToBookState = Rx<DKStateEventIdle<void>>(DKStateEventIdle());
   final archives = <File>[].obs;
   final appDatabase = Get.find<AppDatabase>();
@@ -26,7 +27,6 @@ class ParseSingleArchiveController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    extractArchiveState.listenEvent();
     saveToBookState.listenEvent(
       onSuccess: (_) {
         final bookController = Get.find<BookController>();
@@ -43,8 +43,8 @@ class ParseSingleArchiveController extends GetxController {
   }
 
   Future<void> extractArchive() async {
-    extractArchiveState.triggerEvent(
-      event: () async {
+    await extractArchiveState.triggerQuery(
+      query: () async {
         final bytes = await File(file).readAsBytes();
         final tmpDir = p.join(
           (await getTemporaryDirectory()).path,

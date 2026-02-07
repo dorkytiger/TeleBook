@@ -127,22 +127,11 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
             archiveFolder.files.firstOrNull?.path ??
             '${controller.appDirectory}/${archiveFolder.files.first.path}',
       ),
-      note: '共 ${archiveFolder.files.length} 个文件',
       arrow: true,
       onClick: (cell) {
         controller.editArchiveFolder(index);
       },
-      rightIconWidget: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TDText(
-            '${archiveFolder.files.length} 个文件',
-            font: TDTheme.of(context).fontBodyMedium,
-            textColor: TDTheme.of(context).fontGyColor3,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      description: '${archiveFolder.files.length} 个文件',
     );
   }
 }
