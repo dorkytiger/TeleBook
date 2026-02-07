@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_controller.dart';
+import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class DownloadTaskScreen extends GetView<DownloadTaskController> {
   const DownloadTaskScreen({super.key});
@@ -93,11 +94,12 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                     '状态: ${task.status.value.name}\n进度: ${(task.progress.value * 100).toStringAsFixed(1)}%',
                 noteWidget: TDButton(
                   icon: Icons.more_horiz_outlined,
+                  theme: TDButtonTheme.primary,
+                  size: TDButtonSize.small,
                   type: TDButtonType.text,
                   onTap: () {
-                    TDActionSheet(
+                    TDActionSheet.showGroupActionSheet(
                       context,
-                      visible: true,
                       onSelected: (actionItem, actionIndex) {
                         if (actionIndex == 0) {
                           controller.downloadService.resume(task.taskId);
@@ -113,10 +115,36 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                         }
                       },
                       items: [
-                        TDActionSheetItem(label: "继续"),
-                        TDActionSheetItem(label: "暂停"),
-                        TDActionSheetItem(label: "删除"),
-                        TDActionSheetItem(label: "重试"),
+                        TDActionSheetItem(
+                          label: "继续",
+                          icon: TDActionSheetItemIconWidget(
+                            iconData: Icons.play_arrow,
+                          ),
+                          group: "操作",
+                        ),
+                        TDActionSheetItem(
+                          label: "暂停",
+                          icon: TDActionSheetItemIconWidget(
+                            iconData: Icons.pause,
+                          ),
+                          group: "操作",
+                        ),
+                        TDActionSheetItem(
+                          label: "删除",
+                          icon: TDActionSheetItemIconWidget(
+                            iconData: Icons.delete,
+                            bgColor: TDTheme.of(context).errorLightColor,
+                            iconColor: TDTheme.of(context).errorNormalColor,
+                          ),
+                          group: "操作",
+                        ),
+                        TDActionSheetItem(
+                          label: "重试",
+                          icon: TDActionSheetItemIconWidget(
+                            iconData: Icons.refresh,
+                          ),
+                          group: "操作",
+                        ),
                       ],
                     );
                   },

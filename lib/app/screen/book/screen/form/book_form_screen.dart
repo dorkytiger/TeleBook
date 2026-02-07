@@ -41,7 +41,10 @@ class BookFormScreen extends GetView<BookFormController> {
         TDText("选择导入源"),
         TDText(
           "请选择您想要导入书籍的来源方式",
-          textColor: TDTheme.of(context).fontGyColor3,
+          textColor:
+              MediaQuery.of(context).platformBrightness == Brightness.dark
+              ? TDTheme.of(context).fontWhColor4
+              : TDTheme.of(context).fontGyColor3,
           font: TDTheme.of(context).fontBodySmall,
         ),
       ],
@@ -239,12 +242,12 @@ class BookFormScreen extends GetView<BookFormController> {
         child: Container(
           decoration: BoxDecoration(
             color: isSelected
-                ? TDTheme.of(context).fontGyColor4.withValues(alpha: 0.1)
+                ? TDTheme.of(context).brandLightColor
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSelected
-                  ? TDTheme.of(context).fontGyColor4
+                  ? TDTheme.of(context).brandNormalColor
                   : Colors.transparent,
             ),
           ),
@@ -270,7 +273,11 @@ class BookFormScreen extends GetView<BookFormController> {
                     TDText(
                       description,
                       overflow: TextOverflow.clip,
-                      textColor: TDTheme.of(context).fontGyColor3,
+                      textColor:
+                          MediaQuery.of(context).platformBrightness ==
+                              Brightness.dark
+                          ? TDTheme.of(context).fontWhColor4
+                          : TDTheme.of(context).fontGyColor3,
                       font: TDTheme.of(context).fontBodySmall,
                     ),
                   ],

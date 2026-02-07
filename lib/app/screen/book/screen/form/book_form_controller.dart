@@ -39,7 +39,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择压缩包文件");
         return;
       }
-      Get.offAndToNamed(
+      Get.toNamed(
         AppRoute.parseArchiveSingle,
         arguments: file.toString(),
       );
@@ -50,7 +50,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择压缩包文件夹");
         return;
       }
-      Get.offAndToNamed(
+      Get.toNamed(
         AppRoute.parseArchiveBatch,
         arguments: folder.toString(),
       );
@@ -61,7 +61,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择PDF文件");
         return;
       }
-      Get.offAndToNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
+      Get.toNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
     }
     if (sourceValue == BookFormSources.imageFolder) {
       final folder = imageFolderPathController.text;
@@ -69,7 +69,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择图片文件夹");
         return;
       }
-      Get.offAndToNamed(
+      Get.toNamed(
         AppRoute.parseImageFolder,
         arguments: folder.toString(),
       );
@@ -80,7 +80,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择包含图片文件夹的父文件夹");
         return;
       }
-      Get.offAndToNamed(
+      Get.toNamed(
         AppRoute.parseBatchImageFolder,
         arguments: folder.toString(),
       );

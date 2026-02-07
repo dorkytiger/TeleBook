@@ -29,7 +29,6 @@ class ParseBatchImageFolderScreen extends GetView<ParseBatchImageFolderControlle
                       child: TDText(
                         "找到 ${data.length} 个文件夹，共 ${data.fold<int>(0, (sum, folder) => sum + folder.images.length)} 张图片",
                         font: TDTheme.of(context).fontBodyMedium,
-                        textColor: TDTheme.of(context).fontGyColor1,
                       ),
                     ),
                   ],

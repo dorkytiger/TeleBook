@@ -20,21 +20,19 @@ class BookScreen extends GetView<BookController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: TDNavBar(
-        backgroundColor: TDTheme.of(context).brandNormalColor,
-        titleColor: TDTheme.of(context).whiteColor1,
         title: '书籍管理',
         useDefaultBack: false,
         rightBarItems: [
           TDNavBarItem(
             icon: Icons.search,
-            iconColor: TDTheme.of(context).whiteColor1,
+            iconColor: TDTheme.of(context).brandNormalColor,
             action: () {
               controller.toggleShowSearchBar();
             },
           ),
           TDNavBarItem(
             icon: Icons.filter_alt,
-            iconColor: TDTheme.of(context).whiteColor1,
+            iconColor: TDTheme.of(context).brandNormalColor,
             action: () {
               Navigator.of(context).push(
                 TDSlidePopupRoute(
@@ -47,43 +45,14 @@ class BookScreen extends GetView<BookController> {
           ),
           TDNavBarItem(
             icon: Icons.more_horiz,
-            iconColor: TDTheme.of(context).whiteColor1,
+            iconColor: TDTheme.of(context).brandNormalColor,
             action: () {
               _onActionMorePressed(context);
             },
           ),
         ],
       ),
-      floatingActionButton: Obx(
-        () => controller.multiEditMode.value
-            ? Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 8,
-                children: [
-                  TDFab(
-                    icon: Icon(
-                      Icons.checklist_sharp,
-                      color: TDTheme.of(context).warningColor1,
-                    ),
-                    theme: TDFabTheme.primary,
-                    onClick: () {
-                      _onBatchEditConfirmedPressed(context);
-                    },
-                  ),
-                  TDFab(
-                    icon: Icon(
-                      Icons.close,
-                      color: TDTheme.of(context).warningColor1,
-                    ),
-                    theme: TDFabTheme.danger,
-                    onClick: () {
-                      controller.triggerMultiEditMode(false);
-                    },
-                  ),
-                ],
-              )
-            : SizedBox.shrink(),
-      ),
+      floatingActionButton: _buildFab(context),
       body: Column(
         children: [
           Obx(
@@ -185,19 +154,21 @@ class BookScreen extends GetView<BookController> {
                     backgroundColor: Color(bookData.collection!.color),
                     isOutline: true,
                   ),
-                if (bookData.book.readCount == 0)
+                if (bookData.book.localPaths.isNotEmpty)
                   TDProgress(
                     type: TDProgressType.linear,
                     value:
-                        bookData.book.readCount +
-                        1 / bookData.book.localPaths.length,
+                        (bookData.book.currentPage) /
+                        (bookData.book.localPaths.length - 1),
                     showLabel: false,
                     strokeWidth: 3,
                   ),
               ],
             ),
-            onClick: (cell) {
-              Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+            onClick: (cell) async {
+              await Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+              // 阅读页面返回后刷新书籍列表以更新阅读进度
+              controller.refreshBooks();
             },
           ),
         );
@@ -218,8 +189,10 @@ class BookScreen extends GetView<BookController> {
       itemBuilder: (context, index) {
         final bookData = data[index];
         return GestureDetector(
-          onTap: () {
-            Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+          onTap: () async {
+            await Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+            // 阅读页面返回后刷新书籍列表以更新阅读进度
+            controller.refreshBooks();
           },
           child: Container(
             decoration: BoxDecoration(
@@ -413,6 +386,127 @@ class BookScreen extends GetView<BookController> {
           icon: TDActionSheetItemIconWidget(
             iconData: Icons.bookmark,
             bgColor: TDTheme.of(context).successNormalColor,
+          ),
+          group: "操作",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFab(BuildContext context) {
+    final isShowMore = false.obs;
+    final isAllSelected = controller.isAllBooksSelected;
+
+    return Obx(
+      () => controller.multiEditMode.value
+          ? (!isShowMore.value
+                ? TDFab(
+                    icon: Icon(
+                      Icons.more_horiz,
+                      color: TDTheme.of(context).fontWhColor1,
+                    ),
+                    theme: TDFabTheme.primary,
+                    onClick: () {
+                      _showBatchEditOptions(context);
+                    },
+                  )
+                : Column(
+                    children: [
+                      TDFab(
+                        icon: Icon(
+                          isAllSelected ? Icons.deselect : Icons.select_all,
+                          color: TDTheme.of(context).fontWhColor1,
+                        ),
+                        theme: TDFabTheme.primary,
+                        onClick: () {
+                          if (isAllSelected) {
+                            controller.deselectAllBooks();
+                          } else {
+                            controller.selectAllBooks();
+                          }
+                        },
+                      ),
+                      SizedBox(height: 12),
+                      TDFab(
+                        icon: Icon(
+                          Icons.check,
+                          color: TDTheme.of(context).fontWhColor1,
+                        ),
+                        onClick: () {
+                          _onBatchEditConfirmedPressed(context);
+                        },
+                      ),
+                      SizedBox(height: 12),
+                      TDFab(
+                        icon: Icon(
+                          Icons.close,
+                          color: TDTheme.of(context).fontWhColor1,
+                        ),
+                        theme: TDFabTheme.danger,
+                        onClick: () {
+                          controller.triggerMultiEditMode(false);
+                        },
+                      ),
+                    ],
+                  ))
+          : SizedBox.shrink(),
+    );
+  }
+
+  void _showBatchEditOptions(BuildContext context) {
+    final isAllSelected = controller.isAllBooksSelected;
+
+    TDActionSheet.showGridActionSheet(
+      context,
+      description: "批量操作选项",
+      onSelected: (actionItem, actionIndex) async {
+        if (actionIndex == 0) {
+          // 全选/取消全选
+          if (isAllSelected) {
+            controller.deselectAllBooks();
+          } else {
+            controller.selectAllBooks();
+          }
+        }
+        if (actionIndex == 1) {
+          // 确认操作
+          _onBatchEditConfirmedPressed(context);
+        }
+        if (actionIndex == 2) {
+          // 取消
+          controller.triggerMultiEditMode(false);
+        }
+      },
+      items: [
+        TDActionSheetItem(
+          label: isAllSelected ? "取消全选" : "全选",
+          icon: TDActionSheetItemIconWidget(
+            iconData: isAllSelected ? Icons.deselect : Icons.select_all,
+            bgColor: TDTheme.of(context).brandNormalColor,
+          ),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "添加到收藏夹",
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.check,
+            bgColor: TDTheme.of(context).successNormalColor,
+          ),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "导出",
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.check,
+            bgColor: TDTheme.of(context).successNormalColor,
+          ),
+          group: "操作",
+        ),
+        TDActionSheetItem(
+          label: "取消",
+          icon: TDActionSheetItemIconWidget(
+            iconData: Icons.close,
+            bgColor: TDTheme.of(context).errorNormalColor,
           ),
           group: "操作",
         ),

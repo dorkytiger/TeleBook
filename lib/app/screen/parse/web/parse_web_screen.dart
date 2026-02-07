@@ -4,10 +4,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
+import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class ParseWebScreen extends GetView<ParseWebController> {
   const ParseWebScreen({super.key});
@@ -42,8 +44,8 @@ class ParseWebScreen extends GetView<ParseWebController> {
           TDNavBarItem(
             icon: Icons.check,
             action: () {
-              Get.offAndToNamed(
-                "/download/form",
+              Get.toNamed(
+                AppRoute.downloadForm,
                 arguments: jsonEncode(
                   ParseWebResult(
                     title: controller.title.value,
@@ -106,24 +108,43 @@ class ParseWebScreen extends GetView<ParseWebController> {
                               leftIconWidget: CustomImageLoader(
                                 networkUrl: item,
                               ),
-                              onClick: (cell) {
-                                TDActionSheet(
-                                  context,
-                                  visible: true,
-                                  onSelected: (actionItem, actionIndex) {
-                                    if (actionIndex == 0) {
-                                      controller.copyImageUrl(item);
-                                    }
-                                    if (actionIndex == 1) {
-                                      controller.saveImageTo(item);
-                                    }
-                                  },
-                                  items: [
-                                    TDActionSheetItem(label: "复制url"),
-                                    TDActionSheetItem(label: "保存到..."),
-                                  ],
-                                );
-                              },
+                              disabled: true,
+                              noteWidget: TDButton(
+                                icon: Icons.more_horiz,
+                                size: TDButtonSize.small,
+                                theme: TDButtonTheme.primary,
+                                type: TDButtonType.text,
+                                onTap: () {
+                                  TDActionSheet.showGroupActionSheet(
+                                    context,
+
+                                    onSelected: (actionItem, actionIndex) {
+                                      if (actionIndex == 0) {
+                                        controller.copyImageUrl(item);
+                                      }
+                                      if (actionIndex == 1) {
+                                        controller.saveImageTo(item);
+                                      }
+                                    },
+                                    items: [
+                                      TDActionSheetItem(
+                                        label: "复制url",
+                                        icon: TDActionSheetItemIconWidget(
+                                          iconData: Icons.copy,
+                                        ),
+                                        group: "操作",
+                                      ),
+                                      TDActionSheetItem(
+                                        label: "保存到...",
+                                        icon: TDActionSheetItemIconWidget(
+                                          iconData: Icons.save_alt,
+                                        ),
+                                        group: "操作",
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
                             );
                           },
                           itemCount: controller.images.length,
@@ -147,7 +168,10 @@ class ParseWebScreen extends GetView<ParseWebController> {
                 Icons.web,
                 color: TDTheme.of(context).brandNormalColor,
               ),
-              unselectedIcon: Icon(Icons.web_outlined),
+              unselectedIcon: Icon(
+                Icons.web_outlined,
+                color: TDTheme.of(context).grayColor12,
+              ),
               onTap: () {
                 controller.selectBar.value = 0;
               },
@@ -158,7 +182,10 @@ class ParseWebScreen extends GetView<ParseWebController> {
                 Icons.photo,
                 color: TDTheme.of(context).brandNormalColor,
               ),
-              unselectedIcon: Icon(Icons.photo_outlined),
+              unselectedIcon: Icon(
+                Icons.photo_outlined,
+                color: TDTheme.of(context).grayColor12,
+              ),
               onTap: () {
                 controller.selectBar.value = 1;
               },

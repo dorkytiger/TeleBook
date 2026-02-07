@@ -159,7 +159,7 @@ class BookFilterWidget extends StatelessWidget {
       },
       loadingBuilder: () => Center(child: TDCircleIndicator()),
       emptyBuilder: () =>
-          TDText("暂无收藏夹", textColor: TDTheme.of(context).fontGyColor3),
+          TDText("暂无收藏夹",),
       errorBuilder: (error) =>
           TDText("加载失败", textColor: TDTheme.of(context).errorColor6),
     );
@@ -198,7 +198,7 @@ class BookFilterWidget extends StatelessWidget {
       },
       loadingBuilder: () => Center(child: TDCircleIndicator()),
       emptyBuilder: () =>
-          TDText("暂无标签", textColor: TDTheme.of(context).fontGyColor3),
+          TDText("暂无标签"),
       errorBuilder: (error) =>
           TDText("加载失败", textColor: TDTheme.of(context).errorColor6),
     );

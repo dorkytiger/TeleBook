@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/enum/reading_direction_enum.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_controller.dart';
 
 class BookPageScreen extends GetView<BookPageController> {
@@ -24,8 +25,8 @@ class BookPageScreen extends GetView<BookPageController> {
             )),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline, color: Colors.white),
-            onPressed: controller.toggleProgress,
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () => controller.showReadingSettings(context),
           ),
         ],
       ),
@@ -38,58 +39,112 @@ class BookPageScreen extends GetView<BookPageController> {
 
         return Stack(
           children: [
-            // 图片浏览器 - 支持左右滑动
-            PageView.builder(
-              controller: controller.pageController,
-              itemCount: controller.totalPages.value,
-              itemBuilder: (context, index) {
-                final imagePath =
-                    '${controller.appDirectory}/${controller.bookData.localPaths[index]}';
-                return GestureDetector(
-                  onTap: controller.toggleProgress,
-                  child: Center(
-                    child: InteractiveViewer(
-                      minScale: 0.5,
-                      maxScale: 4.0,
-                      child: Image.file(
-                        File(imagePath),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.broken_image,
-                                  size: 64,
-                                  color: Colors.white54,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  '图片加载失败',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 14,
+            // 图片浏览器 - 支持不同阅读方向的滑动
+            Obx(() {
+              if (controller.readingDirection.value == ReadingDirection.topToBottom) {
+                // 从上往下阅读：连续滚动模式
+                return SingleChildScrollView(
+                  controller: controller.scrollController,
+                  child: Column(
+                    children: List.generate(controller.totalPages.value, (index) {
+                      final imagePath = '${controller.appDirectory}/${controller.bookData.localPaths[index]}';
+                      return GestureDetector(
+                        onTap: controller.toggleProgress,
+                        child: InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Image.file(
+                            File(imagePath),
+                            fit: BoxFit.fitWidth,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 200,
+                                color: Colors.grey[800],
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.broken_image,
+                                        size: 64,
+                                        color: Colors.white54,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        '图片加载失败',
+                                        style: TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  imagePath,
-                                  style: TextStyle(
-                                    color: Colors.white38,
-                                    fontSize: 12,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                              );
+                            },
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 );
-              },
-            ),
+              } else {
+                // 左右阅读：分页模式
+                return PageView.builder(
+                  controller: controller.pageController,
+                  scrollDirection: Axis.horizontal,
+                  reverse: controller.readingDirection.value == ReadingDirection.rightToLeft,
+                  itemCount: controller.totalPages.value,
+                  itemBuilder: (context, index) {
+                    final imagePath = '${controller.appDirectory}/${controller.bookData.localPaths[index]}';
+                    return GestureDetector(
+                      onTap: controller.toggleProgress,
+                      child: Center(
+                        child: InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Image.file(
+                            File(imagePath),
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.broken_image,
+                                      size: 64,
+                                      color: Colors.white54,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      '图片加载失败',
+                                      style: TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    Text(
+                                      imagePath,
+                                      style: TextStyle(
+                                        color: Colors.white38,
+                                        fontSize: 12,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+            }),
 
             // 底部进度条
             Positioned(
@@ -115,18 +170,52 @@ class BookPageScreen extends GetView<BookPageController> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // 进度条
-                      Row(
-                        children: [
-                          Text(
-                            '${controller.currentPage.value + 1}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Obx(() => SliderTheme(
+                      Obx(() {
+                        if (controller.readingDirection.value == ReadingDirection.topToBottom) {
+                          // 上下阅读模式：显示滚动进度
+                          return Row(
+                            children: [
+                              Text(
+                                '${((controller.currentPage.value + 1) / controller.totalPages.value * 100).toInt()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: LinearProgressIndicator(
+                                  value: (controller.currentPage.value + 1) / controller.totalPages.value,
+                                  backgroundColor: Colors.white24,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    TDTheme.of(context).brandColor7,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${controller.totalPages.value}页',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          );
+                        } else {
+                          // 左右阅读模式：显示页面进度
+                          return Row(
+                            children: [
+                              Text(
+                                '${controller.currentPage.value + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: SliderTheme(
                                   data: SliderTheme.of(context).copyWith(
                                     trackHeight: 2,
                                     thumbShape: const RoundSliderThumbShape(
@@ -137,11 +226,9 @@ class BookPageScreen extends GetView<BookPageController> {
                                     ),
                                   ),
                                   child: Slider(
-                                    value: controller.currentPage.value
-                                        .toDouble(),
+                                    value: controller.currentPage.value.toDouble(),
                                     min: 0,
-                                    max: (controller.totalPages.value - 1)
-                                        .toDouble(),
+                                    max: (controller.totalPages.value - 1).toDouble(),
                                     divisions: controller.totalPages.value > 1
                                         ? controller.totalPages.value - 1
                                         : 1,
@@ -151,18 +238,20 @@ class BookPageScreen extends GetView<BookPageController> {
                                       controller.jumpToPage(value.toInt());
                                     },
                                   ),
-                                )),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${controller.totalPages.value}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${controller.totalPages.value}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      }),
 
                       const SizedBox(height: 8),
 
@@ -187,4 +276,3 @@ class BookPageScreen extends GetView<BookPageController> {
     );
   }
 }
-

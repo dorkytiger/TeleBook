@@ -27,7 +27,7 @@ class HtmlUtil {
 
     // 清理文件系统非法字符（双引号、斜杠、反斜杠、冒号、星号、问号、尖括号、竖线等）
     // 这些字符在Windows、Linux、macOS文件系统中都是非法的或有特殊含义
-    return title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    return title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '').trim();
   }
 
   static Future<List<String>> extractImagesFromWebView(

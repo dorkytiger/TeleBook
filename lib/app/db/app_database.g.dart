@@ -48,6 +48,18 @@ class $BookTableTable extends BookTable
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _currentPageMeta = const VerificationMeta(
+    'currentPage',
+  );
+  @override
+  late final GeneratedColumn<int> currentPage = GeneratedColumn<int>(
+    'current_page',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -66,6 +78,7 @@ class $BookTableTable extends BookTable
     name,
     localPaths,
     readCount,
+    currentPage,
     createdAt,
   ];
   @override
@@ -95,6 +108,15 @@ class $BookTableTable extends BookTable
       context.handle(
         _readCountMeta,
         readCount.isAcceptableOrUnknown(data['read_count']!, _readCountMeta),
+      );
+    }
+    if (data.containsKey('current_page')) {
+      context.handle(
+        _currentPageMeta,
+        currentPage.isAcceptableOrUnknown(
+          data['current_page']!,
+          _currentPageMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -130,6 +152,10 @@ class $BookTableTable extends BookTable
         DriftSqlType.int,
         data['${effectivePrefix}read_count'],
       )!,
+      currentPage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}current_page'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -151,12 +177,14 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
   final String name;
   final List<String> localPaths;
   final int readCount;
+  final int currentPage;
   final DateTime createdAt;
   const BookTableData({
     required this.id,
     required this.name,
     required this.localPaths,
     required this.readCount,
+    required this.currentPage,
     required this.createdAt,
   });
   @override
@@ -170,6 +198,7 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       );
     }
     map['read_count'] = Variable<int>(readCount);
+    map['current_page'] = Variable<int>(currentPage);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -180,6 +209,7 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       name: Value(name),
       localPaths: Value(localPaths),
       readCount: Value(readCount),
+      currentPage: Value(currentPage),
       createdAt: Value(createdAt),
     );
   }
@@ -196,6 +226,7 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
         serializer.fromJson<List<dynamic>>(json['localPaths']),
       ),
       readCount: serializer.fromJson<int>(json['readCount']),
+      currentPage: serializer.fromJson<int>(json['currentPage']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -209,6 +240,7 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
         $BookTableTable.$converterlocalPaths.toJson(localPaths),
       ),
       'readCount': serializer.toJson<int>(readCount),
+      'currentPage': serializer.toJson<int>(currentPage),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -218,12 +250,14 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
     String? name,
     List<String>? localPaths,
     int? readCount,
+    int? currentPage,
     DateTime? createdAt,
   }) => BookTableData(
     id: id ?? this.id,
     name: name ?? this.name,
     localPaths: localPaths ?? this.localPaths,
     readCount: readCount ?? this.readCount,
+    currentPage: currentPage ?? this.currentPage,
     createdAt: createdAt ?? this.createdAt,
   );
   BookTableData copyWithCompanion(BookTableCompanion data) {
@@ -234,6 +268,9 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
           ? data.localPaths.value
           : this.localPaths,
       readCount: data.readCount.present ? data.readCount.value : this.readCount,
+      currentPage: data.currentPage.present
+          ? data.currentPage.value
+          : this.currentPage,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -245,13 +282,15 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
           ..write('name: $name, ')
           ..write('localPaths: $localPaths, ')
           ..write('readCount: $readCount, ')
+          ..write('currentPage: $currentPage, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, localPaths, readCount, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, localPaths, readCount, currentPage, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -260,6 +299,7 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
           other.name == this.name &&
           other.localPaths == this.localPaths &&
           other.readCount == this.readCount &&
+          other.currentPage == this.currentPage &&
           other.createdAt == this.createdAt);
 }
 
@@ -268,12 +308,14 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
   final Value<String> name;
   final Value<List<String>> localPaths;
   final Value<int> readCount;
+  final Value<int> currentPage;
   final Value<DateTime> createdAt;
   const BookTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.localPaths = const Value.absent(),
     this.readCount = const Value.absent(),
+    this.currentPage = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   BookTableCompanion.insert({
@@ -281,6 +323,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     required String name,
     required List<String> localPaths,
     this.readCount = const Value.absent(),
+    this.currentPage = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name),
        localPaths = Value(localPaths);
@@ -289,6 +332,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     Expression<String>? name,
     Expression<String>? localPaths,
     Expression<int>? readCount,
+    Expression<int>? currentPage,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -296,6 +340,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
       if (name != null) 'name': name,
       if (localPaths != null) 'local_paths': localPaths,
       if (readCount != null) 'read_count': readCount,
+      if (currentPage != null) 'current_page': currentPage,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -305,6 +350,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     Value<String>? name,
     Value<List<String>>? localPaths,
     Value<int>? readCount,
+    Value<int>? currentPage,
     Value<DateTime>? createdAt,
   }) {
     return BookTableCompanion(
@@ -312,6 +358,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
       name: name ?? this.name,
       localPaths: localPaths ?? this.localPaths,
       readCount: readCount ?? this.readCount,
+      currentPage: currentPage ?? this.currentPage,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -333,6 +380,9 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     if (readCount.present) {
       map['read_count'] = Variable<int>(readCount.value);
     }
+    if (currentPage.present) {
+      map['current_page'] = Variable<int>(currentPage.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -346,6 +396,7 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
           ..write('name: $name, ')
           ..write('localPaths: $localPaths, ')
           ..write('readCount: $readCount, ')
+          ..write('currentPage: $currentPage, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2689,6 +2740,7 @@ typedef $$BookTableTableCreateCompanionBuilder =
       required String name,
       required List<String> localPaths,
       Value<int> readCount,
+      Value<int> currentPage,
       Value<DateTime> createdAt,
     });
 typedef $$BookTableTableUpdateCompanionBuilder =
@@ -2697,6 +2749,7 @@ typedef $$BookTableTableUpdateCompanionBuilder =
       Value<String> name,
       Value<List<String>> localPaths,
       Value<int> readCount,
+      Value<int> currentPage,
       Value<DateTime> createdAt,
     });
 
@@ -2762,6 +2815,11 @@ class $$BookTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
@@ -2822,6 +2880,11 @@ class $$BookTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -2851,6 +2914,11 @@ class $$BookTableTableAnnotationComposer
 
   GeneratedColumn<int> get readCount =>
       $composableBuilder(column: $table.readCount, builder: (column) => column);
+
+  GeneratedColumn<int> get currentPage => $composableBuilder(
+    column: $table.currentPage,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2914,12 +2982,14 @@ class $$BookTableTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<List<String>> localPaths = const Value.absent(),
                 Value<int> readCount = const Value.absent(),
+                Value<int> currentPage = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookTableCompanion(
                 id: id,
                 name: name,
                 localPaths: localPaths,
                 readCount: readCount,
+                currentPage: currentPage,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2928,12 +2998,14 @@ class $$BookTableTableTableManager
                 required String name,
                 required List<String> localPaths,
                 Value<int> readCount = const Value.absent(),
+                Value<int> currentPage = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => BookTableCompanion.insert(
                 id: id,
                 name: name,
                 localPaths: localPaths,
                 readCount: readCount,
+                currentPage: currentPage,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

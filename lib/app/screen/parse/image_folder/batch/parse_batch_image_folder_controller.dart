@@ -72,7 +72,13 @@ class ParseBatchImageFolderController extends GetxController {
             index++;
           }
           if (localPaths.isNotEmpty) {
-            await appDatabase.bookTable.insertOnConflictUpdate(BookTableCompanion(name: Value(folderInfo.folderName), localPaths: Value(localPaths)));
+            await appDatabase.bookTable.insertOnConflictUpdate(
+              BookTableCompanion(
+                name: Value(folderInfo.folderName),
+                localPaths: Value(localPaths),
+                currentPage: Value(0),
+              )
+            );
             successCount++;
           }
         } catch (e) {

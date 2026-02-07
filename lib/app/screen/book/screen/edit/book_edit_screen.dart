@@ -16,25 +16,6 @@ class BookEditScreen extends GetView<BookEditController> {
       appBar: TDNavBar(
         title: '编辑书籍',
         backIconColor: TDTheme.of(context).brandNormalColor,
-        rightBarItems: [
-          TDNavBarItem(
-            icon: Icons.check,
-            iconWidget: Obx(() {
-              final state = controller.saveState.value;
-              return state.isLoading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: TDLoading(size: TDLoadingSize.small),
-                    )
-                  : Icon(
-                      Icons.check,
-                      color: TDTheme.of(context).brandNormalColor,
-                    );
-            }),
-            action: () => controller.saveChanges(),
-          ),
-        ],
       ),
       body: Obx(() {
         return Column(
@@ -46,30 +27,38 @@ class BookEditScreen extends GetView<BookEditController> {
                 controller: controller.bookName,
                 hintText: '请输入书籍名称',
                 leftLabel: '书籍名称',
-                backgroundColor: Colors.white,
-                additionInfo: '修改书籍名称后需要点击右上角的保存按钮',
+                backgroundColor: TDTheme.of(context).bgColorContainer,
+                rightBtn: TDButton(
+                  text: '重命名',
+                  size: TDButtonSize.small,
+                  theme: TDButtonTheme.primary,
+                  onTap: () => controller.renameBook(),
+                ),
               ),
             ),
 
             // 工具栏
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.grey[100],
-              child: Row(
-                children: [
-                  Text(
-                    '共 ${controller.imageList.length} 页',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  const Spacer(),
-                  TDButton(
-                    text: '添加图片',
-                    size: TDButtonSize.small,
-                    theme: TDButtonTheme.primary,
-                    icon: Icons.add_photo_alternate,
-                    onTap: () => controller.addImages(),
-                  ),
-                ],
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: Container(
+                padding: EdgeInsets.all(16),
+                color: TDTheme.of(context).bgColorContainer,
+                child: Row(
+                  children: [
+                    TDText(
+                      '共 ${controller.imageList.length} 页',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                    const Spacer(),
+                    TDButton(
+                      text: '添加图片',
+                      size: TDButtonSize.small,
+                      theme: TDButtonTheme.primary,
+                      icon: Icons.add_photo_alternate,
+                      onTap: () => controller.addImages(),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -131,9 +120,9 @@ class ReorderableGridView extends StatelessWidget {
         rightBtn: TDDialogButtonOptions(
           title: '删除',
           theme: TDButtonTheme.danger,
-          action: () {
+          action: () async {
             Get.back();
-            controller.deleteImage(index);
+            await controller.deleteImage(index);
           },
         ),
         leftBtn: TDDialogButtonOptions(

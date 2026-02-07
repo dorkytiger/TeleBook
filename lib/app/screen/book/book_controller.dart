@@ -97,6 +97,35 @@ class BookController extends GetxController {
     }
   }
 
+  void selectAllBooks() {
+    if (!getBookState.value.isSuccess) {
+      return;
+    }
+    final currentBooks = getBookState.value.data;
+    final allBookIds = currentBooks.map((bookUI) => bookUI.book.id).toList();
+    selectedBookIds.clear();
+    selectedBookIds.addAll(allBookIds);
+  }
+
+  void deselectAllBooks() {
+    selectedBookIds.clear();
+  }
+
+  bool get isAllBooksSelected {
+    if (!getBookState.value.isSuccess) {
+      return false;
+    }
+
+    final currentBooks = getBookState.value.data;
+    if (currentBooks.isEmpty) {
+      return false;
+    }
+    final allBookIds = currentBooks.map((bookUI) => bookUI.book.id).toSet();
+    final selectedIds = selectedBookIds.toSet();
+    return selectedIds.length == allBookIds.length &&
+        allBookIds.every((id) => selectedIds.contains(id));
+  }
+
   void triggerMultiEditMode(bool enable) {
     multiEditMode.value = enable;
     if (!multiEditMode.value) {
@@ -200,6 +229,11 @@ class BookController extends GetxController {
       },
       isEmpty: (data) => data.isEmpty,
     );
+  }
+
+  /// 刷新书籍列表（用于阅读后返回时刷新阅读进度）
+  Future<void> refreshBooks() async {
+    await fetchBooks();
   }
 
   Future<void> getCollections() async {
@@ -311,10 +345,12 @@ class BookController extends GetxController {
   }
 
   Future<void> exportBook(BookTableData data) async {
-    await exportService.exportBook(data);
-    await Future.delayed(Duration(milliseconds: 100), () {
+    // 添加到导出队列并立即跳转到导出页面查看进度
+    final record = await exportService.exportBook(data);
+    if (record != null) {
+      // 立即跳转到导出页面，用户可以看到导出进度
       Get.toNamed(AppRoute.export);
-    });
+    }
   }
 
   Future<void> exportMultipleBooks() async {
@@ -322,12 +358,18 @@ class BookController extends GetxController {
     final books =
         await (appDatabase.bookTable.select()..where((tbl) => tbl.id.isIn(ids)))
             .get();
-    await exportService.exportMultiple(books);
+
+    // 添加所有书籍到导出队列
+    final records = await exportService.exportMultiple(books);
+
+    // 清除选择状态
     selectedBookIds.clear();
     multiEditMode.value = false;
-    await Future.delayed(Duration(milliseconds: 100), () {
+
+    // 立即跳转到导出页面查看进度
+    if (records.isNotEmpty) {
       Get.toNamed(AppRoute.export);
-    });
+    }
   }
 
   Future<void> deleteBook(int id) async {

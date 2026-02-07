@@ -110,6 +110,7 @@ class ParseImageFolderController extends GetxController {
           BookTableCompanion(
             name: Value(title),
             localPaths: Value(localPaths),
+            currentPage: Value(0),
           ),
         );
       },

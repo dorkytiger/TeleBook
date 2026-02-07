@@ -74,7 +74,7 @@ class ExportService extends GetxService {
     return record;
   }
 
-  /// Export multiple books sequentially. If exportDir is null, will prompt once.
+  /// Export multiple books. First add all to queue, then run exports asynchronously.
   Future<List<ExportRecord>> exportMultiple(List<BookTableData> books, {String? exportDir}) async {
     if (books.isEmpty) return [];
 
@@ -82,6 +82,8 @@ class ExportService extends GetxService {
     if (dir == null) return [];
 
     final result = <ExportRecord>[];
+
+    // First, add all books to the export queue
     for (final book in books) {
       final r = ExportRecord(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -90,7 +92,11 @@ class ExportService extends GetxService {
       );
       records.insert(0, r);
       result.add(r);
-      await _runExport(r, book, dir);
+    }
+
+    // Then run all exports asynchronously (non-blocking)
+    for (int i = 0; i < books.length; i++) {
+      unawaited(_runExport(result[i], books[i], dir));
     }
 
     return result;
@@ -132,7 +138,7 @@ class ExportService extends GetxService {
         return;
       }
 
-      final timestamp = DateTime.now().toString().replaceAll(RegExp(r'[:\s\.]'), '_');
+      final timestamp = DateTime.now().toString().replaceAll(RegExp(r'[:\s.]'), '_');
       final sanitizedName = data.name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
       final zipFileName = '${sanitizedName}_$timestamp.zip';
       final zipPath = p.join(exportDir, zipFileName);

@@ -45,7 +45,7 @@ class BookCollectionPickerWidget extends StatelessWidget {
       bottomSheet: Container(
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: TDTheme.of(context).whiteColor1,
+          color: TDTheme.of(context).bgColorContainer,
           boxShadow: [
             BoxShadow(
               color: Colors.black12,

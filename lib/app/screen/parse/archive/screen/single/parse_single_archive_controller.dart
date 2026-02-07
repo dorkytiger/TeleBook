@@ -109,7 +109,11 @@ class ParseSingleArchiveController extends GetxController {
         }
 
         await appDatabase.bookTable.insertOnConflictUpdate(
-          BookTableCompanion(name: Value(title), localPaths: Value(localPaths)),
+          BookTableCompanion(
+            name: Value(title),
+            localPaths: Value(localPaths),
+            currentPage: Value(0),
+          ),
         );
       },
     );

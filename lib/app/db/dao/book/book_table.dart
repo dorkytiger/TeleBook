@@ -10,6 +10,8 @@ class BookTable extends Table {
 
   IntColumn get readCount => integer().withDefault(const Constant(0))();
 
+  IntColumn get currentPage => integer().withDefault(const Constant(0))();
+
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 
   @override

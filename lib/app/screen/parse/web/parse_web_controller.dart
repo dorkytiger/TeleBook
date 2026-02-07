@@ -9,9 +9,7 @@ import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
-import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 class ParseWebController extends GetxController {
   final parseUrl = Get.arguments as String;
@@ -25,21 +23,8 @@ class ParseWebController extends GetxController {
 
   @override
   void onInit() {
+    saveImageState.listenEventToast();
     super.onInit();
-    parseState.listenEvent(
-      onSuccess: (_) {
-        Get.offAndToNamed(
-          "/download/form",
-          arguments: jsonEncode(
-            ParseWebResult(
-              title: title.value,
-              images: images.toList(),
-            ).toJson(),
-          ),
-        );
-      },
-    );
-
     _initWebView();
   }
 
@@ -84,13 +69,13 @@ class ParseWebController extends GetxController {
   }
 
   Future<void> saveImageTo(String url) async {
-    saveImageState.triggerEvent(
+    await saveImageState.triggerEvent(
       event: () async {
         final saveDirectory = await PickFileUtil.pickDirectory();
         if (saveDirectory == null) {
           return;
         }
-        final savePath = await HtmlUtil.downloadImageToFile(url, saveDirectory);
+        await HtmlUtil.downloadImageToFile(url, saveDirectory);
       },
     );
   }

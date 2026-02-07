@@ -3,10 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/download/screen/form/download_form_controller.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
+import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class DownloadFormScreen extends GetView<DownloadFormController> {
   const DownloadFormScreen({super.key});
@@ -30,7 +32,7 @@ class DownloadFormScreen extends GetView<DownloadFormController> {
                 groupName: controller.titleController.text,
               );
               ToastService.dismiss();
-              Get.offAndToNamed('/download');
+              Get.offAndToNamed(AppRoute.download);
             },
           ),
         ],
@@ -59,7 +61,7 @@ class DownloadFormScreen extends GetView<DownloadFormController> {
       final imageCount = controller.images.length;
       return ReorderableListView.builder(
         itemBuilder: (context, index) {
-          return _buildImageCell(index);
+          return _buildImageCell(context, index);
         },
         itemCount: imageCount,
         onReorder: (oldIndex, newIndex) {
@@ -91,7 +93,7 @@ class DownloadFormScreen extends GetView<DownloadFormController> {
     });
   }
 
-  Widget _buildImageCell(int index) {
+  Widget _buildImageCell(BuildContext context, int index) {
     final item = controller.images[index];
 
     // 使用 KeyedSubtree 添加 key，ReorderableListView 必需
@@ -105,28 +107,48 @@ class DownloadFormScreen extends GetView<DownloadFormController> {
           child: CustomImageLoader(networkUrl: item),
         ),
         description: item,
-        onClick: (TDCell cell) {
-          TDActionSheet(
-            NavigatorService.currentContext(),
-            visible: true,
-            onSelected: (actionItem, actionIndex) {
-              if (actionIndex == 0) {
-                controller.refreshImage(index);
-              }
-              if (actionIndex == 1) {
-                controller.copyImageUrl(item);
-              }
-              if (actionIndex == 2) {
-                controller.removeImage(index);
-              }
-            },
-            items: [
-              TDActionSheetItem(label: '刷新图片'),
-              TDActionSheetItem(label: '复制url'),
-              TDActionSheetItem(label: '移除'),
-            ],
-          );
-        },
+        noteWidget: TDButton(
+          icon: Icons.more_horiz,
+          theme: TDButtonTheme.primary,
+          type: TDButtonType.text,
+          size: TDButtonSize.small,
+          onTap: () {
+            TDActionSheet.showGroupActionSheet(
+              context,
+              onSelected: (actionItem, actionIndex) {
+                if (actionIndex == 0) {
+                  controller.refreshImage(index);
+                }
+                if (actionIndex == 1) {
+                  controller.copyImageUrl(item);
+                }
+                if (actionIndex == 2) {
+                  controller.removeImage(index);
+                }
+              },
+              items: [
+                TDActionSheetItem(
+                  label: '刷新图片',
+                  group: "操作",
+                  icon: TDActionSheetItemIconWidget(iconData: Icons.refresh),
+                ),
+                TDActionSheetItem(
+                  label: '复制url',
+                  group: "操作",
+                  icon: TDActionSheetItemIconWidget(iconData: Icons.copy),
+                ),
+                TDActionSheetItem(
+                  label: '移除',
+                  group: "操作",
+                  icon: TDActionSheetItemIconWidget(
+                    iconData: Icons.delete,
+                    bgColor: TDTheme.of(context).errorNormalColor,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

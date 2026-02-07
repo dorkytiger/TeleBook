@@ -70,6 +70,7 @@ class DownloadController extends GetxController {
           BookTableCompanion(
             name: Value(group.name),
             localPaths: Value(validSavePaths),
+            currentPage: Value(0),
           ),
         );
       },

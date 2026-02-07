@@ -5,23 +5,12 @@ import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/constant/mark_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/screen/mark/widget/mark_edit_form_widget.dart';
 import 'package:tele_book/app/widget/td/td_form_item_title.dart';
-
-final _colorList = [
-  Colors.red,
-  Colors.blue,
-  Colors.green,
-  Colors.orange,
-  Colors.purple,
-  Colors.teal,
-  Colors.brown,
-  Colors.cyan,
-  Colors.indigo,
-  Colors.lime,
-];
 
 class BookMarkPickerWidget extends StatelessWidget {
   final controller = Get.put(BookMarkPickerController());
@@ -114,54 +103,18 @@ class BookMarkPickerWidget extends StatelessWidget {
   }
 
   Widget _buildAddMarkForm(BuildContext context) {
-    return TDPopupBottomConfirmPanel(
-      rightClick: () {
+    return MarkEditFormWidget(
+      onConfirm: () {
         controller.addBookMark();
       },
-      leftClick: () {
-        Navigator.of(context).pop();
+      onCancel: () {
+        Get.back();
       },
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 16,
-          children: [
-            TDFormItemTitle(label: "标签名称", required: true),
-            TDInput(
-              controller: controller.markNameController,
-              hintText: "请输入标签名称",
-            ),
-            TDFormItemTitle(label: "选择颜色", required: true),
-            TDRadioGroup(
-              cardMode: true,
-              direction: Axis.horizontal,
-              rowCount: 5,
-              onRadioGroupChange: (id) {
-                final color = _colorList.firstWhere(
-                  (color) => color.toARGB32().toString() == id,
-                );
-                controller.selectedMarkColor.value = color;
-              },
-              directionalTdRadios: [
-                ..._colorList.map(
-                  (color) => TDRadio(
-                    id: color.toARGB32().toString(),
-                    cardMode: true,
-                    backgroundColor: color,
-                    customContentBuilder: (context, selected, text) {
-                      return selected
-                          ? Icon(Icons.check, color: Colors.white)
-                          : SizedBox.shrink();
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      selectedColor: controller.selectedMarkColor.value,
+      markNameController: controller.markNameController,
+      onColorSelected: (Color color) {
+        controller.selectedMarkColor.value = color;
+      },
     );
   }
 }
@@ -178,7 +131,7 @@ class BookMarkPickerController extends GetxController {
   final addMarkState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final addBookMarkState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final markNameController = TextEditingController();
-  final selectedMarkColor = Rx<Color>(_colorList.first);
+  final selectedMarkColor = Rx<Color>(MarkConstant.colorList.first);
   final selectedMarkIds = <int>[].obs;
 
   @override

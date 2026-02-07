@@ -181,6 +181,7 @@ class ParseBatchArchiveController extends GetxController {
               BookTableCompanion(
                 name: Value(archiveFolder.title),
                 localPaths: Value(localPaths),
+                currentPage: Value(0),
               ),
             );
           }

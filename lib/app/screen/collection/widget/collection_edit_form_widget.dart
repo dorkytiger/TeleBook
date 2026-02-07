@@ -29,7 +29,7 @@ class CollectionEditFormWidget extends StatelessWidget {
     return SingleChildScrollView(
       child: Container(
         decoration: BoxDecoration(
-          color: TDTheme.of(context).whiteColor1,
+          color: TDTheme.of(context).bgColorContainer,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
