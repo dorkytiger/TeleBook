@@ -20,30 +20,53 @@ class BookScreen extends GetView<BookController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: '书籍管理',
-        useDefaultBack: false,
-        rightBarItems: [
-          TDNavBarItem(
-            icon: Icons.filter_alt,
-            iconColor: TDTheme.of(context).brandNormalColor,
-            action: () {
-              Navigator.of(context).push(
-                TDSlidePopupRoute(
-                  focusMove: true,
-                  builder: (context) {
-                    return BookFilterWidget();
-                  },
-                ),
+      appBar: AppBar(
+        title: Text('书籍管理'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) {
+                  return DraggableScrollableSheet(
+
+                    builder: (context, controller) {
+                      return BookFilterWidget();
+                    },
+                  );
+                },
               );
             },
+            icon: Icon(Icons.filter_alt),
           ),
-          TDNavBarItem(
-            icon: Icons.more_horiz,
-            iconColor: TDTheme.of(context).brandNormalColor,
-            action: () {
-              _onActionMorePressed(context);
+          PopupMenuButton(
+            onSelected: (index) {
+              if (index == "edit") {
+                controller.triggerMultiEditMode(true);
+              }
+              if (index == "add") {
+                Get.toNamed(AppRoute.bookForm);
+              }
             },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: "edit",
+                child: Row(
+                  children: [
+                    Icon(Icons.edit),
+                    SizedBox(width: 8),
+                    Text("批量操作"),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: "add",
+                child: Row(
+                  children: [Icon(Icons.add), SizedBox(width: 8), Text("添加书籍")],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -226,10 +249,8 @@ class BookScreen extends GetView<BookController> {
                             child: Icon(
                               CollectionConstant.iconList.firstWhere(
                                 (icon) =>
-                                    icon.codePoint ==
-                                    bookData.collection!.icon,
-                                orElse: () =>
-                                    CollectionConstant.iconList.first,
+                                    icon.codePoint == bookData.collection!.icon,
+                                orElse: () => CollectionConstant.iconList.first,
                               ),
                               size: 12,
                               color: Colors.white,
@@ -305,81 +326,6 @@ class BookScreen extends GetView<BookController> {
         );
       },
       itemCount: data.length,
-    );
-  }
-
-  void _onActionMorePressed(BuildContext context) {
-    TDActionSheet.showGridActionSheet(
-      context,
-      description: "选择一个操作",
-      onSelected: (actionItem, actionIndex) async {
-        if (actionIndex == 0) {
-          controller.triggerMultiEditMode(true);
-        }
-        if (actionIndex == 1) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.bookForm);
-          });
-        }
-        if (actionIndex == 2) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.download);
-          });
-        }
-        if (actionIndex == 3) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.export);
-          });
-        }
-        if (actionIndex == 4) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.collection);
-          });
-        }
-        if (actionIndex == 5) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.mark);
-          });
-        }
-      },
-      items: [
-        TDActionSheetItem(
-          label: "批量操作",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.edit),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "添加书籍",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.add),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "下载历史",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.download),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "导出历史",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.import_export),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "收藏夹管理",
-          icon: TDActionSheetItemIconWidget(
-            iconData: Icons.star,
-            bgColor: TDTheme.of(context).warningNormalColor,
-          ),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "书签管理",
-          icon: TDActionSheetItemIconWidget(
-            iconData: Icons.bookmark,
-            bgColor: TDTheme.of(context).successNormalColor,
-          ),
-          group: "操作",
-        ),
-      ],
     );
   }
 

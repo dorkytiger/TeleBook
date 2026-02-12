@@ -7,6 +7,8 @@ import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 
 extension RxExtend<T> on Rx<DKStateQuery<T>> {
   Widget displaySuccess({
@@ -21,14 +23,12 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
       initialBuilder: () {
         return initialBuilder != null
             ? initialBuilder()
-            : Center(child: TDEmpty(emptyText: "暂无数据"));
+            : CustomEmpty(message: '暂无数据');
       },
       loadingBuilder: () {
         return loadingBuilder != null
             ? loadingBuilder()
-            : const Center(
-                child: TDLoading(size: TDLoadingSize.large, text: "加载中..."),
-              );
+            : const CustomLoading();
       },
       errorBuilder: (message) {
         ToastService.showError(message);
@@ -49,7 +49,7 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
       emptyBuilder: () {
         return emptyBuilder != null
             ? emptyBuilder()
-            : Center(child: TDEmpty(emptyText: "暂无数据"));
+            : CustomEmpty(message: '暂无数据');
       },
       successBuilder: successBuilder,
     );

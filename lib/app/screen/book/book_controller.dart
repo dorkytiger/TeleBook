@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/enum/setting/book_sort_setting.dart';
 import 'package:tele_book/app/enum/setting/setting_key.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
@@ -20,6 +21,8 @@ class BookController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
   final exportService = Get.find<ExportService>();
   final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
+  final bookTitleSort = Rx<BookTitleSortSetting>(BookTitleSortSetting.titleAsc);
+  final bookAddTimeSort = Rx<BookAddTimeSortSetting>(BookAddTimeSortSetting.addTimeAsc);
   final multiEditMode = false.obs;
   final searchBarController = TextEditingController();
   final selectedBookIds = <int>[].obs;
@@ -64,6 +67,8 @@ class BookController extends GetxController {
     searchBarController.addListener(() {
       fetchBooks();
     });
+    await getCollections();
+    await getMarks();
     await fetchBooks();
   }
 
@@ -78,10 +83,22 @@ class BookController extends GetxController {
         prefs.getInt(SettingKey.bookLayout) ?? BookLayoutSetting.list.value;
     bookLayout.value = BookLayoutSetting.fromValue(layoutValue);
   }
+  
+  Future<void> initBookSort() async {
+    final sortValue =
+        prefs.getString(SettingKey.bookTitleSort) ?? BookTitleSortSetting.titleAsc.value;
+    bookTitleSort.value = BookTitleSortSetting.fromValue(sortValue);
+  }
 
   Future<void> triggerBookLayoutChange(BookLayoutSetting layout) async {
     bookLayout.value = layout;
     await prefs.setInt(SettingKey.bookLayout, layout.value);
+  }
+
+  Future<void> triggerBookTitleSortChange(BookTitleSortSetting sort) async {
+    bookTitleSort.value = sort;
+    await prefs.setString(SettingKey.bookTitleSort, sort.value);
+    fetchBooks(); // 切换排序后刷新书籍列表
   }
 
   void toggleSelectBook(int bookId) {
