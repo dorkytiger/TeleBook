@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/src/widgets/framework.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/parse/pdf/parse_pdf_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
 
 class ParsePdfScreen extends GetView<ParsePdfController> {
   const ParsePdfScreen({super.key});
@@ -13,12 +10,7 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: "解析PDF",
-        onBack: () {
-          Get.back();
-        },
-      ),
+      appBar: AppBar(title: Text("PDF解析"), leading: BackButton()),
       body: controller.renderPageState.displaySuccess(
         loadingBuilder: () {
           return Center(
@@ -48,11 +40,12 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
               Padding(
                 padding: EdgeInsets.all(16),
                 child: TDButton(
-                  text: "保存到本地",
+                  text: "导入",
                   width: double.infinity,
                   theme: TDButtonTheme.primary,
                   onTap: () {
-                    controller.saveImagesToLocal();
+                    controller.importPDF();
+                    Get.back();
                   },
                 ),
               ),

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/mark/widget/mark_edit_form_widget.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 import 'mark_controller.dart';
 
 class MarkScreen extends GetView<MarkController> {
@@ -11,136 +13,105 @@ class MarkScreen extends GetView<MarkController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: "书签管理",
-        rightBarItems: [
-          TDNavBarItem(
-            icon: Icons.add,
-            action: () {
-              controller.clearFormData();
-              Navigator.of(context).push(
-                TDSlidePopupRoute(
-                  focusMove: true,
-                  slideTransitionFrom: SlideTransitionFrom.bottom,
-                  builder: (context) {
-                    return MarkEditFormWidget(
-                      onConfirm: () {
-                        controller.addMark();
-                      },
-                      onCancel: () {
-                        Navigator.of(context).pop();
-                      },
-                      selectedColor: controller.selectedMarkColor.value,
-                      markNameController: controller.markNameController,
-                      onColorSelected: (color) {
-                        controller.selectedMarkColor.value = color;
-                      },
-                    );
-                  },
-                ),
+      appBar: AppBar(
+        title: Text("书签管理"),
+        actions: [
+          IconButton(
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                builder: (context) {
+                  return DraggableScrollableSheet(
+                    builder: (context, scrollController) {
+                      return MarkEditFormWidget(
+                        scrollController: scrollController,
+                        onConfirm: () {
+                          controller.addMark();
+                        },
+                        onCancel: () {
+                          Navigator.of(context).pop();
+                        },
+                        selectedColor: controller.selectedMarkColor.value,
+                        markNameController: controller.markNameController,
+                        onColorSelected: (color) {
+                          controller.selectedMarkColor.value = color;
+                        },
+                      );
+                    },
+                  );
+                },
               );
             },
+            icon: Icon(Icons.add),
           ),
         ],
       ),
-      body: controller.getMarkListState.display(
-        emptyBuilder: () {
-          return TDEmpty();
-        },
-        loadingBuilder: () => const Center(child: CircularProgressIndicator()),
-        successBuilder: (data) {
-          return Column(
-            children: [
-              SizedBox(height: 16),
-              TDCellGroup(
-                theme: TDCellGroupTheme.cardTheme,
-                cells: [
-                  ...data.map(
-                    (mark) => TDCell(
-                      title: mark.name,
-                      imageWidget: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          color: Color(mark.color),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      noteWidget: Row(
-                        children: [
-                          TDButton(
-                            icon: Icons.edit,
-                            theme: TDButtonTheme.primary,
-                            type: TDButtonType.text,
-                            onTap: () {
-                              controller.initFormData(mark);
-                              Navigator.of(context).push(
-                                TDSlidePopupRoute(
-                                  focusMove: true,
-                                  slideTransitionFrom:
-                                      SlideTransitionFrom.bottom,
-                                  builder: (context) {
+      body: Obx(
+        () => controller.markService.marks.isEmpty
+            ? Center(child: CustomEmpty(message: "暂无书签，点击右上角添加"))
+            : ListView.builder(
+                itemCount: controller.markService.marks.length,
+                itemBuilder: (context, index) {
+                  final mark = controller.markService.marks[index];
+                  return ListTile(
+                    leading: CircleAvatar(backgroundColor: Color(mark.color)),
+                    title: Text(mark.name),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            controller.markNameController.text = mark.name;
+                            controller.selectedMarkColor.value = Color(
+                              mark.color,
+                            );
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (context) {
+                                return DraggableScrollableSheet(
+                                  builder: (context, scrollController) {
                                     return MarkEditFormWidget(
+                                      scrollController: scrollController,
                                       onConfirm: () {
                                         controller.updateMark(mark.id);
                                       },
                                       onCancel: () {
                                         Navigator.of(context).pop();
                                       },
+                                      selectedColor:
+                                          controller.selectedMarkColor.value,
                                       markNameController:
                                           controller.markNameController,
-                                      selectedColor: controller.selectedMarkColor.value,
                                       onColorSelected: (color) {
                                         controller.selectedMarkColor.value =
                                             color;
                                       },
                                     );
                                   },
-                                ),
-                              );
-                            },
-                          ),
-                          SizedBox(width: 8),
-                          TDButton(
-                            icon: Icons.delete,
-                            type: TDButtonType.text,
-                            theme: TDButtonTheme.danger,
-                            onTap: () {
-                              showGeneralDialog(
-                                context: context,
-                                pageBuilder: (context, _, _) {
-                                  return TDAlertDialog(
-                                    title: "删除书签",
-                                    content: "确定要删除该书签吗？删除后不可恢复。",
-                                    rightBtn: TDDialogButtonOptions(
-                                      title: "删除",
-                                      action: () {
-                                        controller.deleteMark(mark.id);
-                                        Navigator.of(context).pop();
-                                      },
-                                      theme: TDButtonTheme.danger,
-                                    ),
-                                    leftBtn: TDDialogButtonOptions(
-                                      title: "取消",
-                                      action: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                        ],
-                      ),
+                                );
+                              },
+                            );
+                          },
+                          icon: Icon(Icons.edit),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Get.defaultDialog(
+                              title: "删除书签",
+                              content: Text("确定要删除这个书签吗？"),
+                              onConfirm: () {
+                                controller.deleteMark(mark.id);
+                              },
+                            );
+                          },
+                          icon: Icon(Icons.delete),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
-            ],
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 300),
       ),
     );
   }

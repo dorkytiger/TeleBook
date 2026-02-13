@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:tele_book/app/constant/mark_constant.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/service/mark_service.dart';
 
 class MarkController extends GetxController {
   final getMarkListState = Rx<DKStateQuery<List<MarkTableData>>>(
@@ -18,6 +19,7 @@ class MarkController extends GetxController {
   final markNameController = TextEditingController();
   final selectedMarkColor = Rx<Color>(MarkConstant.colorList.first);
   final db = Get.find<AppDatabase>();
+  final markService = Get.find<MarkService>();
 
   @override
   void onInit() {

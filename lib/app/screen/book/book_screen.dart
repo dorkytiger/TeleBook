@@ -11,7 +11,8 @@ import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/screen/book/widget/book_collection_picker_widget.dart';
 import 'package:tele_book/app/screen/book/widget/book_filter_widget.dart';
-import 'package:tele_book/app/screen/book/widget/book_mark_picker_widget.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class BookScreen extends GetView<BookController> {
@@ -30,9 +31,14 @@ class BookScreen extends GetView<BookController> {
                 isScrollControlled: true,
                 builder: (context) {
                   return DraggableScrollableSheet(
-
-                    builder: (context, controller) {
-                      return BookFilterWidget();
+                    initialChildSize: 0.6,
+                    minChildSize: 0.3,
+                    maxChildSize: 0.9,
+                    expand: false,
+                    builder: (context, scrollController) {
+                      return BookFilterWidget(
+                        scrollController: scrollController,
+                      );
                     },
                   );
                 },
@@ -78,9 +84,9 @@ class BookScreen extends GetView<BookController> {
               successBuilder: (data) {
                 return Obx(() {
                   if (controller.bookLayout.value == BookLayoutSetting.list) {
-                    return _buildBookList(data);
+                    return _buildBookList();
                   } else {
-                    return _buildBookGrid(data);
+                    return _buildBookGrid();
                   }
                 });
               },
@@ -91,241 +97,144 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  Widget _buildBookList(List<BookUIData> data) {
-    return ListView.builder(
-      itemBuilder: (context, index) {
-        final bookData = data[index];
-        return Obx(
-          () => TDCell(
-            title: bookData.book.name,
-            disabled: controller.multiEditMode.value,
-            imageWidget: SizedBox(
-              height: 100,
-              width: 80,
-              child: Image.file(
-                File(
-                  "${controller.appDirectory}/${bookData.book.localPaths.first}",
-                ),
-              ),
-            ),
-            noteWidget: controller.multiEditMode.value
-                ? Padding(
-                    padding: EdgeInsets.all(8),
-                    child: TDCheckbox(
-                      checked: controller.selectedBookIds.contains(
-                        bookData.book.id,
+  Widget _buildBookList() {
+    return FutureBuilder(
+      future: controller.bookService.getBooksVO(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return CustomLoading();
+        final booksVO = snapshot.data!;
+        return ListView.builder(
+          itemBuilder: (context, index) {
+            final bookData = booksVO[index];
+            return Card(
+              child: Row(
+                children: [
+                  SizedBox(
+                    child: Image.file(
+                      File(
+                        "${controller.appDirectory}/${bookData.book.localPaths.first}",
                       ),
-                      onCheckBoxChanged: (checked) {
-                        controller.toggleSelectBook(bookData.book.id);
-                      },
+                      height: 150,
                     ),
-                  )
-                : TDButton(
-                    size: TDButtonSize.small,
-                    icon: Icons.more_horiz,
-                    type: TDButtonType.text,
-                    theme: TDButtonTheme.primary,
-                    onTap: () {
-                      _onBookMorePressed(context, bookData.book);
-                    },
                   ),
-            descriptionWidget: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 8,
-              children: [
-                if (bookData.marks.isNotEmpty)
-                  Row(
-                    spacing: 8,
-                    children: [
-                      ...bookData.marks.map(
-                        (e) => TDTag(
-                          e.name,
-                          size: TDTagSize.small,
-                          backgroundColor: Color(e.color),
-                          textColor: Colors.white,
-                          shape: TDTagShape.square,
-                        ),
+                  Expanded(
+                    child: ListTile(
+                      title: Text(
+                        bookData.book.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                if (bookData.collection != null)
-                  TDTag(
-                    bookData.collection!.name,
-                    shape: TDTagShape.square,
-                    iconWidget: Icon(
-                      CollectionConstant.iconList.firstWhere(
-                        (icon) => icon.codePoint == bookData.collection!.icon,
-                        orElse: () => CollectionConstant.iconList.first,
-                      ),
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    textColor: Colors.white,
-                    backgroundColor: Color(bookData.collection!.color),
-                    isOutline: true,
-                  ),
-                if (bookData.book.localPaths.isNotEmpty)
-                  TDProgress(
-                    type: TDProgressType.linear,
-                    value:
-                        (bookData.book.currentPage) /
-                        (bookData.book.localPaths.length - 1),
-                    showLabel: false,
-                    strokeWidth: 3,
-                  ),
-              ],
-            ),
-            onClick: (cell) async {
-              await Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
-              // 阅读页面返回后刷新书籍列表以更新阅读进度
-              controller.refreshBooks();
-            },
-          ),
-        );
-      },
-      itemCount: data.length,
-    );
-  }
-
-  Widget _buildBookGrid(List<BookUIData> data) {
-    return GridView.builder(
-      padding: EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 16,
-      ),
-      itemBuilder: (context, index) {
-        final bookData = data[index];
-        return GestureDetector(
-          onTap: () async {
-            await Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
-            // 阅读页面返回后刷新书籍列表以更新阅读进度
-            controller.refreshBooks();
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: TDTheme.of(context).bgColorContainer,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      Image.file(
-                        File(
-                          "${controller.appDirectory}/${bookData.book.localPaths.first}",
-                        ),
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                      if (bookData.collection != null)
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Color(bookData.collection!.color),
-                              borderRadius: BorderRadius.circular(6),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 2,
-                                  offset: Offset(0, 2),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: 4,
+                        children: [
+                          Text(
+                            "阅读进度: ${((bookData.book.readCount / bookData.book.localPaths.length) * 100).toStringAsFixed(1)}%",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          if (bookData.collection != null)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              spacing: 4,
+                              children: [
+                                Icon(
+                                  CollectionConstant.iconList.firstWhere(
+                                    (icon) =>
+                                        icon.codePoint ==
+                                        bookData.collection!.icon,
+                                    orElse: () =>
+                                        CollectionConstant.iconList.first,
+                                  ),
+                                  size: 12,
+                                  color: Color(bookData.collection!.color),
+                                ),
+                                Text(bookData.collection!.name),
+                              ],
+                            ),
+                          if (bookData.marks.isNotEmpty)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              spacing: 4,
+                              children: [
+                                ...bookData.marks.map(
+                                  (e) => Chip(label: Text(e.name)),
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              CollectionConstant.iconList.firstWhere(
-                                (icon) =>
-                                    icon.codePoint == bookData.collection!.icon,
-                                orElse: () => CollectionConstant.iconList.first,
-                              ),
-                              size: 12,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: 4,
-                          children: [
-                            TDText(
-                              bookData.book.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (bookData.marks.isNotEmpty)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                spacing: 4,
-                                children: [
-                                  ...bookData.marks.map(
-                                    (e) => TDTag(
-                                      e.name,
-                                      backgroundColor: Color(e.color),
-                                      textColor: Colors.white,
-                                      shape: TDTagShape.square,
-                                      size: TDTagSize.small,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                          ],
-                        ),
+                        ],
                       ),
+                      trailing: _buildPopupButton(context, bookData.book),
                     ),
-                    Obx(
-                      () => controller.multiEditMode.value
-                          ? Padding(
-                              padding: EdgeInsets.all(8),
-                              child: TDCheckbox(
-                                checked: controller.selectedBookIds.contains(
-                                  bookData.book.id,
-                                ),
-                                onCheckBoxChanged: (checked) {
-                                  controller.toggleSelectBook(bookData.book.id);
-                                },
-                              ),
-                            )
-                          : TDButton(
-                              size: TDButtonSize.small,
-                              icon: Icons.more_vert,
-                              theme: TDButtonTheme.primary,
-                              type: TDButtonType.text,
-                              onTap: () {
-                                _onBookMorePressed(context, bookData.book);
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                  ),
+                ],
+              ),
+            );
+          },
+          itemCount: booksVO.length,
         );
       },
-      itemCount: data.length,
+    );
+  }
+
+  Widget _buildBookGrid() {
+    return FutureBuilder(
+      future: controller.bookService.getBooksVO(),
+      builder: (context, snapShot) {
+        if (!snapShot.hasData) return CustomLoading();
+        final data = snapShot.data!;
+
+        return GridView.builder(
+          padding: EdgeInsets.all(16),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.7,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 16,
+          ),
+          itemBuilder: (context, index) {
+            final bookData = data[index];
+            return Card(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Image.file(
+                        File(
+                          "${controller.appDirectory}/${bookData.book.localPaths.first}",
+                        ),
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.broken_image, size: 40);
+                        },
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ListTile(
+                          title: Text(
+                            bookData.book.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            "阅读进度: ${((bookData.book.readCount / bookData.book.localPaths.length) * 100).toStringAsFixed(1)}%",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                      _buildPopupButton(context, bookData.book),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+          itemCount: data.length,
+        );
+      },
     );
   }
 
@@ -518,40 +427,22 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  void _onBookMorePressed(BuildContext context, BookTableData book) {
-    TDActionSheet.showGridActionSheet(
-      context,
-      description: "选择一个操作",
-      onSelected: (actionItem, actionIndex) async {
-        if (actionIndex == 0) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.toNamed(AppRoute.bookEdit, arguments: book.id);
-          });
+  Widget _buildPopupButton(BuildContext context, BookTableData book) {
+    return PopupMenuButton(
+      onSelected: (value) {
+        if (value == "edit") {
+          Get.toNamed(AppRoute.bookEdit, arguments: book.id);
         }
-        if (actionIndex == 1) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.to(
-              () => BookCollectionPickerWidget(),
-              arguments: {
-                "bookIds": [book.id],
-              },
-            );
-          });
+        if (value == "collection") {
+          _addCollection(context, book);
         }
-        if (actionIndex == 2) {
+        if (value == "export") {
           controller.exportBook(book);
         }
-        if (actionIndex == 3) {
-          Future.delayed(Duration(milliseconds: 100), () {
-            Get.to(
-              () => BookMarkPickerWidget(),
-              arguments: {
-                "bookIds": [book.id],
-              },
-            );
-          });
+        if (value == "mark") {
+          _addMarks(context, book);
         }
-        if (actionIndex == 4) {
+        if (value == "delete") {
           Future.delayed(const Duration(milliseconds: 100), () {
             Get.dialog(
               TDAlertDialog(
@@ -576,42 +467,159 @@ class BookScreen extends GetView<BookController> {
           });
         }
       },
-      items: [
-        TDActionSheetItem(
-          label: "编辑",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.edit),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "加入到收藏夹",
-          icon: TDActionSheetItemIconWidget(
-            iconData: Icons.star,
-            bgColor: TDTheme.of(context).warningNormalColor,
+
+      itemBuilder: (BuildContext context) {
+        return [
+          PopupMenuItem(
+            value: "edit",
+            child: Row(
+              children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
+            ),
           ),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "导出",
-          icon: TDActionSheetItemIconWidget(iconData: Icons.upload),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "添加书签",
-          icon: TDActionSheetItemIconWidget(
-            iconData: Icons.bookmark,
-            bgColor: TDTheme.of(context).successNormalColor,
+          PopupMenuItem(
+            value: "collection",
+            child: Row(
+              children: [Icon(Icons.star), SizedBox(width: 8), Text("加入收藏夹")],
+            ),
           ),
-          group: "操作",
-        ),
-        TDActionSheetItem(
-          label: "刪除",
-          icon: TDActionSheetItemIconWidget(
-            iconData: Icons.delete,
-            bgColor: TDTheme.of(context).errorNormalColor,
+          PopupMenuItem(
+            value: "export",
+            child: Row(
+              children: [Icon(Icons.upload), SizedBox(width: 8), Text("导出")],
+            ),
           ),
-          group: "操作",
-        ),
-      ],
+          PopupMenuItem(
+            value: "mark",
+            child: Row(
+              children: [
+                Icon(Icons.bookmark),
+                SizedBox(width: 8),
+                Text("添加书签"),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "delete",
+            child: Row(
+              children: [Icon(Icons.delete), SizedBox(width: 8), Text("删除")],
+            ),
+          ),
+        ];
+      },
     );
+  }
+
+  Future<void> _addCollection(BuildContext context, BookTableData book) async {
+    final collection = await showDialog(
+      context: context,
+      builder: (context) {
+        final selectedCollection = Rxn<CollectionTableData>();
+
+        return AlertDialog(
+          title: Text("选择收藏夹"),
+          content: Obx(() {
+            final data = controller.collectionService.collections;
+            return SingleChildScrollView(
+              child: RadioGroup<CollectionTableData>(
+                onChanged: (value) {
+                  selectedCollection.value = value;
+                },
+                groupValue: selectedCollection.value,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: data
+                      .map(
+                        (collection) => RadioListTile<CollectionTableData>(
+                          value: collection,
+                          selected:
+                              selectedCollection.value?.id == collection.id,
+                          title: Text(collection.name),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            );
+          }),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.back();
+              },
+              child: Text("取消"),
+            ),
+            TextButton(
+              onPressed: () {
+                Get.back(result: selectedCollection.value);
+              },
+              child: Text("确定"),
+            ),
+          ],
+        );
+      },
+    );
+    if (collection != null) {
+      await controller.collectionService.updateBookCollection(
+        collection!.id,
+        book.id,
+      );
+    }
+  }
+
+  Future<void> _addMarks(BuildContext context, BookTableData book) async {
+    final marks = await showDialog(
+      context: context,
+      builder: (context) {
+        final selectedMarks = <int>{}.obs;
+
+        return AlertDialog(
+          title: Text("选择标签"),
+          content: Obx(() {
+            final data = controller.markService.marks;
+            if (data.isEmpty) {
+              return CustomEmpty(message: "暂无标签");
+            }
+
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: data
+                    .map(
+                      (mark) => CheckboxListTile(
+                        value: selectedMarks.contains(mark.id),
+                        onChanged: (value) {
+                          if (value == true) {
+                            selectedMarks.add(mark.id);
+                          } else {
+                            selectedMarks.remove(mark.id);
+                          }
+                        },
+                        title: Text(mark.name),
+                      ),
+                    )
+                    .toList(),
+              ),
+            );
+          }),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.back();
+              },
+              child: Text("取消"),
+            ),
+            TextButton(
+              onPressed: () {
+                Get.back(result: selectedMarks.toList());
+              },
+              child: Text("确定"),
+            ),
+          ],
+        );
+      },
+    );
+    if (marks != null) {
+      await controller.markService.updateBookMarks(book.id, marks);
+    }
   }
 }

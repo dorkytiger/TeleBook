@@ -2,18 +2,12 @@ import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/service/import_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:tele_book/app/db/app_database.dart';
-import 'package:drift/drift.dart';
 
 class ParsePdfController extends GetxController {
   final path = Get.arguments['path'] as String;
@@ -22,22 +16,12 @@ class ParsePdfController extends GetxController {
   final renderPageState = Rx<DKStateQuery<List<Uint8List?>>>(
     DkStateQueryIdle(),
   );
-  final saveToLocalState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-
-  // database reference
-  final appDatabase = Get.find<AppDatabase>();
+  final importService = Get.find<ImportService>();
 
   @override
   void onInit() {
     super.onInit();
     renderPDF();
-    saveToLocalState.listenEventToast(
-      onSuccess: (_) {
-        final booksController = Get.find<BookController>();
-        booksController.fetchBooks();
-        Get.back();
-      },
-    );
   }
 
   Future<void> renderPDF() async {
@@ -49,51 +33,55 @@ class ParsePdfController extends GetxController {
     );
   }
 
-  Future<void> saveImagesToLocal() async {
-    saveToLocalState.triggerEvent(
-      event: () async {
-        if (images.value == null || images.value!.isEmpty) {
-          throw Exception("没有可保存的图片");
-        }
+  Future<void> importPDF() async {
+    if (images.value == null || images.value!.isEmpty) {
+      DKLog.e("没有可导入的图片");
+      return;
+    }
 
-        final title = p.basenameWithoutExtension(path);
-        final groupPath = "$title-${DateTime.now().microsecondsSinceEpoch}";
-        final appDocDir = await getApplicationDocumentsDirectory();
-        final saveDir = p.join(appDocDir.path, groupPath);
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final name = p.basenameWithoutExtension(path);
+    final type = ImportType.pdf;
 
-        final localPaths = <String>[];
-        int index = 1;
+    // 创建导入组
+    final group = ImportGroup(id: id, name: name, type: type);
 
-        for (final imageData in images.value!) {
-          if (imageData == null) {
-            index++;
-            continue;
-          }
+    // 获取临时目录
+    final tempDir = await getTemporaryDirectory();
+    final pdfTempDir = Directory("${tempDir.path}/pdf_$id");
+    if (!await pdfTempDir.exists()) {
+      await pdfTempDir.create(recursive: true);
+    }
 
-          // 文件名格式：00000001.jpg
-          final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-          final savePath = p.join(saveDir, fileName);
+    // 为每一页创建任务
+    for (var i = 0; i < images.value!.length; i++) {
+      final imageData = images.value![i];
+      if (imageData == null) continue;
 
-          final file = File(savePath);
-          await file.parent.create(recursive: true);
-          await file.writeAsBytes(imageData);
+      // 将图片数据保存到临时文件
+      final tempFile = File("${pdfTempDir.path}/page_${i + 1}.png");
+      await tempFile.writeAsBytes(imageData);
 
-          localPaths.add(p.join(groupPath, fileName));
-          index++;
-        }
+      // 创建任务
+      final taskId = "${id}_task_$i";
+      final task = ImportTask(
+        id: taskId,
+        groupId: id,
+        filePath: tempFile.path,
+      );
 
-        if (localPaths.isEmpty) {
-          throw Exception('没有可保存的有效图片');
-        }
+      group.tasks.add(task);
+    }
 
-        await appDatabase.bookTable.insertOnConflictUpdate(
-          BookTableCompanion(
-            name: Value(title),
-            localPaths: Value(localPaths),
-            currentPage: Value(0),
-          ),
-        );
-      },
-    );
+    DKLog.d("创建导入组: $name, 任务数: ${group.tasks.length}");
+
+    // 添加到导入服务并开始导入
+    importService.addImportGroup(group);
+    await importService.startImport(id);
+
+    // 导入完成后清理临时目录
+    if (await pdfTempDir.exists()) {
+      await pdfTempDir.delete(recursive: true);
+    }
   }
 }

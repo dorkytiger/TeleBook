@@ -1,20 +1,20 @@
 import 'package:get/get.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/screen/collection/collection_controller.dart';
-import 'package:tele_book/app/screen/import/import_controller.dart';
-import 'package:tele_book/app/screen/manage/manage_bind.dart';
-import 'package:tele_book/app/screen/manage/manage_controller.dart';
-import 'package:tele_book/app/screen/mark/mark_controller.dart';
-import 'package:tele_book/app/screen/setting/setting_controller.dart';
+import 'package:tele_book/app/screen/book/book_binding.dart';
+import 'package:tele_book/app/screen/collection/collection_bind.dart';
+import 'package:tele_book/app/screen/import/import_bind.dart';
+import 'package:tele_book/app/screen/mark/mark_bind.dart';
+import 'package:tele_book/app/screen/task/task_bind.dart';
 import 'home_controller.dart';
 
 class HomeBind extends Bindings {
   @override
   void dependencies() {
     Get.lazyPut<HomeController>(() => HomeController());
-    Get.lazyPut<BookController>(() => BookController());
-    Get.lazyPut<CollectionController>(() => CollectionController());
-    Get.lazyPut<MarkController>(() => MarkController());
-    Get.lazyPut<ImportController>(() => ImportController());
+
+    // 组合子页面的 Bindings
+    BookBinding().dependencies();
+    TaskBind().dependencies();
+    CollectionBind().dependencies();
+    MarkBind().dependencies();
   }
 }

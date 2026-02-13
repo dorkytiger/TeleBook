@@ -15,11 +15,17 @@ import 'package:tele_book/app/enum/setting/book_sort_setting.dart';
 import 'package:tele_book/app/enum/setting/setting_key.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
+import 'package:tele_book/app/service/book_service.dart';
+import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/export_service.dart';
+import 'package:tele_book/app/service/mark_service.dart';
 
 class BookController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
   final exportService = Get.find<ExportService>();
+  final bookService = Get.find<BookService>();
+  final collectionService = Get.find<CollectionService>();
+  final markService = Get.find<MarkService>();
   final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
   final bookTitleSort = Rx<BookTitleSortSetting>(BookTitleSortSetting.titleAsc);
   final bookAddTimeSort = Rx<BookAddTimeSortSetting>(BookAddTimeSortSetting.addTimeAsc);
@@ -101,6 +107,12 @@ class BookController extends GetxController {
     fetchBooks(); // 切换排序后刷新书籍列表
   }
 
+  Future<void> triggerBookAddTimeSortChange(BookAddTimeSortSetting sort) async {
+    bookAddTimeSort.value = sort;
+    await prefs.setString(SettingKey.bookAddTimeSort, sort.value);
+    fetchBooks(); // 切换排序后刷新书籍列表
+  }
+
   void toggleSelectBook(int bookId) {
     if (selectedBookIds.contains(bookId)) {
       selectedBookIds.remove(bookId);
@@ -150,6 +162,11 @@ class BookController extends GetxController {
       query: () async {
         final bookData = await appDatabase.bookTable.select().get();
         final bookIds = bookData.map((e) => e.id).toList();
+        //打印测试
+        for(final book in bookData) {
+          DKLog.t("Book: id=${book.id}, name=${book.name}, localPaths=${book.localPaths}");
+        }
+
         List<MarkBookTableData> markBookTableData;
         if (bookIds.isNotEmpty) {
           markBookTableData =

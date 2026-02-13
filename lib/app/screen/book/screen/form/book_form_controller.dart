@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
 import 'package:tele_book/app/route/app_route.dart';
@@ -39,7 +40,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择压缩包文件");
         return;
       }
-      Get.toNamed(
+      Get.offAndToNamed(
         AppRoute.parseArchiveSingle,
         arguments: file.toString(),
       );
@@ -50,7 +51,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择压缩包文件夹");
         return;
       }
-      Get.toNamed(
+      Get.offAndToNamed(
         AppRoute.parseArchiveBatch,
         arguments: folder.toString(),
       );
@@ -61,7 +62,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择PDF文件");
         return;
       }
-      Get.toNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
+      Get.offAndToNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
     }
     if (sourceValue == BookFormSources.imageFolder) {
       final folder = imageFolderPathController.text;
@@ -69,7 +70,7 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择图片文件夹");
         return;
       }
-      Get.toNamed(
+      Get.offAndToNamed(
         AppRoute.parseImageFolder,
         arguments: folder.toString(),
       );
@@ -80,9 +81,20 @@ class BookFormController extends GetxController {
         ToastService.showError("请选择包含图片文件夹的父文件夹");
         return;
       }
-      Get.toNamed(
+      Get.offAndToNamed(
         AppRoute.parseBatchImageFolder,
         arguments: folder.toString(),
+      );
+    }
+  }
+
+  Future<void> pasteFromClipboard(BuildContext context) async{
+    final clipboardData = await  Clipboard.getData(Clipboard.kTextPlain);
+    if (clipboardData != null && clipboardData.text != null && clipboardData.text!.trim().isNotEmpty) {
+      webUrlController.text = clipboardData.text!.trim();
+    } else {
+     ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("剪贴板中没有有效的文本")),
       );
     }
   }

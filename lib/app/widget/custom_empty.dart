@@ -8,18 +8,13 @@ class CustomEmpty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.inbox, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.inbox, size: 64, color: Colors.grey),
+        const SizedBox(height: 16),
+        Text(message, style: const TextStyle(fontSize: 16, color: Colors.grey)),
+      ],
     );
   }
 }

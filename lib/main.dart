@@ -7,16 +7,18 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/event/event_bus.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/book/book_binding.dart';
-import 'package:tele_book/app/screen/book/book_screen.dart';
 import 'package:tele_book/app/screen/home/home_bind.dart';
 import 'package:tele_book/app/screen/home/home_screen.dart';
+import 'package:tele_book/app/service/book_service.dart';
+import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/export_service.dart';
+import 'package:tele_book/app/service/import_service.dart';
+import 'package:tele_book/app/service/mark_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
-
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,11 +42,16 @@ void main() async {
 Future<void> _init() async {
   await DKLog.initFileLog();
   DkConfig.setShowStateLog(true);
+
   Get.put(AppDatabase());
   await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
-  // 初始化后台下载服务
-  Get.put(DownloadService());
-  Get.put<ExportService>(ExportService());
+  Get.put(EventBus(), permanent: true);
+  Get.put(DownloadService(), permanent: true);
+  Get.put<ExportService>(ExportService(), permanent: true);
+  Get.put(ImportService(), permanent: true);
+  Get.put(BookService(), permanent: true);
+  Get.put(CollectionService(), permanent: true);
+  Get.put(MarkService(), permanent: true);
 
   // 清理临时目录
   await _cleanupTempDirectory();

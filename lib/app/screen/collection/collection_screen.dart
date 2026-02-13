@@ -16,12 +16,12 @@ class CollectionScreen extends GetView<CollectionController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: '收藏夹管理',
-        rightBarItems: [
-          TDNavBarItem(
-            icon: Icons.add,
-            action: () {
+      appBar: AppBar(
+        title: Text('收藏夹管理'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () {
               controller.clearFormData();
               Get.bottomSheet(
                 _editCollectionForm(false),

@@ -10,6 +10,7 @@ class MarkEditFormWidget extends StatelessWidget {
   final TextEditingController markNameController;
   final Color selectedColor;
   final Function(Color color) onColorSelected;
+  final ScrollController scrollController;
 
   const MarkEditFormWidget({
     super.key,
@@ -18,17 +19,13 @@ class MarkEditFormWidget extends StatelessWidget {
     required this.markNameController,
     required this.selectedColor,
     required this.onColorSelected,
+    required this.scrollController,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TDPopupBottomConfirmPanel(
-      rightClick: () {
-        onConfirm();
-      },
-      leftClick: () {
-        onCancel();
-      },
+    return SingleChildScrollView(
+      controller: scrollController,
       child: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -36,9 +33,17 @@ class MarkEditFormWidget extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           spacing: 16,
           children: [
-            TDFormItemTitle(label: "标签名称", required: true),
-            TDInput(controller: markNameController, hintText: "请输入标签名称"),
-            TDFormItemTitle(label: "选择颜色", required: true),
+            Text("标签名称"),
+            TextField(
+              controller: markNameController,
+              decoration: InputDecoration(
+                hintText: "请输入标签名称",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+            Text("标签颜色"),
             TDRadioGroup(
               cardMode: true,
               direction: Axis.horizontal,
@@ -65,6 +70,18 @@ class MarkEditFormWidget extends StatelessWidget {
                 ),
               ],
             ),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+
+                onPressed: () {
+                  onConfirm();
+                  Navigator.of(context).pop();
+                },
+                label: Text("确认"),
+                icon: Icon(Icons.check),
+              ),
+            )
           ],
         ),
       ),
