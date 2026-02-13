@@ -66,6 +66,28 @@ class ImportService extends GetxService {
   final appDatabase = Get.find<AppDatabase>();
   final groups = <ImportGroup>[].obs;
 
+  Future<ImportGroup> buildImportGroup({
+    required String name,
+    required ImportType type,
+    required List<File> files,
+  }) async {
+    final groupId = generateGroupId();
+    final group = ImportGroup(id: groupId, name: name, type: type);
+
+    for (var file in files) {
+      final taskId = generateTaskId();
+      final task = ImportTask(
+        id: taskId,
+        groupId: groupId,
+        filePath: file.path,
+      );
+      group.tasks.add(task);
+    }
+
+    return group;
+  }
+
+
   // 添加一个新的导入组
   void addImportGroup(ImportGroup group) {
     groups.add(group);

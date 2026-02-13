@@ -15,31 +15,23 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/service/book_service.dart';
+import 'package:tele_book/app/service/import_service.dart';
 import 'package:tele_book/app/util/request_state.dart';
 
 class ParseSingleArchiveController extends GetxController {
   final file = Get.arguments as String;
   final extractArchiveState = Rx<DKStateQuery<void>>(DkStateQueryIdle());
-  final saveToBookState = Rx<DKStateEventIdle<void>>(DKStateEventIdle());
+  final importArchiveState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final importService = Get.find<ImportService>();
   final archives = <File>[].obs;
   final appDatabase = Get.find<AppDatabase>();
 
   @override
   void onInit() {
     super.onInit();
-    saveToBookState.listenEvent(
-      onSuccess: (_) {
-        final bookController = Get.find<BookController>();
-        bookController.fetchBooks();
-        Get.offAndToNamed(AppRoute.book);
-      },
-    );
+    importArchiveState.listenEvent();
     unawaited(extractArchive());
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
   }
 
   Future<void> extractArchive() async {
@@ -48,7 +40,10 @@ class ParseSingleArchiveController extends GetxController {
         final bytes = await File(file).readAsBytes();
         final tmpDir = p.join(
           (await getTemporaryDirectory()).path,
-          DateTime.now().microsecondsSinceEpoch.toString(),
+          DateTime
+              .now()
+              .microsecondsSinceEpoch
+              .toString(),
         );
 
         // 在后台线程中解压 zip 文件，避免阻塞 UI
@@ -83,40 +78,21 @@ class ParseSingleArchiveController extends GetxController {
     return extractedPaths;
   }
 
-  Future<void> saveToBook() async {
-    saveToBookState.triggerEvent(
-      event: () async {
-        final title = p.basenameWithoutExtension(file);
-        final groupPath = "$title-${DateTime.now().microsecondsSinceEpoch}";
-        final appDocDir = await getApplicationDocumentsDirectory();
-        final saveDir = p.join(appDocDir.path, groupPath);
+  Future<void> importArchive() async {
+    await importArchiveState.triggerEvent(event: () async {
+      if (archives.isEmpty) return;
+      final name = p.basenameWithoutExtension(file);
+      final type = ImportType.zip;
 
-        final localPaths = <String>[];
-        int index = 1;
-        for (final archive in archives) {
-          // 重命名为统一格式：00000001.jpg, 00000002.jpg, ...
-          final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-          final savePath = p.join(saveDir, fileName);
+      final importGroup = await importService.buildImportGroup(
+        name: name,
+        type: type,
+        files: archives,
+      );
 
-          // 确保父目录存在
-          final saveFile = File(savePath);
-          await saveFile.parent.create(recursive: true);
-
-          // 复制文件
-          await archive.copy(savePath);
-          localPaths.add(p.join(groupPath, fileName));
-          index++;
-        }
-
-        await appDatabase.bookTable.insertOnConflictUpdate(
-          BookTableCompanion(
-            name: Value(title),
-            localPaths: Value(localPaths),
-            currentPage: Value(0),
-          ),
-        );
-      },
-    );
+      importService.addImportGroup(importGroup);
+      importService.startImport(importGroup.id);
+    });
   }
 }
 

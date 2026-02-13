@@ -77,23 +77,13 @@ class BookScreen extends GetView<BookController> {
         ],
       ),
       floatingActionButton: _buildFab(context),
-      body: Column(
-        children: [
-          Expanded(
-            child: controller.getBookState.displaySuccess(
-              successBuilder: (data) {
-                return Obx(() {
-                  if (controller.bookLayout.value == BookLayoutSetting.list) {
-                    return _buildBookList();
-                  } else {
-                    return _buildBookGrid();
-                  }
-                });
-              },
-            ),
-          ),
-        ],
-      ),
+      body: Obx(() {
+        if (controller.bookLayout.value == BookLayoutSetting.list) {
+          return _buildBookList();
+        } else {
+          return _buildBookGrid();
+        }
+      }),
     );
   }
 
@@ -101,8 +91,11 @@ class BookScreen extends GetView<BookController> {
     return FutureBuilder(
       future: controller.bookService.getBooksVO(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return CustomLoading();
+        if (!snapshot.hasData) return Center(child: CustomLoading());
         final booksVO = snapshot.data!;
+        if (booksVO.isEmpty) {
+          return Center(child: CustomEmpty(message: "暂无书籍"));
+        }
         return ListView.builder(
           itemBuilder: (context, index) {
             final bookData = booksVO[index];
@@ -180,9 +173,11 @@ class BookScreen extends GetView<BookController> {
     return FutureBuilder(
       future: controller.bookService.getBooksVO(),
       builder: (context, snapShot) {
-        if (!snapShot.hasData) return CustomLoading();
+        if (!snapShot.hasData) return Center(child: CustomLoading());
         final data = snapShot.data!;
-
+        if (data.isEmpty) {
+          return Center(child: CustomEmpty(message: "暂无书籍"));
+        }
         return GridView.builder(
           padding: EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

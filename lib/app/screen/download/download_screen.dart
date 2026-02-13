@@ -13,7 +13,7 @@ class DownloadScreen extends GetView<DownloadController> {
     return Scaffold(
       body: Obx(() {
         if (controller.downloadService.groups.entries.isEmpty) {
-          return CustomEmpty(message: "暂无下载任务");
+          return Center(child: CustomEmpty(message: "暂无下载任务"));
         }
         return ListView.builder(
           itemBuilder: (context, index) {
