@@ -23,6 +23,10 @@ class MarkScreen extends GetView<MarkController> {
                 isScrollControlled: true,
                 builder: (context) {
                   return DraggableScrollableSheet(
+                    initialChildSize: 0.5,
+                    minChildSize: 0.5,
+                    maxChildSize: 0.6,
+                    expand: false,
                     builder: (context, scrollController) {
                       return MarkEditFormWidget(
                         scrollController: scrollController,
@@ -68,8 +72,12 @@ class MarkScreen extends GetView<MarkController> {
                             );
                             showModalBottomSheet(
                               context: context,
+                              isScrollControlled: true,
                               builder: (context) {
                                 return DraggableScrollableSheet(
+                                  initialChildSize: 0.5,
+                                  minChildSize: 0.5,
+                                  maxChildSize: 0.6,
                                   builder: (context, scrollController) {
                                     return MarkEditFormWidget(
                                       scrollController: scrollController,

@@ -17,6 +17,7 @@ class MarkService extends GetxService {
     super.onInit();
     _markSubscription = db.markTable.select().watch().listen((_) {
       getAllMarks();
+      _eventBus.fire(BookRefreshedEvent());
     });
     _markBookSubscription = db.markBookTable.select().watch().listen((_) {
       getAllMarks();

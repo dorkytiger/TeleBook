@@ -121,7 +121,7 @@ class BookController extends GetxController {
     }
   }
 
-  void selectAllBooks() {
+  void toggleSelectAllBooks() {
     if (!getBookState.value.isSuccess) {
       return;
     }
@@ -131,7 +131,7 @@ class BookController extends GetxController {
     selectedBookIds.addAll(allBookIds);
   }
 
-  void deselectAllBooks() {
+  void toggleDeselectAllBooks() {
     selectedBookIds.clear();
   }
 

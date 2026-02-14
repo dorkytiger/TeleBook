@@ -21,6 +21,7 @@ class CollectionService extends GetxService {
       event,
     ) {
       getCollections();
+      _eventBus.fire(BookRefreshedEvent());
     });
     _collectionBookSubscription = db.collectionBookTable
         .select()
@@ -51,6 +52,7 @@ class CollectionService extends GetxService {
       }
     });
   }
+
 
   @override
   void onClose() {

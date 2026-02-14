@@ -10,7 +10,6 @@ class ExportScreen extends GetView<ExportController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(title: '导出记录'),
       body: Obx(() {
         final records = controller.exportService.records;
         if (records.isEmpty) {
