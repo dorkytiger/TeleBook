@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
 import 'package:tele_book/app/service/path_service.dart';
@@ -186,14 +185,14 @@ class BookPageController extends GetxController {
     showGeneralDialog(
       context: context,
       pageBuilder: (context, ts, tx) {
-        return TDAlertDialog(
-          title: '阅读设置',
-          contentWidget: Column(
+        return AlertDialog(
+          title: Text('阅读设置'),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              const TDText('选择阅读方向：'),
+              const Text('选择阅读方向：'),
               const SizedBox(height: 16),
               TDRadioGroup(
                 direction: Axis.vertical,

@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_controller.dart';
-
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class ParseSingleArchiveScreen extends GetView<ParseSingleArchiveController> {

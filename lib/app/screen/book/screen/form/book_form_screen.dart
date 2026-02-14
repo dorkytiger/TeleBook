@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_controller.dart';
 
 class BookFormScreen extends GetView<BookFormController> {

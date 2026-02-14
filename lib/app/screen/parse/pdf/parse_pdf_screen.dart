@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/parse/pdf/parse_pdf_controller.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 
 class ParsePdfScreen extends GetView<ParsePdfController> {
   const ParsePdfScreen({super.key});
@@ -14,10 +14,7 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
       body: controller.renderPageState.displaySuccess(
         loadingBuilder: () {
           return Center(
-            child: TDLoading(
-              size: TDLoadingSize.large,
-              text: "解析中，根据文件大小所需时间不同",
-            ),
+            child: CustomLoading()
           );
         },
         successBuilder: (data) {
@@ -39,14 +36,12 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
               ),
               Padding(
                 padding: EdgeInsets.all(16),
-                child: TDButton(
-                  text: "导入",
-                  width: double.infinity,
-                  theme: TDButtonTheme.primary,
-                  onTap: () {
+                child: FilledButton.icon(
+                  onPressed: () {
                     controller.importPDF();
-                    Get.back();
                   },
+                  icon: Icon(Icons.save),
+                  label: Text("保存图片"),
                 ),
               ),
             ],

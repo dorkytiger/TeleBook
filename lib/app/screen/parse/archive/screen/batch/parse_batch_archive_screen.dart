@@ -10,8 +10,8 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: "批量导入压缩包",
+      appBar: AppBar(
+        title: Text("批量导入压缩包"),
         onBack: () {
           Get.back();
         },

@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/service/download_service.dart';
-import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
@@ -67,7 +66,9 @@ class ParseWebController extends GetxController {
 
   Future<void> copyImageUrl(String url) async {
     Clipboard.setData(ClipboardData(text: url));
-    ToastService.showSuccess("图片url已复制到剪贴板");
+    ScaffoldMessenger.of(
+      Get.context!,
+    ).showSnackBar(const SnackBar(content: Text('图片链接已复制到剪贴板')));
   }
 
   Future<void> saveImageTo(String url) async {
@@ -82,4 +83,3 @@ class ParseWebController extends GetxController {
     );
   }
 }
-

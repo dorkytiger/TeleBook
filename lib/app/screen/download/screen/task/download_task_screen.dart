@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_controller.dart';
 import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
@@ -46,7 +45,6 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                                 return Icon(
                                   Icons.broken_image,
                                   size: 50,
-                                  color: TDTheme.of(context).grayColor4,
                                 );
                               },
                             ),
@@ -58,7 +56,6 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                           child: Icon(
                             Icons.image,
                             size: 50,
-                            color: TDTheme.of(context).grayColor4,
                           ),
                         );
                       },
@@ -72,9 +69,9 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                         child: SizedBox(
                           height: 16,
                           width: 16,
-                          child: TDProgress(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             value: task.progress.value,
-                            type: TDProgressType.circular,
                           ),
                         ),
                       ),
@@ -86,7 +83,6 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                     child: Icon(
                       Icons.downloading,
                       size: 32,
-                      color: TDTheme.of(context).brandNormalColor,
                     ),
                   );
                 }(),

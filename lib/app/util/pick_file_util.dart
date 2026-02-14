@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 class PickFileUtil {
   static Future<FilePickerResult?> pickerFile({
@@ -25,21 +25,23 @@ class PickFileUtil {
       // 如果权限被永久拒绝，提示用户去设置
       if (status.isPermanentlyDenied) {
         final result = await Get.dialog<bool>(
-          TDAlertDialog(
-            title: '权限被拒绝',
-            content: '需要存储权限来选择文件，请在设置中开启',
-            leftBtn: TDDialogButtonOptions(
-              title: '取消',
-              action: () {
-                Get.back(result: false);
-              },
-            ),
-            rightBtn: TDDialogButtonOptions(
-              title: '去设置',
-              action: () {
-                Get.back(result: true);
-              },
-            ),
+          AlertDialog(
+            title: Text('权限被拒绝'),
+            content: Text('需要存储权限来选择文件，请在设置中开启'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back(result: false);
+                },
+                child: Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Get.back(result: true);
+                },
+                child: Text('去设置'),
+              ),
+            ],
           ),
         );
         if (result == true) {
@@ -81,21 +83,23 @@ class PickFileUtil {
       } else if (status.isPermanentlyDenied) {
         // 权限被永久拒绝，提示用户去设置中开启
         final result = await Get.dialog<bool>(
-          TDAlertDialog(
-            title: '权限被拒绝',
-            content: '需要存储权限来选择文件，请在设置中开启',
-            leftBtn: TDDialogButtonOptions(
-              title: '取消',
-              action: () {
-                Get.back(result: false);
-              },
-            ),
-            rightBtn: TDDialogButtonOptions(
-              title: '去设置',
-              action: () {
-                Get.back(result: true);
-              },
-            ),
+          AlertDialog(
+            title: Text('权限被拒绝'),
+            content: Text('需要存储权限来选择文件，请在设置中开启'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back(result: false);
+                },
+                child: Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Get.back(result: true);
+                },
+                child: Text('去设置'),
+              ),
+            ],
           ),
         );
         if (result == true) {
@@ -127,21 +131,23 @@ class PickFileUtil {
       // 如果权限被永久拒绝，提示用户去设置
       if (status.isPermanentlyDenied) {
         final result = await Get.dialog<bool>(
-          TDAlertDialog(
-            title: '权限被拒绝',
-            content: '需要存储权限来选择文件夹，请在设置中开启',
-            leftBtn: TDDialogButtonOptions(
-              title: '取消',
-              action: () {
-                Get.back(result: false);
-              },
-            ),
-            rightBtn: TDDialogButtonOptions(
-              title: '去设置',
-              action: () {
-                Get.back(result: true);
-              },
-            ),
+          AlertDialog(
+            title: Text('权限被拒绝'),
+            content: Text('需要存储权限来选择文件夹，请在设置中开启'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back(result: false);
+                },
+                child: Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Get.back(result: true);
+                },
+                child: Text('去设置'),
+              ),
+            ],
           ),
         );
         if (result == true) {
@@ -182,21 +188,23 @@ class PickFileUtil {
         throw Exception('存储权限被拒绝，无法选择文件夹');
       } else if (status.isPermanentlyDenied) {
         final result = await Get.dialog<bool>(
-          TDAlertDialog(
-            title: '权限被拒绝',
-            content: '需要存储权限来选择文件夹，请在设置中开启',
-            leftBtn: TDDialogButtonOptions(
-              title: '取消',
-              action: () {
-                Get.back(result: false);
-              },
-            ),
-            rightBtn: TDDialogButtonOptions(
-              title: '去设置',
-              action: () {
-                Get.back(result: true);
-              },
-            ),
+          AlertDialog(
+            title: Text('权限被拒绝'),
+            content: Text('需要存储权限来选择文件夹，请在设置中开启'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Get.back(result: false);
+                },
+                child: Text('取消'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Get.back(result: true);
+                },
+                child: Text('去设置'),
+              ),
+            ],
           ),
         );
         if (result == true) {

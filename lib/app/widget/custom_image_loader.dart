@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/widget/custom_error.dart';
 
 class CustomImageLoader extends StatefulWidget {
   final String? networkUrl;
@@ -72,18 +72,18 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
             return widget;
           }
           return const Center(
-            child: TDLoading(
-              size: TDLoadingSize.small,
-              icon: TDLoadingIcon.activity,
+            child: SizedBox(
+              height: 50,
+              width: 50,
+              child: CircularProgressIndicator(),
             ),
           );
         },
         errorBuilder: (context, error, stackTrace) {
-          return TDResult(
-            icon: Icon(
-              Icons.broken_image,
-              size: 50,
-              color: TDTheme.of(context).grayColor4,
+          return Center(
+            child: CustomError(
+              title: error.toString(),
+              description: stackTrace.toString(),
             ),
           );
         },
