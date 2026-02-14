@@ -9,6 +9,7 @@ class CollectionService extends GetxService {
   final _eventBus = Get.find<EventBus>();
   final db = Get.find<AppDatabase>();
   final collections = <CollectionTableData>[].obs;
+  final collectionBooks = <CollectionBookTableData>[].obs;
 
   StreamSubscription? _collectionSubscription;
   StreamSubscription? _collectionBookSubscription;
@@ -21,20 +22,25 @@ class CollectionService extends GetxService {
       event,
     ) {
       getCollections();
-      _eventBus.fire(BookRefreshedEvent());
+      getCollectionBooks();
     });
     _collectionBookSubscription = db.collectionBookTable
         .select()
         .watch()
         .listen((event) {
           getCollections();
-          _eventBus.fire(BookRefreshedEvent());
+          getCollectionBooks();
         });
   }
 
   Future<void> getCollections() async {
     final data = await db.collectionTable.select().get();
     collections.assignAll(data);
+  }
+
+  Future<void> getCollectionBooks() async {
+    final data = await db.collectionBookTable.select().get();
+    collectionBooks.assignAll(data);
   }
 
   Future<void> updateBookCollection(int collectionId, int bookId) async {
@@ -53,6 +59,32 @@ class CollectionService extends GetxService {
     });
   }
 
+  Future<void> saveCollection({
+    int? id,
+    required String name,
+    required int color,
+    required int icon,
+  }) async {
+    await db.collectionTable.insertOnConflictUpdate(
+      CollectionTableCompanion(
+        id: id != null ? Value(id) : Value.absent(),
+        name: Value(name),
+        color: Value(color),
+        icon: Value(icon),
+      ),
+    );
+  }
+
+  Future<void> deleteCollection(int collectionId) async {
+    await db.transaction(() async {
+      await (db.collectionTable.delete()
+            ..where((tbl) => tbl.id.equals(collectionId)))
+          .go();
+      await (db.collectionBookTable.delete()
+            ..where((tbl) => tbl.collectionId.equals(collectionId)))
+          .go();
+    });
+  }
 
   @override
   void onClose() {

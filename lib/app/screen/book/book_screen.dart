@@ -56,7 +56,7 @@ class BookScreen extends GetView<BookController> {
           body: Obx(() {
             return RefreshIndicator(
               onRefresh: () async {
-                await controller.bookService.getBooksVO();
+                await controller.fetchBooks();
               },
               child: controller.bookLayout.value == BookLayoutSetting.list
                   ? _buildBookList()
@@ -70,9 +70,17 @@ class BookScreen extends GetView<BookController> {
 
   Widget _buildBookList() {
     return FutureBuilder(
-      future: controller.bookService.getBooksVO(),
+      future: controller.fetchBooks(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return Center(child: CustomLoading());
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CustomLoading());
+        }
+        if(snapshot.hasError) {
+          return Center(child: Text("加载书籍失败: ${snapshot.error}"));
+        }
+        if(!snapshot.hasData) {
+          return Center(child: Text("加载书籍失败"));
+        }
         final booksVO = snapshot.data!;
         if (booksVO.isEmpty) {
           return Center(child: CustomEmpty(message: "暂无书籍"));
@@ -134,12 +142,15 @@ class BookScreen extends GetView<BookController> {
                               : SizedBox.shrink(),
                         ),
 
-                        Image.file(
-                          File(
-                            "${controller.appDirectory}/${bookData.book.localPaths.first}",
-                          ),
+                        SizedBox(
                           width: 100,
-                          fit: BoxFit.cover,
+                          height: 100,
+                          child: Image.file(
+                            File(
+                              "${controller.appDirectory}/${bookData.book.localPaths.first}",
+                            ),
+                            fit: BoxFit.cover,
+                          ),
                         ),
                         Expanded(
                           child: Column(
@@ -259,7 +270,7 @@ class BookScreen extends GetView<BookController> {
 
   Widget _buildBookGrid() {
     return FutureBuilder(
-      future: controller.bookService.getBooksVO(),
+      future: controller.fetchBooks(),
       builder: (context, snapShot) {
         if (!snapShot.hasData) return Center(child: CustomLoading());
         final data = snapShot.data!;

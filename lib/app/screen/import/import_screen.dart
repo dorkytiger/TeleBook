@@ -1,11 +1,9 @@
 import 'dart:io';
 
-import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/download/download_screen.dart';
-import 'package:tele_book/app/screen/export/export_screen.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+
 import 'import_controller.dart';
 
 class ImportScreen extends GetView<ImportController> {
@@ -14,8 +12,11 @@ class ImportScreen extends GetView<ImportController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(
-        () => ListView.builder(
+      body: Obx(() {
+        if (controller.importService.groups.isEmpty) {
+          return Center(child: CustomEmpty(message: "暂无导入任务"));
+        }
+        return ListView.builder(
           itemCount: controller.importService.groups.length,
           itemBuilder: (context, index) {
             final group = controller.importService.groups[index];
@@ -57,8 +58,8 @@ class ImportScreen extends GetView<ImportController> {
               ),
             );
           },
-        ),
-      ),
+        );
+      }),
     );
   }
 }

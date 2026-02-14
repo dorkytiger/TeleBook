@@ -47,7 +47,7 @@ Future<void> _init() async {
   await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
   Get.put(EventBus(), permanent: true);
   Get.put(DownloadService(), permanent: true);
-  Get.put<ExportService>(ExportService(), permanent: true);
+  Get.put(ExportService(), permanent: true);
   Get.put(ImportService(), permanent: true);
   Get.put(BookService(), permanent: true);
   Get.put(CollectionService(), permanent: true);

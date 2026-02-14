@@ -2,6 +2,7 @@ import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
+import 'package:tele_book/app/constant/mark_constant.dart';
 import 'package:tele_book/app/screen/mark/widget/mark_edit_form_widget.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_loading.dart';
@@ -18,34 +19,7 @@ class MarkScreen extends GetView<MarkController> {
         actions: [
           IconButton(
             onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                builder: (context) {
-                  return DraggableScrollableSheet(
-                    initialChildSize: 0.5,
-                    minChildSize: 0.5,
-                    maxChildSize: 0.6,
-                    expand: false,
-                    builder: (context, scrollController) {
-                      return MarkEditFormWidget(
-                        scrollController: scrollController,
-                        onConfirm: () {
-                          controller.addMark();
-                        },
-                        onCancel: () {
-                          Navigator.of(context).pop();
-                        },
-                        selectedColor: controller.selectedMarkColor.value,
-                        markNameController: controller.markNameController,
-                        onColorSelected: (color) {
-                          controller.selectedMarkColor.value = color;
-                        },
-                      );
-                    },
-                  );
-                },
-              );
+              _saveMark(context);
             },
             icon: Icon(Icons.add),
           ),
@@ -61,66 +35,142 @@ class MarkScreen extends GetView<MarkController> {
                   return ListTile(
                     leading: CircleAvatar(backgroundColor: Color(mark.color)),
                     title: Text(mark.name),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () {
-                            controller.markNameController.text = mark.name;
-                            controller.selectedMarkColor.value = Color(
-                              mark.color,
-                            );
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (context) {
-                                return DraggableScrollableSheet(
-                                  initialChildSize: 0.5,
-                                  minChildSize: 0.5,
-                                  maxChildSize: 0.6,
-                                  builder: (context, scrollController) {
-                                    return MarkEditFormWidget(
-                                      scrollController: scrollController,
-                                      onConfirm: () {
-                                        controller.updateMark(mark.id);
-                                      },
-                                      onCancel: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      selectedColor:
-                                          controller.selectedMarkColor.value,
-                                      markNameController:
-                                          controller.markNameController,
-                                      onColorSelected: (color) {
-                                        controller.selectedMarkColor.value =
-                                            color;
-                                      },
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                          icon: Icon(Icons.edit),
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Get.defaultDialog(
-                              title: "删除书签",
-                              content: Text("确定要删除这个书签吗？"),
-                              onConfirm: () {
-                                controller.deleteMark(mark.id);
-                              },
-                            );
-                          },
-                          icon: Icon(Icons.delete),
-                        ),
-                      ],
+                    trailing: PopupMenuButton(
+                      itemBuilder: (context) {
+                        return [
+                          PopupMenuItem(value: 'edit', child: Text('编辑')),
+                          PopupMenuItem(value: 'delete', child: Text('删除')),
+                        ];
+                      },
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          _saveMark(
+                            context,
+                            initData: MarkFormData(
+                              id: mark.id,
+                              name: mark.name,
+                              color: mark.color,
+                            ),
+                          );
+                        } else if (value == 'delete') {
+                          controller.markService.deleteMark(mark.id);
+                        }
+                      },
                     ),
                   );
                 },
               ),
       ),
+    );
+  }
+
+  void _saveMark(BuildContext context, {MarkFormData? initData}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Scaffold(
+              appBar: AppBar(
+                title: Text(initData == null ? "添加书签" : "编辑书签"),
+                leading: IconButton(
+                  icon: Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              body: Padding(
+                padding: EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    spacing: 16,
+                    children: [
+                      Text("标签名称"),
+                      TextField(
+                        controller: controller.markNameController,
+                        decoration: InputDecoration(
+                          hintText: "请输入标签名称",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      Text("标签颜色"),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Obx(
+                          () => SegmentedButton(
+                            onSelectionChanged: (newSelection) {
+                              final color = MarkConstant.colorList.firstWhere(
+                                (color) => color == newSelection.first,
+                              );
+                              controller.selectedMarkColor.value = color;
+                            },
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.resolveWith((
+                                states,
+                              ) {
+                                if (states.contains(WidgetState.selected)) {
+                                  return controller.selectedMarkColor.value;
+                                }
+                                return Colors.transparent;
+                              }),
+                            ),
+                            showSelectedIcon: false,
+                            segments: [
+                              ...MarkConstant.colorList.map(
+                                (color) => ButtonSegment<Color>(
+                                  value: color,
+                                  label: Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          controller.selectedMarkColor.value !=
+                                              color
+                                          ? color
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onPrimary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            selected: {controller.selectedMarkColor.value},
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              bottomNavigationBar: Container(
+                padding: EdgeInsets.all(16),
+                child: FilledButton.icon(
+                  onPressed: () {
+                    controller.markService.saveMark(
+                      id: initData?.id,
+                      name: controller.markNameController.text,
+                      color: controller.selectedMarkColor.value.toARGB32(),
+                    );
+                    Get.back();
+                  },
+                  label: Text("确认"),
+                  icon: Icon(Icons.check),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

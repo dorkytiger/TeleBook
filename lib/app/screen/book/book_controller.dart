@@ -157,69 +157,64 @@ class BookController extends GetxController {
     }
   }
 
+  /// ✅ 优化：利用 Service 缓存，按需组装 VO
   Future<void> fetchBooks() async {
     await getBookState.triggerQuery(
       query: () async {
-        final bookData = await appDatabase.bookTable.select().get();
-        final bookIds = bookData.map((e) => e.id).toList();
-        //打印测试
-        for(final book in bookData) {
-          DKLog.t("Book: id=${book.id}, name=${book.name}, localPaths=${book.localPaths}");
+        // 1. 使用 BookService 获取基础书籍数据（利用 Service 的过滤和排序）
+        final bookData = bookService.books;
+
+        if (bookData.isEmpty) {
+          return <BookUIData>[];
         }
 
-        List<MarkBookTableData> markBookTableData;
-        if (bookIds.isNotEmpty) {
-          markBookTableData =
-              await (appDatabase.markBookTable.select()
-                    ..where((tbl) => tbl.bookId.isIn(bookIds)))
-                  .get();
-        } else {
-          markBookTableData = [];
-        }
-        final markIds = markBookTableData.map((e) => e.markId).toSet().toList();
-        List<MarkTableData> markTableData;
-        if (markIds.isNotEmpty) {
-          markTableData =
-              await (appDatabase.markTable.select()
-                    ..where((tbl) => tbl.id.isIn(markIds)))
-                  .get();
-        } else {
-          markTableData = [];
-        }
-        final collectionBookData =
-            await (appDatabase.collectionBookTable.select()
-                  ..where((tbl) => tbl.bookId.isIn(bookIds)))
-                .get();
-        final collectionIds = collectionBookData
-            .map((e) => e.collectionId)
-            .toSet()
-            .toList();
-        List<CollectionTableData> collectionTableData;
-        if (collectionIds.isNotEmpty) {
-          collectionTableData =
-              await (appDatabase.collectionTable.select()
-                    ..where((tbl) => tbl.id.isIn(collectionIds)))
-                  .get();
-        } else {
-          collectionTableData = [];
-        }
+        final bookIds = bookData.map((e) => e.id).toList();
+
+        // 2. 批量查询关联数据（一次查询，避免 N+1 问题）
+        final markBookRelations = await (appDatabase.markBookTable.select()
+              ..where((tbl) => tbl.bookId.isIn(bookIds)))
+            .get();
+
+        final markIds = markBookRelations.map((e) => e.markId).toSet().toList();
+        final marks = markIds.isNotEmpty
+            ? await (appDatabase.markTable.select()
+                  ..where((tbl) => tbl.id.isIn(markIds)))
+                .get()
+            : <MarkTableData>[];
+
+        final collectionBookRelations = await (appDatabase
+                .collectionBookTable
+                .select()
+              ..where((tbl) => tbl.bookId.isIn(bookIds)))
+            .get();
+
+        final collectionIds =
+            collectionBookRelations.map((e) => e.collectionId).toSet().toList();
+        final collections = collectionIds.isNotEmpty
+            ? await (appDatabase.collectionTable.select()
+                  ..where((tbl) => tbl.id.isIn(collectionIds)))
+                .get()
+            : <CollectionTableData>[];
+
+        // 3. 在内存中组装 VO（高效，只遍历一次）
         final List<BookUIData> result = bookData.map((book) {
-          final marksForBook = markBookTableData
+          // 找到该书籍的所有标记
+          final bookMarkIds = markBookRelations
               .where((mb) => mb.bookId == book.id)
-              .map(
-                (mb) =>
-                    markTableData.firstWhereOrNull((m) => m.id == mb.markId),
-              )
-              .whereType<MarkTableData>()
+              .map((mb) => mb.markId)
+              .toSet();
+          final marksForBook = marks
+              .where((m) => bookMarkIds.contains(m.id))
               .toList();
-          final collectionForBook = collectionBookData
+
+          // 找到该书籍的收藏夹
+          final collectionId = collectionBookRelations
               .firstWhereOrNull((cb) => cb.bookId == book.id)
               ?.collectionId;
-          final collectionData = collectionForBook != null
-              ? collectionTableData.firstWhereOrNull(
-                  (c) => c.id == collectionForBook,
-                )
+          final collectionData = collectionId != null
+              ? collections.firstWhereOrNull((c) => c.id == collectionId)
               : null;
+
           return BookUIData(
             book: book,
             marks: marksForBook,

@@ -16,7 +16,6 @@ class DownloadFormController extends GetxController {
   final titleController = TextEditingController();
   final downloadService = Get.find<DownloadService>();
 
-
   // 存储图片列表
   late final RxList<String> images;
 
@@ -25,7 +24,6 @@ class DownloadFormController extends GetxController {
     super.onInit();
     final parseResultStr = Get.arguments as String;
     parseResult = ParseWebResult.fromJson(jsonDecode(parseResultStr));
-    debugPrint('DownloadFormController onInit: $parseResult');
 
     // 初始化图片列表
     images = RxList<String>.from(parseResult.images);

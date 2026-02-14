@@ -36,20 +36,16 @@ class DownloadScreen extends GetView<DownloadController> {
     return Obx(
       () => ListTile(
         leading: firstTask?.url != null
-            ? Image.network(
-                firstTask!.url,
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
-              )
+            ? Image.network(firstTask!.url, fit: BoxFit.cover)
             : SizedBox(
-                width: 50,
-                height: 50,
+                width: 150,
+                height: 150,
                 child: Icon(Icons.file_download, color: Colors.grey),
               ),
         title: Text(group.name),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          spacing: 4,
           children: [
             Text(
               '总数: ${group.totalCount.value} | 完成: ${group.completedCount.value} | 失败: ${group.failedCount.value}',
@@ -59,17 +55,27 @@ class DownloadScreen extends GetView<DownloadController> {
               '进度: ${(group.groupProgress.value * 100).toStringAsFixed(1)}%',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            LinearProgressIndicator(value: 0.5),
+            LinearProgressIndicator(value: group.groupProgress.value),
           ],
         ),
-        trailing: DropdownButton<String>(
-          items: [
-            DropdownMenuItem(value: "cancel", child: Text("取消下载")),
-            DropdownMenuItem(value: "resume", child: Text("继续下载")),
-            DropdownMenuItem(value: "delete", child: Text("删除下载")),
-            DropdownMenuItem(value: "retry", child: Text("重新下载")),
-          ],
-          onChanged: (value) {
+        trailing: PopupMenuButton<String>(
+          itemBuilder: (context) {
+            return [
+              if (group.completedCount.value == group.totalCount.value)
+                PopupMenuItem(value: "save", child: Text("保存到书架")),
+              if (group.completedCount.value != group.totalCount.value)
+                PopupMenuItem(value: "cancel", child: Text("取消下载")),
+              PopupMenuItem(value: "resume", child: Text("继续下载")),
+              PopupMenuItem(value: "pause", child: Text("暂停下载")),
+
+              PopupMenuItem(value: "retry", child: Text("重试下载")),
+              PopupMenuItem(value: "delete", child: Text("删除下载")),
+            ];
+          },
+          onSelected: (value) {
+            if (value == "save") {
+              controller.savaToBook(groupId);
+            }
             if (value == "cancel") {
               controller.downloadService.cancelGroup(groupId);
             }
@@ -90,31 +96,4 @@ class DownloadScreen extends GetView<DownloadController> {
       ),
     );
   }
-}
-
-@Preview(name: "下载卡片预览")
-Widget downloadScreenPreview() {
-  return Material(
-    child: ListTile(
-      leading: Image.network(
-        'https://picsum.photos/200/300',
-        width: 50,
-        height: 50,
-        fit: BoxFit.cover,
-      ),
-      title: Text("下载任务1"),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '总数: 10 | 完成: 5 | 失败: 2',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          Text('进度: 50.0%', style: TextStyle(fontSize: 12, color: Colors.grey)),
-          LinearProgressIndicator(value: 0.5),
-        ],
-      ),
-      trailing: Icon(Icons.more_horiz),
-    ),
-  );
 }

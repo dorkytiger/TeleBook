@@ -6,10 +6,14 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_sort_setting.dart';
 import 'package:tele_book/app/event/event_bus.dart';
 
+/// BookService 只负责管理 Book 基础数据
+/// UI 需要的复合数据(VO)由 Controller 按需组装
 class BookService extends GetxService {
   final _eventBus = Get.find<EventBus>();
   final db = Get.find<AppDatabase>();
-  final books = Rx<List<BookTableData>>([]);
+
+  // ✅ 只存储基础数据
+  final books = <BookTableData>[].obs;
   final filter = Rx<BookFilter>(BookFilter());
   final sort = Rx<BookSort>(
     BookSort(
@@ -41,6 +45,7 @@ class BookService extends GetxService {
     });
   }
 
+  // ✅ Service 只负责查询和管理基础数据
   Future<void> getAllBooks() async {
     final bookList = await db.bookTable.select().get();
     books.value = bookList;
@@ -99,42 +104,33 @@ class BookService extends GetxService {
     books.value = bookList;
   }
 
-  // ✅ 提供一个转换方法,按需生成 VO
-  Future<BookVO> getBookVO(BookTableData book) async {
-    // 查询标记
-    final marks =
-        await (db.markBookTable.select()
-              ..where((tbl) => tbl.bookId.equals(book.id)))
-            .join([
-              innerJoin(
-                db.markTable,
-                db.markTable.id.equalsExp(db.markBookTable.markId),
-              ),
-            ])
-            .map((row) => row.readTable(db.markTable))
-            .get();
-
-    // 查询合集
-    final collection =
-        await (db.collectionBookTable.select()
-              ..where((tbl) => tbl.bookId.equals(book.id)))
-            .join([
-              innerJoin(
-                db.collectionTable,
-                db.collectionTable.id.equalsExp(
-                  db.collectionBookTable.collectionId,
-                ),
-              ),
-            ])
-            .map((row) => row.readTableOrNull(db.collectionTable))
-            .getSingleOrNull();
-
-    return BookVO(book: book, marks: marks, collection: collection);
+  // ✅ 提供根据 bookId 查询关联数据的方法（供 Controller 使用）
+  Future<List<MarkTableData>> getBookMarks(int bookId) async {
+    return await (db.markBookTable.select()
+          ..where((tbl) => tbl.bookId.equals(bookId)))
+        .join([
+          innerJoin(
+            db.markTable,
+            db.markTable.id.equalsExp(db.markBookTable.markId),
+          ),
+        ])
+        .map((row) => row.readTable(db.markTable))
+        .get();
   }
 
-  // ✅ 批量转换(如果列表需要)
-  Future<List<BookVO>> getBooksVO() async {
-    return Future.wait(books.value.map((book) => getBookVO(book)));
+  Future<CollectionTableData?> getBookCollection(int bookId) async {
+    return await (db.collectionBookTable.select()
+          ..where((tbl) => tbl.bookId.equals(bookId)))
+        .join([
+          innerJoin(
+            db.collectionTable,
+            db.collectionTable.id.equalsExp(
+              db.collectionBookTable.collectionId,
+            ),
+          ),
+        ])
+        .map((row) => row.readTableOrNull(db.collectionTable))
+        .getSingleOrNull();
   }
 
   Future<void> addBook(BookTableCompanion data) async {

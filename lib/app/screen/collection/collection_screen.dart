@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/constant/collection_constant.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/collection/widget/collection_edit_form_widget.dart';
-import 'package:tele_book/app/util/request_state.dart';
-import 'package:tele_book/app/widget/td/td_cell_group_title_widge.dart';
-import 'package:tele_book/app/widget/td/td_cell_image_icon_widget.dart';
+import 'package:tele_book/app/screen/collection/widget/collection_form_widget.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+
 import 'collection_controller.dart';
 
 class CollectionScreen extends GetView<CollectionController> {
@@ -22,118 +18,84 @@ class CollectionScreen extends GetView<CollectionController> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              controller.clearFormData();
-              Get.bottomSheet(
-                _editCollectionForm(false),
-                isScrollControlled: true,
-              );
+              saveCollection(context);
             },
           ),
         ],
       ),
-      body: controller.getCollectionState.displaySuccess(
-        successBuilder: (data) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 16),
-                TDCellGroup(
-                  theme: TDCellGroupTheme.cardTheme,
-                  cells: [
-                    ...data.map((collection) {
-                      final iconData = CollectionConstant.iconList.firstWhere(
-                        (element) => element.codePoint == collection.icon,
-                      );
-                      final color = CollectionConstant.colorList.firstWhere(
-                        (element) => element.toARGB32() == collection.color,
-                      );
-                      return TDCell(
-                        title: collection.name,
-                        imageWidget: TDCellImageIconWidget(
-                          iconData: iconData,
-                          color: color,
-                        ),
-                        noteWidget: Row(
-                          children: [
-                            TDButton(
-                              icon: Icons.edit,
-                              theme: TDButtonTheme.primary,
-                              type: TDButtonType.text,
-                              onTap: () {
-                                controller.initFormData(collection);
-                                Get.bottomSheet(
-                                  _editCollectionForm(true),
-                                  isScrollControlled: true,
-                                );
-                              },
-                            ),
-                            TDButton(
-                              icon: Icons.delete,
-                              theme: TDButtonTheme.danger,
-                              type: TDButtonType.text,
-                              onTap: () {
-                                showGeneralDialog(
-                                  context: context,
-                                  pageBuilder:
-                                      (
-                                        BuildContext buildContext,
-                                        Animation<double> animation,
-                                        Animation<double> secondaryAnimation,
-                                      ) {
-                                        return TDAlertDialog(
-                                          title: '删除收藏夹',
-                                          content: '确定要删除该收藏夹吗？',
-                                          leftBtnAction: () {
-                                            Get.back();
-                                          },
-                                          rightBtnAction: () {
-                                            controller.deleteCollection(
-                                              collection.id,
-                                            );
-                                          },
-                                        );
-                                      },
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      body: Obx(() {
+        if (controller.collectionService.collections.isEmpty) {
+          return Center(child: CustomEmpty(message: "暂无收藏夹，点击右上角添加"));
+        }
+        return ListView.builder(
+          itemCount: controller.collectionService.collections.length,
+          itemBuilder: (context, index) {
+            final collection = controller.collectionService.collections[index];
+            final icon = CollectionConstant.iconList.firstWhere(
+              (iconData) => iconData.codePoint == collection.icon,
+            );
+            return ListTile(
+              title: Text(collection.name),
+              leading: Icon(icon, color: Color(collection.color)),
+              trailing: PopupMenuButton(
+                itemBuilder: (context) {
+                  return [
+                    PopupMenuItem(value: 'edit', child: Text('编辑')),
+                    PopupMenuItem(value: 'delete', child: Text('删除')),
+                  ];
+                },
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    saveCollection(
+                      context,
+                      initData: CollectionFormData(
+                        id: collection.id,
+                        name: collection.name,
+                        iconData: collection.icon,
+                        color: collection.color,
+                      ),
+                    );
+                  } else if (value == 'delete') {
+                    controller.collectionService.deleteCollection(
+                      collection.id,
+                    );
+                  }
+                },
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 
-  Widget _editCollectionForm(bool isEditMode) {
-    return CollectionEditFormWidget(
-      nameController: controller.collectionNameController,
-      selectedColorId: controller.selectedCollectionColor.value
-          ?.toARGB32()
-          .toString(),
-      selectedIconId: controller.selectedCollectionIconData.value?.codePoint
-          .toString(),
-      onConfirm: () {
-        if (isEditMode) {
-          controller.editCollection();
-        } else {
-          controller.addCollection();
-        }
-      },
-      onCancel: () {
-        Navigator.of(Get.context!).pop();
-        controller.clearFormData();
-      },
-      onIconSelected: (iconData) {
-        controller.selectedCollectionIconData.value = iconData;
-      },
-      onColorSelected: (color) {
-        controller.selectedCollectionColor.value = color;
+  Future<void> saveCollection(
+    BuildContext context, {
+    CollectionFormData? initData,
+  }) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.5,
+          maxChildSize: 0.6,
+          expand: false,
+          builder: (context, scrollController) {
+            return CollectionFormWidget(
+              scrollController: scrollController,
+              onConfirm: (data) {
+                controller.collectionService.saveCollection(
+                  id: initData?.id,
+                  name: data.name,
+                  icon: data.iconData,
+                  color: data.color,
+                );
+              },
+            );
+          },
+        );
       },
     );
   }

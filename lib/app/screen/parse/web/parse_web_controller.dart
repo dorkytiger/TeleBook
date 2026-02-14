@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
@@ -19,6 +20,7 @@ class ParseWebController extends GetxController {
   late final Rx<String> title = ''.obs;
   final parseState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final saveImageState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final downloadService = Get.find<DownloadService>();
   final parseProgress = 0.obs;
 
   @override
