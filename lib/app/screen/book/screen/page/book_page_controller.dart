@@ -6,11 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
+import 'package:tele_book/app/service/path_service.dart';
 
 class BookPageController extends GetxController {
   final int bookId = Get.arguments as int;
 
   final appDatabase = Get.find<AppDatabase>();
+  final pathService = Get.find<PathService>();
 
   // 书籍数据
   late BookTableData bookData;
@@ -105,11 +107,15 @@ class BookPageController extends GetxController {
 
   /// 滚动变化回调（用于上下阅读模式）
   void _onScrollChanged() {
-    if (scrollController.hasClients && readingDirection.value == ReadingDirection.topToBottom) {
+    if (scrollController.hasClients &&
+        readingDirection.value == ReadingDirection.topToBottom) {
       // 根据滚动位置计算当前页面（简单估算）
-      final scrollRatio = scrollController.offset / scrollController.position.maxScrollExtent;
+      final scrollRatio =
+          scrollController.offset / scrollController.position.maxScrollExtent;
       final estimatedPage = (scrollRatio * (totalPages.value - 1)).round();
-      if (estimatedPage != currentPage.value && estimatedPage >= 0 && estimatedPage < totalPages.value) {
+      if (estimatedPage != currentPage.value &&
+          estimatedPage >= 0 &&
+          estimatedPage < totalPages.value) {
         currentPage.value = estimatedPage;
         _saveReadingProgress(estimatedPage);
       }
@@ -135,7 +141,8 @@ class BookPageController extends GetxController {
         // 上下阅读模式：滚动到对应位置
         if (scrollController.hasClients) {
           final scrollRatio = page / (totalPages.value - 1);
-          final targetOffset = scrollRatio * scrollController.position.maxScrollExtent;
+          final targetOffset =
+              scrollRatio * scrollController.position.maxScrollExtent;
           scrollController.animateTo(
             targetOffset,
             duration: const Duration(milliseconds: 300),

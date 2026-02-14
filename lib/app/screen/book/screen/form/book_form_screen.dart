@@ -16,14 +16,6 @@ class BookFormScreen extends GetView<BookFormController> {
             Get.back();
           },
         ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              controller.submitForm();
-            },
-            icon: Icon(Icons.check),
-          ),
-        ],
       ),
       body: Obx(
         () => Container(
@@ -39,6 +31,19 @@ class BookFormScreen extends GetView<BookFormController> {
                 _buildForm(context),
               ],
             ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.all(16),
+        child: SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            label: Text("提交"),
+            onPressed: () {
+              controller.submitForm();
+            },
+            icon: Icon(Icons.check),
           ),
         ),
       ),

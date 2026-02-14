@@ -47,7 +47,9 @@ class BookPageScreen extends GetView<BookPageController> {
                   controller: controller.scrollController,
                   child: Column(
                     children: List.generate(controller.totalPages.value, (index) {
-                      final imagePath = '${controller.appDirectory}/${controller.bookData.localPaths[index]}';
+                      final imagePath = controller.pathService.getBookFilePath(
+                        controller.bookData.localPaths[index],
+                      );
                       return GestureDetector(
                         onTap: controller.toggleProgress,
                         child: InteractiveViewer(
@@ -97,7 +99,9 @@ class BookPageScreen extends GetView<BookPageController> {
                   reverse: controller.readingDirection.value == ReadingDirection.rightToLeft,
                   itemCount: controller.totalPages.value,
                   itemBuilder: (context, index) {
-                    final imagePath = '${controller.appDirectory}/${controller.bookData.localPaths[index]}';
+                    final imagePath = controller.pathService.getBookFilePath(
+                      controller.bookData.localPaths[index],
+                    );
                     return GestureDetector(
                       onTap: controller.toggleProgress,
                       child: Center(

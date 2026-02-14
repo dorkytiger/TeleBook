@@ -10,6 +10,7 @@ import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
+import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
@@ -33,47 +34,36 @@ class ParseWebScreen extends GetView<ParseWebController> {
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(4),
-          child: ValueListenableBuilder<int>(
-            valueListenable:
-                controller.webViewController.loadingProgressNotifier,
-            builder: (context, progress, child) {
-              if (progress > 0 && progress < 100) {
-                return TDCell(
-                  title: "解析中... $progress%",
-                  descriptionWidget: TDProgress(
-                    type: TDProgressType.linear,
-                    value: progress / 100,
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+          child: Obx(
+            () => LinearProgressIndicator(
+              value: (controller.parseProgress.value / 100).toDouble(),
+            ),
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showParseImageList(context);
-        },
-        label: Text("解析结果 ${controller.images.length}"),
-        icon: Icon(Icons.book),
-      ),
-      body: Obx(
-        () => Column(
-          children: [
-            Expanded(
-              child: CrossPlatformWebView(
-                controller: controller.webViewController,
-              ),
-            ),
-          ],
+      floatingActionButton: Obx(
+        () => FloatingActionButton.extended(
+          onPressed: () {
+            _showParseImageList(context);
+          },
+          label: Text("解析结果 ${controller.images.length}"),
+          icon: Icon(Icons.book),
         ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: CrossPlatformWebView(
+              controller: controller.webViewController,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  void _showParseImageList(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> _showParseImageList(BuildContext context) async {
+    final callBack = await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
@@ -83,87 +73,97 @@ class ParseWebScreen extends GetView<ParseWebController> {
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
-            return Scaffold(
-              appBar: AppBar(
-                title: Text("解析到 ${controller.images.length} 张图片"),
-                leading: IconButton(
-                  icon: Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+            return Obx(
+              () => Scaffold(
+                appBar: AppBar(
+                  title: Text("解析到 ${controller.images.length} 张图片"),
+                  leading: IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
                 ),
-              ),
-              body: Padding(
-                padding: EdgeInsets.all(16),
-                child: Column(
-                  spacing: 16,
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: controller.images.length,
-                        itemBuilder: (context, index) {
-                          final image = controller.images[index];
-                          return ListTile(
-                            leading: CachedNetworkImage(
-                              imageUrl: image,
-                              width: 50,
-                              height: 50,
-                              fit: BoxFit.cover,
-                              errorWidget: (context, url, error) =>
-                                  Icon(Icons.error),
-                            ),
-                            title: Text(image),
-                            trailing: PopupMenuButton(
-                              itemBuilder: (context) {
-                                return [
-                                  PopupMenuItem(
-                                    value: 'copy',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.copy, size: 16),
-                                        SizedBox(width: 8),
-                                        Text('复制链接'),
-                                      ],
+                body: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    spacing: 16,
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: controller.images.length,
+                          itemBuilder: (context, index) {
+                            final image = controller.images[index];
+                            return ListTile(
+                              leading: CachedNetworkImage(
+                                imageUrl: image,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorWidget: (context, url, error) =>
+                                    Icon(Icons.error),
+                              ),
+                              title: Text(image),
+                              trailing: PopupMenuButton(
+                                itemBuilder: (context) {
+                                  return [
+                                    PopupMenuItem(
+                                      value: 'copy',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.copy, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('复制链接'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'download',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.download, size: 16),
-                                        SizedBox(width: 8),
-                                        Text('下载图片'),
-                                      ],
+                                    PopupMenuItem(
+                                      value: 'download',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.download, size: 16),
+                                          SizedBox(width: 8),
+                                          Text('下载图片'),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ];
-                              },
-                              onSelected: (value) {
-                                if (value == 'copy') {
-                                  Clipboard.setData(ClipboardData(text: image));
-                                } else if (value == 'download') {
-                                  controller.saveImageTo(image);
-                                }
-                              },
-                            ),
-                          );
-                        },
+                                  ];
+                                },
+                                onSelected: (value) {
+                                  if (value == 'copy') {
+                                    Clipboard.setData(
+                                      ClipboardData(text: image),
+                                    );
+                                  } else if (value == 'download') {
+                                    controller.saveImageTo(image);
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              bottomSheet: Container(
-                padding: EdgeInsets.all(16),
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () {
-                    controller.downloadService.downloadBatch(
-                      urls: controller.images,
-                      groupName: controller.title.value,
-                    );
-                    Get.back();
-                  },
-                  label: Text("下载"),
-                  icon: Icon(Icons.download),
+                bottomSheet: Container(
+                  padding: EdgeInsets.all(16),
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Get.back(
+                        result: () {
+                          controller.downloadService.downloadBatch(
+                            urls: controller.images,
+                            groupName: controller.title.value,
+                          );
+                          Get.back();
+                          final taskController = Get.find<TaskController>();
+                          taskController.tabController.animateTo(0);
+                        },
+                      );
+                    },
+                    label: Text("下载"),
+                    icon: Icon(Icons.download),
+                  ),
                 ),
               ),
             );
@@ -171,5 +171,6 @@ class ParseWebScreen extends GetView<ParseWebController> {
         );
       },
     );
+    callBack.call();
   }
 }

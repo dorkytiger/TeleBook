@@ -83,20 +83,3 @@ class ParseWebController extends GetxController {
   }
 }
 
-class ParseWebResult {
-  final String title;
-  final List<String> images;
-
-  ParseWebResult({required this.title, required this.images});
-
-  Map<String, dynamic> toJson() {
-    return {'title': title, 'images': images};
-  }
-
-  factory ParseWebResult.fromJson(Map<String, dynamic> json) {
-    return ParseWebResult(
-      title: json['title'] as String,
-      images: List<String>.from(json['images'] as List),
-    );
-  }
-}

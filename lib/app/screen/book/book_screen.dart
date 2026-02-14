@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
+import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/screen/book/widget/book_filter_widget.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
-import 'package:tele_book/app/widget/custom_loading.dart';
 
 class BookScreen extends GetView<BookController> {
   const BookScreen({super.key});
@@ -29,28 +28,20 @@ class BookScreen extends GetView<BookController> {
           appBar: AppBar(
             title: Text('书籍管理'),
             actions: [
-              IconButton(
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (context) {
-                      return DraggableScrollableSheet(
-                        initialChildSize: 0.6,
-                        minChildSize: 0.3,
-                        maxChildSize: 0.9,
-                        expand: false,
-                        builder: (context, scrollController) {
-                          return BookFilterWidget(
-                            scrollController: scrollController,
-                          );
-                        },
-                      );
+              SearchAnchor(
+                builder: (context, searchController) {
+                  return IconButton(
+                    onPressed: () {
+                      searchController.openView();
                     },
+                    icon: Icon(Icons.search),
                   );
                 },
-                icon: Icon(Icons.filter_list_sharp),
+                suggestionsBuilder: (context, searchController) {
+                  return controller.fetchSearchBook(searchController.text);
+                },
               ),
+              _buildActionPopupButton(context),
             ],
           ),
           body: Obx(() {
@@ -69,25 +60,11 @@ class BookScreen extends GetView<BookController> {
   }
 
   Widget _buildBookList() {
-    return FutureBuilder(
-      future: controller.fetchBooks(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CustomLoading());
-        }
-        if(snapshot.hasError) {
-          return Center(child: Text("加载书籍失败: ${snapshot.error}"));
-        }
-        if(!snapshot.hasData) {
-          return Center(child: Text("加载书籍失败"));
-        }
-        final booksVO = snapshot.data!;
-        if (booksVO.isEmpty) {
-          return Center(child: CustomEmpty(message: "暂无书籍"));
-        }
+    return controller.getBookState.displaySuccess(
+      successBuilder: (data) {
         return ListView.builder(
           itemBuilder: (context, index) {
-            final bookData = booksVO[index];
+            final bookData = data[index];
             return Obx(
               () => Card(
                 shape: controller.selectedBookIds.contains(bookData.book.id)
@@ -147,7 +124,9 @@ class BookScreen extends GetView<BookController> {
                           height: 100,
                           child: Image.file(
                             File(
-                              "${controller.appDirectory}/${bookData.book.localPaths.first}",
+                              controller.pathService.getBookFilePath(
+                                bookData.book.localPaths.first,
+                              ),
                             ),
                             fit: BoxFit.cover,
                           ),
@@ -167,10 +146,14 @@ class BookScreen extends GetView<BookController> {
                                       ),
                                       subtitle: Text(
                                         '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: Colors.grey),
                                       ),
                                     ),
                                   ),
-                                  _buildPopupButton(context, bookData.book),
+                                  _buildEditPopupButton(context, bookData.book),
                                 ],
                               ),
                               Padding(
@@ -262,21 +245,15 @@ class BookScreen extends GetView<BookController> {
               ),
             );
           },
-          itemCount: booksVO.length,
+          itemCount: data.length,
         );
       },
     );
   }
 
   Widget _buildBookGrid() {
-    return FutureBuilder(
-      future: controller.fetchBooks(),
-      builder: (context, snapShot) {
-        if (!snapShot.hasData) return Center(child: CustomLoading());
-        final data = snapShot.data!;
-        if (data.isEmpty) {
-          return Center(child: CustomEmpty(message: "暂无书籍"));
-        }
+    return controller.getBookState.displaySuccess(
+      successBuilder: (data) {
         return GridView.builder(
           padding: EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -320,7 +297,9 @@ class BookScreen extends GetView<BookController> {
                         width: double.infinity,
                         child: Image.file(
                           File(
-                            "${controller.appDirectory}/${bookData.book.localPaths.first}",
+                            controller.pathService.getBookFilePath(
+                              bookData.book.localPaths.first,
+                            ),
                           ),
                           errorBuilder: (context, error, stackTrace) {
                             return Icon(Icons.broken_image, size: 40);
@@ -357,7 +336,7 @@ class BookScreen extends GetView<BookController> {
                                     ),
                                   ),
                                 ),
-                                _buildPopupButton(context, bookData.book),
+                                _buildEditPopupButton(context, bookData.book),
                               ],
                             ),
                             if (bookData.marks.isNotEmpty)
@@ -478,7 +457,127 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  Widget _buildPopupButton(BuildContext context, BookTableData book) {
+  Widget _buildActionPopupButton(BuildContext context) {
+    return PopupMenuButton(
+      icon: Icon(Icons.filter_list),
+      onSelected: (value) {
+        if (value == "grid") {
+          controller.bookLayout.value = BookLayoutSetting.grid;
+        }
+        if (value == "list") {
+          controller.bookLayout.value = BookLayoutSetting.list;
+        }
+        if (value == "titleAsc") {
+          controller.sortBy.value = BookSort(
+            type: BookSortType.title,
+            order: BookSortOrder.asc,
+          );
+        }
+        if (value == "titleDesc") {
+          controller.sortBy.value = BookSort(
+            type: BookSortType.title,
+            order: BookSortOrder.desc,
+          );
+        }
+        if (value == "addTimeAsc") {
+          controller.sortBy.value = BookSort(
+            type: BookSortType.addTime,
+            order: BookSortOrder.asc,
+          );
+        }
+        if (value == "addTimeDesc") {
+          controller.sortBy.value = BookSort(
+            type: BookSortType.addTime,
+            order: BookSortOrder.desc,
+          );
+        }
+      },
+      itemBuilder: (BuildContext context) {
+        return [
+          PopupMenuItem(
+            value: "grid",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.grid_view),
+                Text("网格布局"),
+                if (controller.bookLayout.value == BookLayoutSetting.grid)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "list",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.list),
+
+                Text("列表布局"),
+
+                if (controller.bookLayout.value == BookLayoutSetting.list)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "titleAsc",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.sort_by_alpha),
+                Text("标题升序"),
+                if (controller.sortBy.value.type == BookSortType.title &&
+                    controller.sortBy.value.order == BookSortOrder.asc)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "titleDesc",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.sort_by_alpha_outlined),
+                Text("标题降序"),
+                if (controller.sortBy.value.type == BookSortType.title &&
+                    controller.sortBy.value.order == BookSortOrder.desc)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "addTimeAsc",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.access_time),
+                Text("添加时间升序"),
+                if (controller.sortBy.value.type == BookSortType.addTime &&
+                    controller.sortBy.value.order == BookSortOrder.asc)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+          PopupMenuItem(
+            value: "addTimeDesc",
+            child: Row(
+              spacing: 8,
+              children: [
+                Icon(Icons.access_time_outlined),
+                Text("添加时间降序"),
+                if (controller.sortBy.value.type == BookSortType.addTime &&
+                    controller.sortBy.value.order == BookSortOrder.desc)
+                  Icon(Icons.check, size: 16),
+              ],
+            ),
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _buildEditPopupButton(BuildContext context, BookTableData book) {
     return PopupMenuButton(
       onSelected: (value) {
         if (value == "edit") {

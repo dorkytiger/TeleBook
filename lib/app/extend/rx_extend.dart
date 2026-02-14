@@ -23,7 +23,7 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
       initialBuilder: () {
         return initialBuilder != null
             ? initialBuilder()
-            : CustomEmpty(message: '暂无数据');
+            : Center(child: CustomEmpty(message: '暂无数据'));
       },
       loadingBuilder: () {
         return loadingBuilder != null
@@ -49,7 +49,7 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
       emptyBuilder: () {
         return emptyBuilder != null
             ? emptyBuilder()
-            : CustomEmpty(message: '暂无数据');
+            : Center(child: CustomEmpty(message: '暂无数据'));
       },
       successBuilder: successBuilder,
     );
@@ -72,27 +72,33 @@ extension RXDKStateEventExtension<T> on Rx<DKStateEvent<T>> {
       DKStateEventHelper.handleState<T>(
         state,
         onLoading: () {
-          ToastService.dismiss();
+          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showLoadingToast) {
-            ToastService.showLoading("加载中...");
+            ScaffoldMessenger.of(
+              Get.context!,
+            ).showSnackBar(const SnackBar(content: Text('加载中...')));
           }
           if (onLoading != null) {
             onLoading();
           }
         },
         onSuccess: (data) {
-          ToastService.dismiss();
+          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showSuccessToast) {
-            ToastService.showSuccess("操作成功");
+            ScaffoldMessenger.of(
+              Get.context!,
+            ).showSnackBar(const SnackBar(content: Text('操作成功')));
           }
           if (onSuccess != null) {
             onSuccess(data);
           }
         },
         onError: (message, error, stackTrace) {
-          ToastService.dismiss();
+          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showErrorToast) {
-            ToastService.showError(message);
+            ScaffoldMessenger.of(
+              Get.context!,
+            ).showSnackBar(SnackBar(content: Text('操作失败: $message')));
           }
           if (onError != null) {
             onError(message, error, stackTrace);

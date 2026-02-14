@@ -18,6 +18,7 @@ import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/import_service.dart';
 import 'package:tele_book/app/service/mark_service.dart';
 import 'package:tele_book/app/service/navigator_service.dart';
+import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
 
 void main() async {
@@ -45,6 +46,11 @@ Future<void> _init() async {
 
   Get.put(AppDatabase());
   await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
+
+  // 初始化路径服务（需要最先初始化，其他服务可能依赖它）
+  await Get.putAsync(() => PathService().init(), permanent: true);
+
+  // 初始化服务
   Get.put(EventBus(), permanent: true);
   Get.put(DownloadService(), permanent: true);
   Get.put(ExportService(), permanent: true);

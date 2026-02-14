@@ -123,7 +123,7 @@ class BookEditController extends GetxController {
 
       // 更新书籍列表
       final bookController = Get.find<BookController>();
-      await bookController.refreshBooks();
+      await bookController.fetchBooks();
 
       ToastService.showSuccess('书籍名称已更新');
       DKLog.i('书籍重命名成功: $sanitizedName');

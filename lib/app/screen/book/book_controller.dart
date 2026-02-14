@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' as io;
+import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
@@ -7,18 +7,16 @@ import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
-import 'package:tele_book/app/enum/setting/book_sort_setting.dart';
-import 'package:tele_book/app/enum/setting/setting_key.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/mark_service.dart';
+import 'package:tele_book/app/service/path_service.dart';
 
 class BookController extends GetxController {
   final appDatabase = Get.find<AppDatabase>();
@@ -26,35 +24,36 @@ class BookController extends GetxController {
   final bookService = Get.find<BookService>();
   final collectionService = Get.find<CollectionService>();
   final markService = Get.find<MarkService>();
-  final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
-  final bookTitleSort = Rx<BookTitleSortSetting>(BookTitleSortSetting.titleAsc);
-  final bookAddTimeSort = Rx<BookAddTimeSortSetting>(BookAddTimeSortSetting.addTimeAsc);
+  final pathService = Get.find<PathService>();
+
   final multiEditMode = false.obs;
-  final searchBarController = TextEditingController();
   final selectedBookIds = <int>[].obs;
-  final selectedCollectionId = Rxn<int>(); // null means show all
-  final selectedMarkIds = <int>[].obs; // empty means show all
-  final getBookState = Rx<DKStateQuery<List<BookUIData>>>(DkStateQueryIdle());
-  final getCollectionState = Rx<DKStateQuery<List<CollectionTableData>>>(
-    DkStateQueryIdle(),
+  final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
+  final sortBy = Rx<BookSort>(
+    BookSort(type: BookSortType.title, order: BookSortOrder.asc),
   );
-  final getMarkState = Rx<DKStateQuery<List<MarkTableData>>>(
-    DkStateQueryIdle(),
-  );
+  final getBookState = Rx<DKStateQuery<List<BookVo>>>(DkStateQueryIdle());
+
   final addBookToCollectionState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final addMultipleBooksToCollectionState = Rx<DKStateEvent<void>>(
     DKStateEventIdle(),
   );
   final deleteBookState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final deleteMultipleBookState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  late final String appDirectory;
-  late final SharedPreferences prefs;
+  final sharedPreferences = Get.find<SharedPreferences>();
+  StreamSubscription? booksSubscription;
+  StreamSubscription? collectionsSubscription;
+  StreamSubscription? collectionBooksSubscription;
+  StreamSubscription? marksSubscription;
+  StreamSubscription? markBooksSubscription;
 
   @override
   void onInit() async {
     super.onInit();
-    prefs = await SharedPreferences.getInstance();
-    initBookLayout();
+    _initListen();
+
+    sortBy.listen((_) => fetchBooks());
+
     deleteBookState.listenEventToast();
     deleteMultipleBookState.listenEventToast(
       onSuccess: (_) {
@@ -69,48 +68,19 @@ class BookController extends GetxController {
         multiEditMode.value = false;
       },
     );
-    appDirectory = (await getApplicationDocumentsDirectory()).path;
-    searchBarController.addListener(() {
-      fetchBooks();
-    });
-    await getCollections();
-    await getMarks();
     await fetchBooks();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-    fetchBooks(); // 每次路由激活时自动刷新
-  }
-
-  Future<void> initBookLayout() async {
-    final layoutValue =
-        prefs.getInt(SettingKey.bookLayout) ?? BookLayoutSetting.list.value;
-    bookLayout.value = BookLayoutSetting.fromValue(layoutValue);
-  }
-  
-  Future<void> initBookSort() async {
-    final sortValue =
-        prefs.getString(SettingKey.bookTitleSort) ?? BookTitleSortSetting.titleAsc.value;
-    bookTitleSort.value = BookTitleSortSetting.fromValue(sortValue);
-  }
-
-  Future<void> triggerBookLayoutChange(BookLayoutSetting layout) async {
-    bookLayout.value = layout;
-    await prefs.setInt(SettingKey.bookLayout, layout.value);
-  }
-
-  Future<void> triggerBookTitleSortChange(BookTitleSortSetting sort) async {
-    bookTitleSort.value = sort;
-    await prefs.setString(SettingKey.bookTitleSort, sort.value);
-    fetchBooks(); // 切换排序后刷新书籍列表
-  }
-
-  Future<void> triggerBookAddTimeSortChange(BookAddTimeSortSetting sort) async {
-    bookAddTimeSort.value = sort;
-    await prefs.setString(SettingKey.bookAddTimeSort, sort.value);
-    fetchBooks(); // 切换排序后刷新书籍列表
+  void _initListen() {
+    booksSubscription = bookService.books.listen((_) => fetchBooks());
+    collectionsSubscription = collectionService.collections.listen(
+      (_) => fetchBooks(),
+    );
+    collectionBooksSubscription = collectionService.collectionBooks.listen(
+      (_) => fetchBooks(),
+    );
+    marksSubscription = markService.marks.listen((_) => fetchBooks());
+    markBooksSubscription = markService.markBooks.listen((_) => fetchBooks());
   }
 
   void toggleSelectBook(int bookId) {
@@ -157,215 +127,96 @@ class BookController extends GetxController {
     }
   }
 
+  void changeSortBy(BookSortType type, BookSortOrder order) {
+    sortBy.value = BookSort(type: type, order: order);
+    fetchBooks();
+  }
+
   /// ✅ 优化：利用 Service 缓存，按需组装 VO
   Future<void> fetchBooks() async {
     await getBookState.triggerQuery(
       query: () async {
-        // 1. 使用 BookService 获取基础书籍数据（利用 Service 的过滤和排序）
-        final bookData = bookService.books;
+        final books = bookService.books;
+        final collections = collectionService.collections;
+        final collectionBooks = collectionService.collectionBooks;
+        final marks = markService.marks;
+        final markBooks = markService.markBooks;
 
-        if (bookData.isEmpty) {
-          return <BookUIData>[];
-        }
+        List<BookVo> bookVos = [];
 
-        final bookIds = bookData.map((e) => e.id).toList();
-
-        // 2. 批量查询关联数据（一次查询，避免 N+1 问题）
-        final markBookRelations = await (appDatabase.markBookTable.select()
-              ..where((tbl) => tbl.bookId.isIn(bookIds)))
-            .get();
-
-        final markIds = markBookRelations.map((e) => e.markId).toSet().toList();
-        final marks = markIds.isNotEmpty
-            ? await (appDatabase.markTable.select()
-                  ..where((tbl) => tbl.id.isIn(markIds)))
-                .get()
-            : <MarkTableData>[];
-
-        final collectionBookRelations = await (appDatabase
-                .collectionBookTable
-                .select()
-              ..where((tbl) => tbl.bookId.isIn(bookIds)))
-            .get();
-
-        final collectionIds =
-            collectionBookRelations.map((e) => e.collectionId).toSet().toList();
-        final collections = collectionIds.isNotEmpty
-            ? await (appDatabase.collectionTable.select()
-                  ..where((tbl) => tbl.id.isIn(collectionIds)))
-                .get()
-            : <CollectionTableData>[];
-
-        // 3. 在内存中组装 VO（高效，只遍历一次）
-        final List<BookUIData> result = bookData.map((book) {
-          // 找到该书籍的所有标记
-          final bookMarkIds = markBookRelations
+        for (var book in books) {
+          final bookMarks = markBooks
               .where((mb) => mb.bookId == book.id)
-              .map((mb) => mb.markId)
-              .toSet();
-          final marksForBook = marks
-              .where((m) => bookMarkIds.contains(m.id))
+              .map((mb) => marks.firstWhere((m) => m.id == mb.markId))
               .toList();
+          final bookCollection = collectionBooks
+              .where((cb) => cb.bookId == book.id)
+              .map(
+                (cb) => collections.firstWhere((c) => c.id == cb.collectionId),
+              )
+              .firstOrNull;
 
-          // 找到该书籍的收藏夹
-          final collectionId = collectionBookRelations
-              .firstWhereOrNull((cb) => cb.bookId == book.id)
-              ?.collectionId;
-          final collectionData = collectionId != null
-              ? collections.firstWhereOrNull((c) => c.id == collectionId)
-              : null;
-
-          return BookUIData(
-            book: book,
-            marks: marksForBook,
-            collection: collectionData,
+          bookVos.add(
+            BookVo(book: book, marks: bookMarks, collection: bookCollection),
           );
-        }).toList();
-
-        // Apply filters
-        var filteredResult = result;
-
-        // Filter by collection
-        if (selectedCollectionId.value != null) {
-          filteredResult = filteredResult.where((bookUI) {
-            return bookUI.collection?.id == selectedCollectionId.value;
-          }).toList();
         }
 
-        // Filter by marks (if any marks are selected, show books that have at least one of them)
-        if (selectedMarkIds.isNotEmpty) {
-          filteredResult = filteredResult.where((bookUI) {
-            return bookUI.marks.any(
-              (mark) => selectedMarkIds.contains(mark.id),
-            );
-          }).toList();
-        }
+        // 进行排序
+        bookVos.sort((a, b) {
+          int compareResult = 0;
 
-        if (searchBarController.text.isNotEmpty) {
-          final query = searchBarController.text.toLowerCase();
-          filteredResult = filteredResult.where((bookUI) {
-            final titleMatch = bookUI.book.name.toLowerCase().contains(query);
-            return titleMatch;
-          }).toList();
-        }
-
-        return filteredResult;
-      },
-      isEmpty: (data) => data.isEmpty,
-    );
-  }
-
-  /// 刷新书籍列表（用于阅读后返回时刷新阅读进度）
-  Future<void> refreshBooks() async {
-    await fetchBooks();
-  }
-
-  Future<void> getCollections() async {
-    await getCollectionState.triggerQuery(
-      query: () async {
-        final query = appDatabase.collectionTable.select()
-          ..orderBy([
-            (t) => OrderingTerm(expression: t.order, mode: OrderingMode.asc),
-            (t) =>
-                OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
-          ]);
-        final collections = await query.get();
-        return collections;
-      },
-      isEmpty: (data) => data.isEmpty,
-    );
-  }
-
-  Future<void> getMarks() async {
-    await getMarkState.triggerQuery(
-      query: () async {
-        final query = appDatabase.markTable.select();
-        final marks = await query.get();
-        return marks;
-      },
-      isEmpty: (data) => data.isEmpty,
-    );
-  }
-
-  void toggleCollectionFilter(int? collectionId) {
-    if (selectedCollectionId.value == collectionId) {
-      selectedCollectionId.value = null; // Deselect if already selected
-    } else {
-      selectedCollectionId.value = collectionId;
-    }
-    fetchBooks(); // Refresh books with new filter
-  }
-
-  void toggleMarkFilter(int markId) {
-    if (selectedMarkIds.contains(markId)) {
-      selectedMarkIds.remove(markId);
-    } else {
-      selectedMarkIds.add(markId);
-    }
-    fetchBooks(); // Refresh books with new filter
-  }
-
-  void clearAllFilters() {
-    selectedCollectionId.value = null;
-    selectedMarkIds.clear();
-    fetchBooks(); // Refresh books
-  }
-
-  Future<void> addBookToCollection(int bookId, int collectionId) async {
-    await addBookToCollectionState.triggerEvent(
-      event: () async {
-        final appDatabase = Get.find<AppDatabase>();
-        final existingEntry =
-            await (appDatabase.collectionBookTable.select()..where(
-                  (tbl) =>
-                      tbl.bookId.equals(bookId) &
-                      tbl.collectionId.equals(collectionId),
-                ))
-                .getSingleOrNull();
-
-        if (existingEntry != null) {
-          // 已存在，不需要重复添加
-          return;
-        }
-
-        await appDatabase.collectionBookTable.insertOnConflictUpdate(
-          CollectionBookTableCompanion.insert(
-            bookId: bookId,
-            collectionId: collectionId,
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> addMultipleBooksToCollection(int collectionId) async {
-    await addMultipleBooksToCollectionState.triggerEvent(
-      event: () async {
-        final bookIds = selectedBookIds.toList();
-        final appDatabase = Get.find<AppDatabase>();
-        for (final bookId in bookIds) {
-          final existingEntry =
-              await (appDatabase.collectionBookTable.select()..where(
-                    (tbl) =>
-                        tbl.bookId.equals(bookId) &
-                        tbl.collectionId.equals(collectionId),
-                  ))
-                  .getSingleOrNull();
-
-          if (existingEntry != null) {
-            // 已存在，不需要重复添加
-            continue;
+          // 根据排序类型进行比较
+          switch (sortBy.value.type) {
+            case BookSortType.title:
+              compareResult = a.book.name.compareTo(b.book.name);
+              break;
+            case BookSortType.addTime:
+              compareResult = a.book.createdAt.compareTo(b.book.createdAt);
+              break;
           }
 
-          await appDatabase.collectionBookTable.insertOnConflictUpdate(
-            CollectionBookTableCompanion.insert(
-              bookId: bookId,
-              collectionId: collectionId,
-            ),
-          );
-        }
+          // 根据排序顺序调整结果
+          return sortBy.value.order == BookSortOrder.asc
+              ? compareResult
+              : -compareResult;
+        });
+
+        return bookVos;
       },
+      isEmpty: (data) => data.isEmpty,
     );
+  }
+
+  Future<List<Widget>> fetchSearchBook(String searchText) async {
+    if (!getBookState.value.isSuccess) {
+      return [];
+    }
+    final currentBooks = getBookState.value.data;
+    if (searchText.isEmpty) {
+      return [];
+    }
+    final matchedBooks = currentBooks
+        .where((bookUI) => bookUI.book.name.contains(searchText))
+        .toList();
+    return matchedBooks
+        .map(
+          (bookUI) => Row(
+            children: [
+              Image.file(
+                File(pathService.getBookFilePath(bookUI.book.localPaths.first)),
+              ),
+              Expanded(
+                child: ListTile(
+                  title: Text(bookUI.book.name),
+                  subtitle: Text(
+                    '创建于 ${bookUI.book.createdAt.toIso8601String()}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        )
+        .toList();
   }
 
   Future<void> exportBook(BookTableData data) async {
@@ -397,24 +248,9 @@ class BookController extends GetxController {
   }
 
   Future<void> deleteBook(int id) async {
-    deleteBookState.triggerEvent(
+    await deleteBookState.triggerEvent(
       event: () async {
-        final appDatabase = Get.find<AppDatabase>();
-        final book =
-            await (appDatabase.bookTable.select()
-                  ..where((tbl) => tbl.id.equals(id)))
-                .getSingle();
-
-        // 删除本地文件
-        for (final path in book.localPaths) {
-          final file = io.File("$appDirectory/$path");
-          if (await file.exists()) {
-            await file.delete();
-          }
-        }
-
-        await appDatabase.bookTable.deleteWhere((tbl) => tbl.id.equals(id));
-        await fetchBooks();
+        await bookService.deleteBook(id);
       },
     );
   }
@@ -423,23 +259,7 @@ class BookController extends GetxController {
     deleteMultipleBookState.triggerEvent(
       event: () async {
         final ids = selectedBookIds.toList();
-        final appDatabase = Get.find<AppDatabase>();
-        final books =
-            await (appDatabase.bookTable.select()
-                  ..where((tbl) => tbl.id.isIn(ids)))
-                .get();
-
-        // 删除本地文件
-        for (final book in books) {
-          for (final path in book.localPaths) {
-            final file = io.File("$appDirectory/$path");
-            if (await file.exists()) {
-              await file.delete();
-            }
-          }
-        }
-
-        await appDatabase.bookTable.deleteWhere((tbl) => tbl.id.isIn(ids));
+        await bookService.deleteBooks(ids);
         await fetchBooks();
         selectedBookIds.clear();
         multiEditMode.value = false;
@@ -448,14 +268,21 @@ class BookController extends GetxController {
   }
 }
 
-class BookUIData {
+class BookVo {
   final BookTableData book;
   final List<MarkTableData> marks;
   final CollectionTableData? collection;
 
-  BookUIData({
-    required this.book,
-    required this.marks,
-    required this.collection,
-  });
+  BookVo({required this.book, required this.marks, required this.collection});
 }
+
+class BookSort {
+  final BookSortType type;
+  final BookSortOrder order;
+
+  BookSort({required this.type, required this.order});
+}
+
+enum BookSortOrder { asc, desc }
+
+enum BookSortType { title, addTime }
