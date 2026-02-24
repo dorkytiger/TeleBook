@@ -78,9 +78,9 @@ class CollectionScreen extends GetView<CollectionController> {
       isScrollControlled: true,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          minChildSize: 0.5,
-          maxChildSize: 0.6,
+          initialChildSize: 0.6,
+          minChildSize: 0.6,
+          maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {
             return CollectionFormWidget(

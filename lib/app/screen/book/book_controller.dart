@@ -12,6 +12,8 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
+import 'package:tele_book/app/screen/home/home_controller.dart';
+import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/export_service.dart';
@@ -223,8 +225,10 @@ class BookController extends GetxController {
     // 添加到导出队列并立即跳转到导出页面查看进度
     final record = await exportService.exportBook(data);
     if (record != null) {
-      // 立即跳转到导出页面，用户可以看到导出进度
-      Get.toNamed(AppRoute.export);
+      final homeController = Get.find<HomeController>();
+      homeController.selectedIndex.value = 1;
+      final taskController = Get.find<TaskController>();
+      taskController.tabController.animateTo(2);
     }
   }
 

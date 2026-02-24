@@ -1,8 +1,5 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/constant/mark_constant.dart';
-import 'package:tele_book/app/widget/td/td_form_item_title.dart';
 
 class MarkEditFormWidget extends StatelessWidget {
   final Function onConfirm;
@@ -44,32 +41,32 @@ class MarkEditFormWidget extends StatelessWidget {
               ),
             ),
             Text("标签颜色"),
-            TDRadioGroup(
-              cardMode: true,
-              direction: Axis.horizontal,
-              rowCount: 5,
-              selectId: selectedColor.toARGB32().toString(),
-              onRadioGroupChange: (id) {
-                final color = MarkConstant.colorList.firstWhere(
-                  (color) => color.toARGB32().toString() == id,
-                );
-                onColorSelected(color);
-              },
-              directionalTdRadios: [
-                ...MarkConstant.colorList.map(
-                  (color) => TDRadio(
-                    id: color.toARGB32().toString(),
-                    cardMode: true,
-                    backgroundColor: color,
-                    customContentBuilder: (context, selected, text) {
-                      return selected
-                          ? Icon(Icons.check, color: Colors.white)
-                          : SizedBox.shrink();
-                    },
-                  ),
-                ),
-              ],
-            ),
+            // TDRadioGroup(
+            //   cardMode: true,
+            //   direction: Axis.horizontal,
+            //   rowCount: 5,
+            //   selectId: selectedColor.toARGB32().toString(),
+            //   onRadioGroupChange: (id) {
+            //     final color = MarkConstant.colorList.firstWhere(
+            //       (color) => color.toARGB32().toString() == id,
+            //     );
+            //     onColorSelected(color);
+            //   },
+            //   directionalTdRadios: [
+            //     ...MarkConstant.colorList.map(
+            //       (color) => TDRadio(
+            //         id: color.toARGB32().toString(),
+            //         cardMode: true,
+            //         backgroundColor: color,
+            //         customContentBuilder: (context, selected, text) {
+            //           return selected
+            //               ? Icon(Icons.check, color: Colors.white)
+            //               : SizedBox.shrink();
+            //         },
+            //       ),
+            //     ),
+            //   ],
+            // ),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(

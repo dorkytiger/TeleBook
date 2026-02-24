@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'export_controller.dart';
 import 'package:tele_book/app/service/export_service.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+
+import 'export_controller.dart';
 
 class ExportScreen extends GetView<ExportController> {
   const ExportScreen({super.key});
@@ -13,16 +16,15 @@ class ExportScreen extends GetView<ExportController> {
       body: Obx(() {
         final records = controller.exportService.records;
         if (records.isEmpty) {
-          return Center(child: TDEmpty(emptyText: '暂无导出记录'));
+          return Center(child: CustomEmpty(message: "暂无导出记录"));
         }
         return ListView.builder(
           itemCount: records.length,
           itemBuilder: (context, index) {
             final r = records[index];
-            return TDCell(
-              title: r.name,
-              bordered: true,
-              descriptionWidget: Column(
+            return ListTile(
+              title: Text(r.name),
+              subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('状态: ${r.status.value.toString().split('.').last}'),
@@ -31,8 +33,8 @@ class ExportScreen extends GetView<ExportController> {
                     Text('错误: ${r.error}', style: TextStyle(color: Colors.red)),
                 ],
               ),
-              rightIconWidget: Obx(() => _buildTrailing(r)),
-              onClick: (cell) => controller.openExport(r),
+              trailing: Obx(() => _buildTrailing(r)),
+              onTap: () => controller.openExport(r),
             );
           },
         );
@@ -48,8 +50,7 @@ class ExportScreen extends GetView<ExportController> {
         return SizedBox(
           width: 48,
           child: Center(
-            child: TDProgress(
-              type: TDProgressType.circular,
+            child: CircularProgressIndicator(
               value: r.total > 0 ? r.progress.value / r.total : null,
             ),
           ),
@@ -58,31 +59,24 @@ class ExportScreen extends GetView<ExportController> {
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TDButton(
-              icon: Icons.open_in_new,
-              type: TDButtonType.text,
-              theme: TDButtonTheme.primary,
-              onTap: () {
+            IconButton(
+              icon: Icon(Icons.open_in_new),
+              onPressed: () {
                 controller.openExport(r);
               },
             ),
-            TDButton(
-              icon: Icons.share,
-              type: TDButtonType.text,
-              theme: TDButtonTheme.primary,
-              onTap: () {
+            IconButton(
+              icon: Icon(Icons.share),
+              onPressed: () {
                 controller.shareExport(r);
               },
             ),
           ],
         );
       case ExportStatus.failed:
-        return TDButton(
-          text: "重试",
-          icon: Icons.refresh,
-          type: TDButtonType.text,
-          theme: TDButtonTheme.danger,
-          onTap: () {
+        return IconButton(
+          icon: Icon(Icons.refresh),
+          onPressed: () {
             controller.exportService.exportBookById(r.bookId!);
           },
         );

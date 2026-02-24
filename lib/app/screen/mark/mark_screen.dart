@@ -1,11 +1,8 @@
-import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/constant/mark_constant.dart';
-import 'package:tele_book/app/screen/mark/widget/mark_edit_form_widget.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
-import 'package:tele_book/app/widget/custom_loading.dart';
+
 import 'mark_controller.dart';
 
 class MarkScreen extends GetView<MarkController> {
@@ -70,8 +67,8 @@ class MarkScreen extends GetView<MarkController> {
       isScrollControlled: true,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.5,
-          minChildSize: 0.5,
+          initialChildSize: 0.6,
+          minChildSize: 0.6,
           maxChildSize: 0.9,
           expand: false,
           builder: (context, scrollController) {

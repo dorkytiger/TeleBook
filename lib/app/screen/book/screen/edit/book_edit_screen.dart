@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class BookEditScreen extends GetView<BookEditController> {
@@ -61,15 +60,12 @@ class ReorderableGridView extends StatelessWidget {
 
         return KeyedSubtree(
           key: ValueKey(imagePath),
-          child: TDCell(
-            title: "第 ${index + 1} 页",
-            leftIconWidget: CustomImageLoader(localUrl: fullPath),
-            rightIconWidget: TDButton(
-              icon: Icons.delete_outline,
-              theme: TDButtonTheme.danger,
-              type: TDButtonType.text,
-              size: TDButtonSize.small,
-              onTap: () => _showDeleteConfirm(context, index),
+          child: ListTile(
+            title: Text("第 ${index + 1} 页"),
+            leading: CustomImageLoader(localUrl: fullPath),
+            trailing: IconButton(
+              icon: Icon(Icons.delete_outline),
+              onPressed: () => _showDeleteConfirm(context, index),
             ),
           ),
         );
@@ -79,23 +75,12 @@ class ReorderableGridView extends StatelessWidget {
 
   void _showDeleteConfirm(BuildContext context, int index) {
     Get.dialog(
-      TDAlertDialog(
-        title: '确认删除',
-        content: '确定要删除这张图片吗？',
-        rightBtn: TDDialogButtonOptions(
-          title: '删除',
-          theme: TDButtonTheme.danger,
-          action: () async {
-            Get.back();
-            await controller.deleteImage(index);
-          },
-        ),
-        leftBtn: TDDialogButtonOptions(
-          title: '取消',
-          action: () {
-            Get.back();
-          },
-        ),
+      AlertDialog(
+        title:Text( '确认删除'),
+        content: Text('确定要删除这张图片吗？'),
+        actions:[
+          // TextButton(onPressed: onPressed, child: child)
+        ]
       ),
     );
   }

@@ -194,30 +194,30 @@ class BookPageController extends GetxController {
               const SizedBox(height: 16),
               const Text('选择阅读方向：'),
               const SizedBox(height: 16),
-              TDRadioGroup(
-                direction: Axis.vertical,
-                selectId: readingDirection.value.value.toString(),
-                onRadioGroupChange: (id) {
-                  final selectedDirection = ReadingDirection.values.firstWhere(
-                    (direction) => direction.value.toString() == id,
-                  );
-                  saveReadingDirection(selectedDirection);
-                },
-                directionalTdRadios: [
-                  ...ReadingDirection.values.map((direction) {
-                    return TDRadio(
-                      id: direction.value.toString(),
-                      title: direction.label,
-                    );
-                  }),
-                ],
-              ),
+              // TDRadioGroup(
+              //   direction: Axis.vertical,
+              //   selectId: readingDirection.value.value.toString(),
+              //   onRadioGroupChange: (id) {
+              //     final selectedDirection = ReadingDirection.values.firstWhere(
+              //       (direction) => direction.value.toString() == id,
+              //     );
+              //     saveReadingDirection(selectedDirection);
+              //   },
+              //   directionalTdRadios: [
+              //     ...ReadingDirection.values.map((direction) {
+              //       return TDRadio(
+              //         id: direction.value.toString(),
+              //         title: direction.label,
+              //       );
+              //     }),
+              //   ],
+              // ),
             ],
           ),
-          rightBtn: TDDialogButtonOptions(
-            title: '确定',
-            action: () => Get.back(),
-          ),
+          // rightBtn: TDDialogButtonOptions(
+          //   title: '确定',
+          //   action: () => Get.back(),
+          // ),
         );
       },
     );

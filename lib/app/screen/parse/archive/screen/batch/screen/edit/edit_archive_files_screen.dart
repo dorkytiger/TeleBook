@@ -2,10 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_controller.dart';
-import 'package:tele_book/app/widget/custom_image_loader.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
 
 class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
   const EditArchiveFilesScreen({super.key});
@@ -13,12 +12,12 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: controller.archiveFolder.title,
-        rightBarItems: [
-          TDNavBarItem(
-            icon: Icons.check,
-            action: () {
+      appBar: AppBar(
+        title: Text(controller.archiveFolder.title),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.check),
+            onPressed: () {
               controller.saveChanges();
             },
           ),
@@ -26,7 +25,7 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
       ),
       body: Obx(() {
         if (controller.files.isEmpty) {
-          return const Center(child: TDText('没有文件'));
+          return const Center(child: CustomEmpty(message: "没有找到文件"));
         }
 
         return Column(
@@ -36,15 +35,15 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  TDText(
+                  Text(
                     '共 ${controller.files.length} 个文件',
-                    font: TDTheme.of(context).fontBodyLarge,
-                    fontWeight: FontWeight.bold,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                  TDText(
+                  Text(
                     '长按拖动排序',
-                    font: TDTheme.of(context).fontBodyMedium,
-                    textColor: TDTheme.of(context).fontGyColor3,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ],
               ),
@@ -74,22 +73,19 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
   Widget _buildFileItem(BuildContext context, ArchiveFile file, int index) {
     return KeyedSubtree(
       key: ValueKey(file.path),
-      child: TDCell(
-        title: file.path.split(Platform.pathSeparator).last,
-        description: file.path.split(Platform.pathSeparator).last,
-        leftIconWidget: CustomImageLoader(localUrl: file.path),
-        onClick: (cell) {
-          TDActionSheet(
-            context,
-            visible: true,
-            items: [TDActionSheetItem(label: '删除文件')],
-            onSelected: (actionItem, actionIndex) {
-              if (actionIndex == 0) {
-                controller.removeFile(index);
-              }
-            },
-          );
-        },
+      child: ListTile(
+        title: Text(file.path.split(Platform.pathSeparator).last),
+        subtitle: Text(file.path.split(Platform.pathSeparator).last),
+        leading: AspectRatio(
+          aspectRatio: 9 / 16,
+          child: Image.file(File(file.path)),
+        ),
+        trailing: IconButton(
+          onPressed: () {
+            controller.removeFile(index);
+          },
+          icon: Icon(Icons.delete),
+        ),
       ),
     );
   }

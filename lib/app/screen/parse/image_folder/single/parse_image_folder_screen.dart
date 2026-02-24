@@ -20,42 +20,46 @@ class ParseImageFolderScreen extends GetView<ParseImageFolderController> {
       ),
       body: controller.scanImageState.displaySuccess(
         successBuilder: (data) {
-          return Column(
-            children: [
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline),
-                    SizedBox(width: 8),
-                    Expanded(child: Text("找到 ${data.length} 张图片")),
-                  ],
+          return Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "找到 ${data.length} 张图片",
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: data.length,
-                  itemBuilder: (context, index) {
-                    final imageFile = data[index];
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Image.file(imageFile, fit: BoxFit.contain),
-                    );
-                  },
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: data.length,
+                    itemBuilder: (context, index) {
+                      final imageFile = data[index];
+                      return ListTile(
+                        title: Text(imageFile.path.split('/').last),
+                        subtitle: Text(
+                          '大小: ${(imageFile.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                        ),
+                        leading: AspectRatio(
+                          aspectRatio: 9 / 16,
+                          child: Image.file(imageFile, fit: BoxFit.contain),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.all(16),
-                child: FilledButton.icon(
-                  onPressed: () {
-                    controller.saveImagesToLocal();
-                  },
-                  icon: Icon(Icons.save),
-                  label: Text("保存图片"),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      controller.saveImagesToLocal();
+                    },
+                    icon: Icon(Icons.save),
+                    label: Text("导入"),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

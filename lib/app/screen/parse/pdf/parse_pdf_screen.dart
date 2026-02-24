@@ -13,9 +13,7 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
       appBar: AppBar(title: Text("PDF解析"), leading: BackButton()),
       body: controller.renderPageState.displaySuccess(
         loadingBuilder: () {
-          return Center(
-            child: CustomLoading()
-          );
+          return Center(child: CustomLoading());
         },
         successBuilder: (data) {
           return Column(
@@ -26,9 +24,12 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
                   itemBuilder: (context, index) {
                     final item = data[index];
                     return item != null
-                        ? SizedBox(
-                            width: double.infinity,
-                            child: Image.memory(item, fit: BoxFit.contain),
+                        ? ListTile(
+                            title: Text("第${index + 1}页"),
+                            subtitle: Text(
+                              "大小: ${(item.elementSizeInBytes).toStringAsFixed(2)} KB",
+                            ),
+                            leading: Image.memory(item, fit: BoxFit.cover),
                           )
                         : const SizedBox.shrink();
                   },

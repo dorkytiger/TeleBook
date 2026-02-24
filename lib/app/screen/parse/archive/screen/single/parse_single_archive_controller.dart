@@ -10,7 +10,9 @@ import 'package:get/get.dart' hide Value;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/service/import_service.dart';
+
 class ParseSingleArchiveController extends GetxController {
   final file = Get.arguments as String;
   final extractArchiveState = Rx<DKStateQuery<void>>(DkStateQueryIdle());
@@ -22,7 +24,11 @@ class ParseSingleArchiveController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    importArchiveState.listenEvent();
+    importArchiveState.listenEventToast(
+      onSuccess: (_){
+        Get.back();
+      }
+    );
     unawaited(extractArchive());
   }
 
@@ -32,10 +38,7 @@ class ParseSingleArchiveController extends GetxController {
         final bytes = await File(file).readAsBytes();
         final tmpDir = p.join(
           (await getTemporaryDirectory()).path,
-          DateTime
-              .now()
-              .microsecondsSinceEpoch
-              .toString(),
+          DateTime.now().microsecondsSinceEpoch.toString(),
         );
 
         // 在后台线程中解压 zip 文件，避免阻塞 UI
@@ -71,20 +74,22 @@ class ParseSingleArchiveController extends GetxController {
   }
 
   Future<void> importArchive() async {
-    await importArchiveState.triggerEvent(event: () async {
-      if (archives.isEmpty) return;
-      final name = p.basenameWithoutExtension(file);
-      final type = ImportType.zip;
+    await importArchiveState.triggerEvent(
+      event: () async {
+        if (archives.isEmpty) return;
+        final name = p.basenameWithoutExtension(file);
+        final type = ImportType.zip;
 
-      final importGroup = await importService.buildImportGroup(
-        name: name,
-        type: type,
-        files: archives,
-      );
+        final importGroup = await importService.buildImportGroup(
+          name: name,
+          type: type,
+          files: archives,
+        );
 
-      importService.addImportGroup(importGroup);
-      importService.startImport(importGroup.id);
-    });
+        importService.addImportGroup(importGroup);
+        importService.startImport(importGroup.id);
+      },
+    );
   }
 }
 

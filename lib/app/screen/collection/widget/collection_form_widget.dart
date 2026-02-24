@@ -45,6 +45,15 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.initialData == null ? "新建收藏夹" : "编辑收藏夹"),
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: Icon(Icons.close),
+        ),
+      ),
       body: SingleChildScrollView(
         controller: widget.scrollController,
         child: Padding(
@@ -54,7 +63,6 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             spacing: 16,
             children: [
-              Text("收藏夹名称"),
               TextField(
                 controller: nameController,
                 decoration: InputDecoration(

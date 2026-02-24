@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
+import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Value;
@@ -13,12 +14,10 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/service/toast_service.dart';
-import 'package:tele_book/app/util/request_state.dart';
 
 class ParseBatchArchiveController extends GetxController {
   final folderPath = Get.arguments as String;
-  final extractArchivesState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final extractArchivesState = Rx<DKStateQuery<void>>(DkStateQueryIdle());
   final saveAllBooksState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final extractArchiveProgress = 0.obs;
   final extractArchiveTotal = 0.obs;
@@ -30,7 +29,6 @@ class ParseBatchArchiveController extends GetxController {
   void onInit() async {
     super.onInit();
     appDirectory = (await getApplicationDocumentsDirectory()).path;
-    extractArchivesState.listenEvent();
     saveAllBooksState.listenEvent(
       onSuccess: (data) {
         final bookController = Get.find<BookController>();
@@ -43,8 +41,8 @@ class ParseBatchArchiveController extends GetxController {
 
   /// 扫描文件夹中的所有压缩文件并解压
   Future<void> _scanAndExtractArchives() async {
-    extractArchivesState.triggerEvent(
-      event: () async {
+    extractArchivesState.triggerQuery(
+      query: () async {
         final folder = Directory(folderPath);
         if (!await folder.exists()) {
           throw Exception('文件夹不存在');

@@ -1,4 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -83,13 +83,12 @@ class ParseWebScreen extends GetView<ParseWebController> {
                           itemBuilder: (context, index) {
                             final image = controller.images[index];
                             return ListTile(
-                              leading: CachedNetworkImage(
-                                imageUrl: image,
+                              leading: Image.network(
+                                 image,
                                 width: 50,
                                 height: 50,
                                 fit: BoxFit.cover,
-                                errorWidget: (context, url, error) =>
-                                    Icon(Icons.error),
+
                               ),
                               title: Text(image),
                               trailing: PopupMenuButton(

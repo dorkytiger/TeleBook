@@ -4,7 +4,6 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_controller.dart';
-import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class DownloadTaskScreen extends GetView<DownloadTaskController> {
   const DownloadTaskScreen({super.key});

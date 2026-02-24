@@ -94,9 +94,11 @@ class BookScreen extends GetView<BookController> {
                       _showBottomSheet(context);
                     }
                   },
-                  child: IntrinsicHeight(
+                  // Bound the row to a fixed height to avoid unbounded Column height inside Expanded
+                  child: SizedBox(
+                    height: 160,
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Obx(
                           () => controller.multiEditMode.value
@@ -118,116 +120,121 @@ class BookScreen extends GetView<BookController> {
                                 )
                               : SizedBox.shrink(),
                         ),
-
-                        SizedBox(
-                          width: 100,
-                          height: 100,
+                        AspectRatio(
+                          aspectRatio: 9 / 16,
                           child: Image.file(
                             File(
                               controller.pathService.getBookFilePath(
                                 bookData.book.localPaths.first,
                               ),
                             ),
-                            fit: BoxFit.cover,
                           ),
                         ),
                         Expanded(
                           child: Column(
+                            mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
-                                    child: ListTile(
-                                      title: Text(
-                                        bookData.book.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      subtitle: Text(
-                                        '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(color: Colors.grey),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        title: Text(
+                                          bookData.book.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        subtitle: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          spacing: 4,
+                                          children: [
+                                            Text(
+                                              '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall
+                                                  ?.copyWith(
+                                                    color: Colors.grey,
+                                                  ),
+                                            ),
+                                            if (bookData.marks.isNotEmpty)
+                                              Wrap(
+                                                spacing: 8,
+                                                runSpacing: 4,
+                                                children: [
+                                                  ...bookData.marks.map(
+                                                    (e) => Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            horizontal: 6,
+                                                            vertical: 2,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        border: Border.all(
+                                                          color: Color(e.color),
+                                                        ),
+                                                        color: Color(
+                                                          e.color,
+                                                        ).withOpacity(0.1),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        e.name,
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .labelSmall
+                                                            ?.copyWith(
+                                                              color: Color(
+                                                                e.color,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (bookData.collection != null)
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                  horizontal: 6,
+                                                  vertical: 2,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  bookData.collection!.name,
+                                                  style: Theme.of(
+                                                    context,
+                                                  ).textTheme.labelSmall,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
                                   _buildEditPopupButton(context, bookData.book),
                                 ],
                               ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  spacing: 8,
-                                  children: [
-                                    if (bookData.marks.isNotEmpty)
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 4,
-                                        children: [
-                                          ...bookData.marks.map(
-                                            (e) => Container(
-                                              padding: EdgeInsets.symmetric(
-                                                horizontal: 6,
-                                                vertical: 2,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: Color(e.color),
-                                                ),
-                                                color: Color(
-                                                  e.color,
-                                                ).withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                e.name,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(
-                                                      color: Color(e.color),
-                                                    ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    if (bookData.collection != null)
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(
-                                            color: Theme.of(
-                                              context,
-                                            ).colorScheme.onSurfaceVariant,
-                                          ),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          bookData.collection!.name,
-                                          style: Theme.of(
-                                            context,
-                                          ).textTheme.labelSmall,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
                               Spacer(),
                               Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
+                                padding: EdgeInsets.all(16),
                                 child: LinearProgressIndicator(
                                   value: bookData.book.localPaths.isEmpty
                                       ? 0
@@ -458,181 +465,189 @@ class BookScreen extends GetView<BookController> {
   }
 
   Widget _buildActionPopupButton(BuildContext context) {
-    return PopupMenuButton(
-      icon: Icon(Icons.filter_list),
-      onSelected: (value) {
-        if (value == "grid") {
-          controller.bookLayout.value = BookLayoutSetting.grid;
-        }
-        if (value == "list") {
-          controller.bookLayout.value = BookLayoutSetting.list;
-        }
-        if (value == "titleAsc") {
-          controller.sortBy.value = BookSort(
-            type: BookSortType.title,
-            order: BookSortOrder.asc,
-          );
-        }
-        if (value == "titleDesc") {
-          controller.sortBy.value = BookSort(
-            type: BookSortType.title,
-            order: BookSortOrder.desc,
-          );
-        }
-        if (value == "addTimeAsc") {
-          controller.sortBy.value = BookSort(
-            type: BookSortType.addTime,
-            order: BookSortOrder.asc,
-          );
-        }
-        if (value == "addTimeDesc") {
-          controller.sortBy.value = BookSort(
-            type: BookSortType.addTime,
-            order: BookSortOrder.desc,
-          );
-        }
-      },
-      itemBuilder: (BuildContext context) {
-        return [
-          PopupMenuItem(
-            value: "grid",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.grid_view),
-                Text("网格布局"),
-                if (controller.bookLayout.value == BookLayoutSetting.grid)
-                  Icon(Icons.check, size: 16),
-              ],
+    return SizedBox(
+      height: 40,
+      width: 40,
+      child: PopupMenuButton(
+        icon: Icon(Icons.filter_list),
+        onSelected: (value) {
+          if (value == "grid") {
+            controller.bookLayout.value = BookLayoutSetting.grid;
+          }
+          if (value == "list") {
+            controller.bookLayout.value = BookLayoutSetting.list;
+          }
+          if (value == "titleAsc") {
+            controller.sortBy.value = BookSort(
+              type: BookSortType.title,
+              order: BookSortOrder.asc,
+            );
+          }
+          if (value == "titleDesc") {
+            controller.sortBy.value = BookSort(
+              type: BookSortType.title,
+              order: BookSortOrder.desc,
+            );
+          }
+          if (value == "addTimeAsc") {
+            controller.sortBy.value = BookSort(
+              type: BookSortType.addTime,
+              order: BookSortOrder.asc,
+            );
+          }
+          if (value == "addTimeDesc") {
+            controller.sortBy.value = BookSort(
+              type: BookSortType.addTime,
+              order: BookSortOrder.desc,
+            );
+          }
+        },
+        itemBuilder: (BuildContext context) {
+          return [
+            PopupMenuItem(
+              value: "grid",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.grid_view),
+                  Text("网格布局"),
+                  if (controller.bookLayout.value == BookLayoutSetting.grid)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "list",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.list),
+            PopupMenuItem(
+              value: "list",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.list),
 
-                Text("列表布局"),
+                  Text("列表布局"),
 
-                if (controller.bookLayout.value == BookLayoutSetting.list)
-                  Icon(Icons.check, size: 16),
-              ],
+                  if (controller.bookLayout.value == BookLayoutSetting.list)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "titleAsc",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.sort_by_alpha),
-                Text("标题升序"),
-                if (controller.sortBy.value.type == BookSortType.title &&
-                    controller.sortBy.value.order == BookSortOrder.asc)
-                  Icon(Icons.check, size: 16),
-              ],
+            PopupMenuItem(
+              value: "titleAsc",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.sort_by_alpha),
+                  Text("标题升序"),
+                  if (controller.sortBy.value.type == BookSortType.title &&
+                      controller.sortBy.value.order == BookSortOrder.asc)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "titleDesc",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.sort_by_alpha_outlined),
-                Text("标题降序"),
-                if (controller.sortBy.value.type == BookSortType.title &&
-                    controller.sortBy.value.order == BookSortOrder.desc)
-                  Icon(Icons.check, size: 16),
-              ],
+            PopupMenuItem(
+              value: "titleDesc",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.sort_by_alpha_outlined),
+                  Text("标题降序"),
+                  if (controller.sortBy.value.type == BookSortType.title &&
+                      controller.sortBy.value.order == BookSortOrder.desc)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "addTimeAsc",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.access_time),
-                Text("添加时间升序"),
-                if (controller.sortBy.value.type == BookSortType.addTime &&
-                    controller.sortBy.value.order == BookSortOrder.asc)
-                  Icon(Icons.check, size: 16),
-              ],
+            PopupMenuItem(
+              value: "addTimeAsc",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.access_time),
+                  Text("添加时间升序"),
+                  if (controller.sortBy.value.type == BookSortType.addTime &&
+                      controller.sortBy.value.order == BookSortOrder.asc)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "addTimeDesc",
-            child: Row(
-              spacing: 8,
-              children: [
-                Icon(Icons.access_time_outlined),
-                Text("添加时间降序"),
-                if (controller.sortBy.value.type == BookSortType.addTime &&
-                    controller.sortBy.value.order == BookSortOrder.desc)
-                  Icon(Icons.check, size: 16),
-              ],
+            PopupMenuItem(
+              value: "addTimeDesc",
+              child: Row(
+                spacing: 8,
+                children: [
+                  Icon(Icons.access_time_outlined),
+                  Text("添加时间降序"),
+                  if (controller.sortBy.value.type == BookSortType.addTime &&
+                      controller.sortBy.value.order == BookSortOrder.desc)
+                    Icon(Icons.check, size: 16),
+                ],
+              ),
             ),
-          ),
-        ];
-      },
+          ];
+        },
+      ),
     );
   }
 
   Widget _buildEditPopupButton(BuildContext context, BookTableData book) {
-    return PopupMenuButton(
-      onSelected: (value) {
-        if (value == "edit") {
-          Get.toNamed(AppRoute.bookEdit, arguments: book.id);
-        }
-        if (value == "collection") {
-          _addBookToCollection(context, book);
-        }
-        if (value == "export") {
-          controller.exportBook(book);
-        }
-        if (value == "mark") {
-          _addBookToMarks(context, book);
-        }
-        if (value == "delete") {}
-      },
-
-      itemBuilder: (BuildContext context) {
-        return [
-          PopupMenuItem(
-            value: "edit",
-            child: Row(
-              children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
+    return SizedBox(
+      height: 40,
+      width: 40,
+      child: PopupMenuButton(
+        icon: Icon(Icons.more_vert),
+        onSelected: (value) {
+          if (value == "edit") {
+            Get.toNamed(AppRoute.bookEdit, arguments: book.id);
+          }
+          if (value == "collection") {
+            _addBookToCollection(context, book);
+          }
+          if (value == "export") {
+            controller.exportBook(book);
+          }
+          if (value == "mark") {
+            _addBookToMarks(context, book);
+          }
+          if (value == "delete") {}
+        },
+        itemBuilder: (BuildContext context) {
+          return [
+            PopupMenuItem(
+              value: "edit",
+              child: Row(
+                children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "collection",
-            child: Row(
-              children: [Icon(Icons.star), SizedBox(width: 8), Text("加入收藏夹")],
+            PopupMenuItem(
+              value: "collection",
+              child: Row(
+                children: [Icon(Icons.star), SizedBox(width: 8), Text("加入收藏夹")],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "export",
-            child: Row(
-              children: [Icon(Icons.upload), SizedBox(width: 8), Text("导出")],
+            PopupMenuItem(
+              value: "export",
+              child: Row(
+                children: [Icon(Icons.upload), SizedBox(width: 8), Text("导出")],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "mark",
-            child: Row(
-              children: [
-                Icon(Icons.bookmark),
-                SizedBox(width: 8),
-                Text("添加书签"),
-              ],
+            PopupMenuItem(
+              value: "mark",
+              child: Row(
+                children: [
+                  Icon(Icons.bookmark),
+                  SizedBox(width: 8),
+                  Text("添加书签"),
+                ],
+              ),
             ),
-          ),
-          PopupMenuItem(
-            value: "delete",
-            child: Row(
-              children: [Icon(Icons.delete), SizedBox(width: 8), Text("删除")],
+            PopupMenuItem(
+              value: "delete",
+              child: Row(
+                children: [Icon(Icons.delete), SizedBox(width: 8), Text("删除")],
+              ),
             ),
-          ),
-        ];
-      },
+          ];
+        },
+      ),
     );
   }
 

@@ -4,7 +4,6 @@ import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tele_book/app/service/toast_service.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_loading.dart';
 
@@ -29,21 +28,19 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
             : const CustomLoading();
       },
       errorBuilder: (message) {
-        ToastService.showError(message);
         return errorBuilder != null
             ? errorBuilder(message)
             : Center(
-                child: FilledButton.icon(
-                  label: Text('加载失败，点击重试'),
-                  icon: Icon(Icons.refresh),
-                  onPressed: () {
-                    ToastService.dismiss();
-                    if (onRetry != null) {
-                      onRetry();
-                    }
-                  },
-                ),
-              );
+          child: FilledButton.icon(
+            label: Text('加载失败，点击重试'),
+            icon: Icon(Icons.refresh),
+            onPressed: () {
+              if (onRetry != null) {
+                onRetry();
+              }
+            },
+          ),
+        );
       },
       emptyBuilder: () {
         return emptyBuilder != null

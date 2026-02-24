@@ -12,7 +12,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/service/toast_service.dart';
 
 class BookEditController extends GetxController {
   final int bookId = Get.arguments as int;
@@ -22,6 +21,7 @@ class BookEditController extends GetxController {
   final bookName = TextEditingController();
   final imageList = <String>[].obs;
   final getBookState = Rx<DKStateQuery<BookTableData>>(DkStateQueryIdle());
+  final addImageState = Rx<DKStateEvent<void>>(DKStateEventIdle());
   final saveState = Rx<DKStateEvent<void>>(DKStateEventIdle());
 
   @override
@@ -62,48 +62,46 @@ class BookEditController extends GetxController {
 
   /// 添加图片
   Future<void> addImages() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: true,
-      );
+    await addImageState.triggerEvent(
+      event: () async {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
 
-      if (result == null || result.files.isEmpty) return;
+        if (result == null || result.files.isEmpty) return;
 
-      // 创建保存目录
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final saveDir = p.join(appDirectory, 'book_$bookId\_$timestamp');
-      await Directory(saveDir).create(recursive: true);
+        // 创建保存目录
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final saveDir = p.join(appDirectory, 'book_$bookId\_$timestamp');
+        await Directory(saveDir).create(recursive: true);
 
-      final newPaths = <String>[];
+        final newPaths = <String>[];
 
-      for (final file in result.files) {
-        if (file.path == null) continue;
+        for (final file in result.files) {
+          if (file.path == null) continue;
 
-        // 生成文件名
-        final extension = p.extension(file.path!);
-        final fileName = '${DateTime.now().microsecondsSinceEpoch}$extension';
-        final savePath = p.join(saveDir, fileName);
+          // 生成文件名
+          final extension = p.extension(file.path!);
+          final fileName = '${DateTime.now().microsecondsSinceEpoch}$extension';
+          final savePath = p.join(saveDir, fileName);
 
-        // 复制文件
-        await File(file.path!).copy(savePath);
+          // 复制文件
+          await File(file.path!).copy(savePath);
 
-        // 保存相对路径
-        final relativePath = p.relative(savePath, from: appDirectory);
-        newPaths.add(relativePath);
-      }
+          // 保存相对路径
+          final relativePath = p.relative(savePath, from: appDirectory);
+          newPaths.add(relativePath);
+        }
 
-      imageList.addAll(newPaths);
-      ToastService.showSuccess('已添加 ${newPaths.length} 张图片');
-    } catch (e) {
-      ToastService.showError('添加失败: $e');
-    }
+        imageList.addAll(newPaths);
+      },
+    );
   }
 
   /// 重命名 书籍
   Future<void> renameBook() async {
     if (bookName.text.trim().isEmpty) {
-      ToastService.showError('书籍名称不能为空');
       return;
     }
 
@@ -117,26 +115,22 @@ class BookEditController extends GetxController {
       // 立即更新数据库中的书籍名称
       await (appDatabase.update(appDatabase.bookTable)
             ..where((tbl) => tbl.id.equals(bookId)))
-          .write(BookTableCompanion(
-        name: drift.Value(sanitizedName),
-      ));
+          .write(BookTableCompanion(name: drift.Value(sanitizedName)));
 
       // 更新书籍列表
       final bookController = Get.find<BookController>();
       await bookController.fetchBooks();
 
-      ToastService.showSuccess('书籍名称已更新');
+
       DKLog.i('书籍重命名成功: $sanitizedName');
     } catch (e) {
       DKLog.e('重命名书籍失败: $e');
-      ToastService.showError('重命名失败: $e');
     }
   }
 
   /// 删除图片
   Future<void> deleteImage(int index) async {
     if (imageList.length <= 1) {
-      ToastService.showError('至少需要保留一张图片');
       return;
     }
 
@@ -158,21 +152,19 @@ class BookEditController extends GetxController {
       // 立即更新数据库
       await _updateDatabasePaths();
 
-      ToastService.showSuccess('已删除');
     } catch (e) {
       DKLog.e('删除图片失败: $e');
-      ToastService.showError('删除失败: $e');
     }
   }
 
   /// 更新数据库中的图片路径
   Future<void> _updateDatabasePaths() async {
     try {
-      await (appDatabase.update(appDatabase.bookTable)
-            ..where((tbl) => tbl.id.equals(bookId)))
-          .write(BookTableCompanion(
-        localPaths: drift.Value(imageList.toList()),
-      ));
+      await (appDatabase.update(
+        appDatabase.bookTable,
+      )..where((tbl) => tbl.id.equals(bookId))).write(
+        BookTableCompanion(localPaths: drift.Value(imageList.toList())),
+      );
       DKLog.i('数据库图片路径已更新');
     } catch (e) {
       DKLog.e('更新数据库失败: $e');
@@ -205,12 +197,10 @@ class BookEditController extends GetxController {
   /// 保存修改
   Future<void> saveChanges() async {
     if (bookName.text.trim().isEmpty) {
-      ToastService.showError('书籍名称不能为空');
       return;
     }
 
     if (imageList.isEmpty) {
-      ToastService.showError('至少需要一张图片');
       return;
     }
 

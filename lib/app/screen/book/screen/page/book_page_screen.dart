@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_controller.dart';
 
@@ -191,9 +190,6 @@ class BookPageScreen extends GetView<BookPageController> {
                                 child: LinearProgressIndicator(
                                   value: (controller.currentPage.value + 1) / controller.totalPages.value,
                                   backgroundColor: Colors.white24,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    TDTheme.of(context).brandColor7,
-                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -236,7 +232,6 @@ class BookPageScreen extends GetView<BookPageController> {
                                     divisions: controller.totalPages.value > 1
                                         ? controller.totalPages.value - 1
                                         : 1,
-                                    activeColor: TDTheme.of(context).brandColor7,
                                     inactiveColor: Colors.white24,
                                     onChanged: (value) {
                                       controller.jumpToPage(value.toInt());

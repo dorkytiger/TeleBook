@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/book/book_screen.dart';
 import 'package:tele_book/app/screen/collection/collection_screen.dart';
-import 'package:tele_book/app/screen/import/import_screen.dart';
-import 'package:tele_book/app/screen/manage/manage_screen.dart';
 import 'package:tele_book/app/screen/mark/mark_screen.dart';
-import 'package:tele_book/app/screen/setting/setting_screen.dart';
 import 'package:tele_book/app/screen/task/task_screen.dart';
+
 import 'home_controller.dart';
 
 class HomeScreen extends GetView<HomeController> {
