@@ -66,7 +66,7 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
         child: Image.file(
           File(
             archiveFolder.files.firstOrNull?.path ??
-                '${controller.appDirectory}/${archiveFolder.files.first.path}',
+                '${controller.appDir}/${archiveFolder.files.first.path}',
           ),
         ),
       ),

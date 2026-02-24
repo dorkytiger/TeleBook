@@ -31,18 +31,18 @@ class ParseSingleArchiveScreen extends GetView<ParseSingleArchiveController> {
           return ListView.builder(
             itemBuilder: (context, index) {
               final archive = controller.archives[index];
-              return Card(
-                child: Row(
-                  children: [
-                    CustomImageLoader(localUrl: archive.path),
-                    Expanded(child: ListTile(
+              return Row(
+                children: [
+                  CustomImageLoader(localUrl: archive.path),
+                  Expanded(
+                    child: ListTile(
                       title: Text(archive.path.split('/').last),
                       subtitle: Text(
                         '大小: ${(archive.lengthSync() / 1024).toStringAsFixed(2)} KB',
                       ),
-                    ),)
-                  ],
-                ),
+                    ),
+                  ),
+                ],
               );
             },
             itemCount: controller.archives.length,

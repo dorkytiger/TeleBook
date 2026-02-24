@@ -67,17 +67,17 @@ extension RXDKStateEventExtension<T> on Rx<DKStateEvent<T>> {
     return listen((state) {
       DKStateEventHelper.handleState<T>(
         state,
-        onLoading: () {
-          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
-          if (showLoadingToast) {
-            ScaffoldMessenger.of(
-              Get.context!,
-            ).showSnackBar(const SnackBar(content: Text('加载中...')));
-          }
-          if (onLoading != null) {
-            onLoading();
-          }
-        },
+        // onLoading: () {
+        //   ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
+        //   if (showLoadingToast) {
+        //     ScaffoldMessenger.of(
+        //       Get.context!,
+        //     ).showSnackBar(const SnackBar(content: Text('加载中...')));
+        //   }
+        //   if (onLoading != null) {
+        //     onLoading();
+        //   }
+        // },
         onSuccess: (data) {
           ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showSuccessToast) {

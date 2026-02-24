@@ -13,9 +13,10 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
     return Scaffold(
       appBar: AppBar(title: Text('下载任务')),
       body: Obx(() {
-        final tasks = controller.downloadService.tasks.values.where(
-          (task) => task.groupId == controller.groupId,
-        );
+        final tasks = controller.downloadService.tasks.values
+            .where((task) => task.groupId == controller.groupId)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
         return ListView.builder(
           itemCount: tasks.length,
           cacheExtent: 500,

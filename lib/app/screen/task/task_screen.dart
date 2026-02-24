@@ -13,7 +13,7 @@ class TaskScreen extends GetView<TaskController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('导入/导出'),
+        title: Text('任务管理'),
         actions: [
           IconButton(
             onPressed: () {

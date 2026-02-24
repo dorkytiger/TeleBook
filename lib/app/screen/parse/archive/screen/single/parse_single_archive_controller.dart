@@ -11,6 +11,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
+import 'package:tele_book/app/screen/home/home_controller.dart';
+import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/service/import_service.dart';
 
 class ParseSingleArchiveController extends GetxController {
@@ -25,9 +27,13 @@ class ParseSingleArchiveController extends GetxController {
   void onInit() {
     super.onInit();
     importArchiveState.listenEventToast(
-      onSuccess: (_){
+      onSuccess: (_) {
         Get.back();
-      }
+        final homeController = Get.find<HomeController>();
+        homeController.selectedIndex.value = 1;
+        final taskController = Get.find<TaskController>();
+        taskController.tabController.animateTo(1);
+      },
     );
     unawaited(extractArchive());
   }

@@ -6,6 +6,7 @@ import 'package:get/get.dart' hide Value;
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/service/import_service.dart';
 
 /// 下载任务状态
 class DownloadTaskInfo {
@@ -13,6 +14,7 @@ class DownloadTaskInfo {
   final String groupId; // 批次 ID，用于管理一批下载任务
   final String url;
   final String filename;
+  final int order; // 下载顺序，用于批量下载时排序
   final Rx<TaskStatus> status;
   final RxDouble progress;
   final RxString savePath;
@@ -21,6 +23,7 @@ class DownloadTaskInfo {
     required this.taskId,
     required this.groupId,
     required this.url,
+    required this.order,
     required this.filename,
     TaskStatus? initialStatus,
     double? initialProgress,
@@ -58,8 +61,6 @@ class DownloadGroupInfo {
 
 class DownloadService extends GetxService {
   static DownloadService get instance => Get.find<DownloadService>();
-
-  final appDatabase = Get.find<AppDatabase>();
 
   // 所有下载任务
   final tasks = <String, DownloadTaskInfo>{}.obs;
@@ -120,45 +121,6 @@ class DownloadService extends GetxService {
       groupNotificationId: 'download_group', // 使用组通知ID，合并通知
     );
 
-    // 先从数据库恢复组信息
-    final groupRows = await appDatabase.downloadGroupTable.select().get();
-    for (final groupRow in groupRows) {
-      groups[groupRow.id] = DownloadGroupInfo(
-        groupId: groupRow.id,
-        name: groupRow.name,
-        total: groupRow.totalCount,
-        completed: groupRow.completedCount,
-        failed: groupRow.failedCount,
-      );
-      // 恢复组进度
-      groups[groupRow.id]!.groupProgress.value = groupRow.groupProgress;
-    }
-
-    // 然后恢复任务信息
-    final taskRows = await appDatabase.downloadTaskTable.select().get();
-    for (final taskRow in taskRows) {
-      tasks[taskRow.id] = DownloadTaskInfo(
-        taskId: taskRow.id,
-        groupId: taskRow.groupId ?? 'default',
-        url: taskRow.url,
-        filename: taskRow.fileName,
-        initialProgress: taskRow.status == TaskStatus.complete.name ? 1.0 : 0.0,
-        initialStatus: TaskStatus.values.firstWhere(
-          (e) => e.name == taskRow.status,
-          orElse: () => TaskStatus.enqueued,
-        ),
-        initialSavePath: taskRow.filePath,
-      );
-    }
-
-    // ✅ 重要：恢复后重新计算所有组的统计信息
-    // 因为任务状态可能在应用重启前后发生变化
-    for (final groupId in groups.keys) {
-      _recalculateGroupStats(groupId);
-    }
-
-    debugPrint('✅ 已恢复 ${groups.length} 个下载组和 ${tasks.length} 个任务');
-
     // 监听下载进度和状态更新
     FileDownloader().updates.listen((update) {
       final taskInfo = tasks[update.task.taskId];
@@ -201,7 +163,6 @@ class DownloadService extends GetxService {
             debugPrint(
               'Task ${update.task.taskId} failed after $maxRetryCount retries',
             );
-            _onDownloadFailed(update.task.taskId);
             _updateGroupStats(taskInfo.groupId);
             _retryCount.remove(update.task.taskId);
           }
@@ -211,9 +172,6 @@ class DownloadService extends GetxService {
         }
       }
     });
-
-    // 恢复之前的下载任务（应用重启后）
-    await _resumePreviousTasks();
   }
 
   /// 开始下载任务
@@ -223,6 +181,7 @@ class DownloadService extends GetxService {
     String? subDirectory,
     String? groupId,
     bool updateGroupCount = true, // 是否更新组计数，批量下载时为 false
+    int? order, // 指定顺序，重试时传入原有 order 以保持顺序不变
   }) async {
     try {
       // 如果没有指定文件名，从 URL 提取
@@ -251,10 +210,13 @@ class DownloadService extends GetxService {
 
       // 创建任务信息，savePath 存储相对路径
       final relativePath = '$finalGroupId/$finalFilename';
+      // 如果外部传入了 order（如重试时），保持原有顺序；否则用当前任务数
+      final taskOrder = order ?? tasks.length;
       final taskInfo = DownloadTaskInfo(
         taskId: task.taskId,
         groupId: finalGroupId,
         url: url,
+        order: taskOrder,
         filename: finalFilename,
         initialSavePath: relativePath,
       );
@@ -276,49 +238,11 @@ class DownloadService extends GetxService {
               name: finalGroupId == 'default' ? '默认组' : finalGroupId,
               total: 1,
             );
-
-            // 创建新组时保存到数据库
-            appDatabase.downloadGroupTable.insertOnConflictUpdate(
-              DownloadGroupTableCompanion(
-                id: Value(finalGroupId),
-                name: Value(groups[finalGroupId]!.name),
-                totalCount: Value(1),
-                completedCount: Value(0),
-                failedCount: Value(0),
-                runningCount: Value(0),
-                groupProgress: Value(0.0),
-                createdAt: Value(DateTime.now()),
-                updatedAt: Value(DateTime.now()),
-              ),
-            );
           } else {
             // 增加总数
             groups[finalGroupId]!.totalCount.value++;
-
-            // 更新组计数
-            (appDatabase.downloadGroupTable.update()
-                  ..where((tbl) => tbl.id.equals(finalGroupId)))
-                .write(
-                  DownloadGroupTableCompanion(
-                    totalCount: Value(groups[finalGroupId]!.totalCount.value),
-                    updatedAt: Value(DateTime.now()),
-                  ),
-                );
           }
         }
-
-        appDatabase.downloadTaskTable.insertOnConflictUpdate(
-          DownloadTaskTableCompanion(
-            id: Value(task.taskId),
-            groupId: Value(finalGroupId),
-            url: Value(url),
-            fileName: Value(finalFilename),
-            filePath: Value(relativePath),
-            // 保存相对路径
-            status: Value(TaskStatus.enqueued.name),
-            createdAt: Value(DateTime.now()),
-          ),
-        );
         return task.taskId;
       } else {
         debugPrint('Failed to enqueue download task');
@@ -377,20 +301,6 @@ class DownloadService extends GetxService {
       groupNotificationId: finalGroupId, // 使用唯一的组ID
     );
 
-    await appDatabase.downloadGroupTable.insertOnConflictUpdate(
-      DownloadGroupTableCompanion(
-        id: Value(finalGroupId),
-        name: Value(groupInfo.name),
-        totalCount: Value(urls.length),
-        completedCount: Value(0),
-        failedCount: Value(0),
-        runningCount: Value(0),
-        groupProgress: Value(0.0),
-        createdAt: Value(DateTime.now()),
-        updatedAt: Value(DateTime.now()),
-      ),
-    );
-
     final taskIds = <String>[];
 
     for (final url in urls) {
@@ -443,16 +353,12 @@ class DownloadService extends GetxService {
 
     final result = await FileDownloader().cancelTaskWithId(taskId);
     tasks.remove(taskId);
-    appDatabase.downloadTaskTable.deleteWhere((tbl) => tbl.id.equals(taskId));
     return result;
   }
 
   /// 取消所有下载
   Future<void> cancelAll() async {
     await FileDownloader().cancelTasksWithIds(tasks.keys.toList());
-    for (final taskId in tasks.keys) {
-      appDatabase.downloadTaskTable.deleteWhere((tbl) => tbl.id.equals(taskId));
-    }
     tasks.clear();
   }
 
@@ -477,23 +383,23 @@ class DownloadService extends GetxService {
     // 确保该组的通知配置存在
     await _ensureGroupNotificationConfigured(taskInfo.groupId);
 
+    // 保留原有 order，以保持任务顺序不变
+    final originalOrder = taskInfo.order;
+
     // 先取消旧任务
     await FileDownloader().cancelTaskWithId(taskId);
 
     // 从任务列表中移除
     tasks.remove(taskId);
 
-    // 删除旧的数据库记录
-    await appDatabase.downloadTaskTable.deleteWhere(
-      (tbl) => tbl.id.equals(taskId),
-    );
-
-    // 创建新的下载任务
+    // 创建新的下载任务，传入原有 order
     return await download(
       url: taskInfo.url,
       filename: taskInfo.filename,
       groupId: taskInfo.groupId,
-      updateGroupCount: false, // 不增加组计数，因为是重试
+      updateGroupCount: false,
+      // 不增加组计数，因为是重试
+      order: originalOrder, // 保持原有顺序
     );
   }
 
@@ -509,7 +415,9 @@ class DownloadService extends GetxService {
 
   /// 获取指定组的所有任务
   List<DownloadTaskInfo> getTasksByGroup(String groupId) {
-    return tasks.values.where((task) => task.groupId == groupId).toList();
+    final list = tasks.values.where((task) => task.groupId == groupId).toList();
+    list.sort((a, b) => a.order.compareTo(b.order));
+    return list;
   }
 
   /// 获取所有下载组
@@ -635,14 +543,8 @@ class DownloadService extends GetxService {
   /// 删除指定组（包括已下载的文件）
   Future<void> deleteGroup(String groupId) async {
     final groupTasks = getTasksByGroup(groupId);
-    await appDatabase.downloadGroupTable.deleteWhere(
-      (tbl) => tbl.id.equals(groupId),
-    );
 
     for (final taskInfo in groupTasks) {
-      await appDatabase.downloadTaskTable.deleteWhere(
-        (tbl) => tbl.id.equals(taskInfo.taskId),
-      );
       // 如果下载完成，删除文件
       if (taskInfo.status.value == TaskStatus.complete) {
         final filePath = await getFilePath(taskInfo.taskId);
@@ -715,9 +617,6 @@ class DownloadService extends GetxService {
       }
       // 从任务列表和数据库中移除
       tasks.remove(taskInfo.taskId);
-      await appDatabase.downloadTaskTable.deleteWhere(
-        (tbl) => tbl.id.equals(taskInfo.taskId),
-      );
     }
   }
 
@@ -738,98 +637,6 @@ class DownloadService extends GetxService {
       debugPrint('✅ 下载完成: ${taskInfo.filename}');
     } else {
       debugPrint('⚠️ 下载完成但文件不存在: ${taskInfo.savePath.value}');
-    }
-
-    // 使用 update 方法更新状态
-    await (appDatabase.downloadTaskTable.update()
-          ..where((tbl) => tbl.id.equals(taskId)))
-        .write(
-          DownloadTaskTableCompanion(status: Value(TaskStatus.complete.name)),
-        );
-  }
-
-  /// 下载失败回调
-  void _onDownloadFailed(String taskId) {
-    // 使用 update 方法更新状态
-    (appDatabase.downloadTaskTable.update()
-          ..where((tbl) => tbl.id.equals(taskId)))
-        .write(
-          DownloadTaskTableCompanion(status: Value(TaskStatus.failed.name)),
-        );
-    debugPrint('Download failed: $taskId');
-  }
-
-  /// 恢复之前的下载任务
-  Future<void> _resumePreviousTasks() async {
-    try {
-      // 从数据库加载所有未完成的任务
-      final dbTasks = await appDatabase.downloadTaskTable.select().get();
-
-      // 用于跟踪哪些组需要配置通知
-      final Set<String> groupsToConfig = {};
-
-      for (final dbTask in dbTasks) {
-        // 只恢复未完成的任务
-        if (dbTask.status == TaskStatus.complete.name) {
-          continue;
-        }
-
-        final groupId = dbTask.groupId ?? 'default';
-        groupsToConfig.add(groupId);
-
-        // 检查任务是否还在下载器中
-        final existingTask = await FileDownloader().taskForId(dbTask.id);
-
-        if (existingTask != null && existingTask is DownloadTask) {
-          // 任务存在，恢复任务信息
-          final taskInfo = DownloadTaskInfo(
-            taskId: dbTask.id,
-            groupId: groupId,
-            url: dbTask.url,
-            filename: dbTask.fileName,
-            initialSavePath: dbTask.filePath,
-            initialStatus: TaskStatus.values.firstWhere(
-              (e) => e.name == dbTask.status,
-              orElse: () => TaskStatus.enqueued,
-            ),
-          );
-          tasks[dbTask.id] = taskInfo;
-
-          // 如果任务是暂停状态，尝试恢复
-          if (dbTask.status == TaskStatus.paused.name) {
-            await FileDownloader().resume(existingTask);
-            debugPrint('Resumed paused task: ${dbTask.id}');
-          }
-        } else {
-          // 任务不存在，可能需要重新创建
-          // 对于失败或取消的任务，不自动重试
-          if (dbTask.status == TaskStatus.failed.name ||
-              dbTask.status == TaskStatus.canceled.name) {
-            // 保留任务信息但不重新下载
-            final taskInfo = DownloadTaskInfo(
-              taskId: dbTask.id,
-              groupId: groupId,
-              url: dbTask.url,
-              filename: dbTask.fileName,
-              initialSavePath: dbTask.filePath,
-              initialStatus: TaskStatus.values.firstWhere(
-                (e) => e.name == dbTask.status,
-                orElse: () => TaskStatus.failed,
-              ),
-            );
-            tasks[dbTask.id] = taskInfo;
-          }
-        }
-      }
-
-      // 为所有涉及的组配置通知
-      for (final groupId in groupsToConfig) {
-        await _ensureGroupNotificationConfigured(groupId);
-      }
-
-      debugPrint('Resumed ${tasks.length} tasks from database');
-    } catch (e) {
-      debugPrint('Error resuming tasks: $e');
     }
   }
 
@@ -896,96 +703,56 @@ class DownloadService extends GetxService {
     groupInfo.completedCount.value = completed;
     groupInfo.failedCount.value = failed;
 
-    // 同步到数据库 - 使用 update 方法
-    (appDatabase.downloadGroupTable.update()
-          ..where((tbl) => tbl.id.equals(groupId)))
-        .write(
-          DownloadGroupTableCompanion(
-            totalCount: Value(groupInfo.totalCount.value),
-            completedCount: Value(completed),
-            failedCount: Value(failed),
-            runningCount: Value(running),
-            updatedAt: Value(DateTime.now()),
-            completedAt: Value(
-              completed == groupInfo.totalCount.value ? DateTime.now() : null,
-            ),
-          ),
-        );
-
     // 更新组整体进度
     _updateGroupProgress(groupId);
+
+    // 所有任务都完成时，自动保存为书籍
+    final allDone =
+        groupTasks.isNotEmpty &&
+        groupTasks.every(
+          (t) =>
+              t.status.value == TaskStatus.complete ||
+              t.status.value == TaskStatus.failed ||
+              t.status.value == TaskStatus.canceled,
+        );
+
+    if (allDone && completed == groupTasks.length) {
+      _saveGroupAsBook(groupId, groupInfo, groupTasks);
+    }
   }
 
-  /// 重新计算组的统计信息（用于应用重启后）
-  void _recalculateGroupStats(String groupId) {
-    final groupInfo = groups[groupId];
-    if (groupInfo == null) return;
+  /// 下载组全部完成后，通过 ImportService 保存为书籍
+  Future<void> _saveGroupAsBook(
+    String groupId,
+    DownloadGroupInfo groupInfo,
+    List<DownloadTaskInfo> groupTasks,
+  ) async {
+    // 按 order 排序，保证书页顺序正确
+    final sorted = [...groupTasks]..sort((a, b) => a.order.compareTo(b.order));
+    final localPaths = sorted
+        .where(
+          (t) =>
+              t.status.value == TaskStatus.complete &&
+              t.savePath.value.isNotEmpty,
+        )
+        .map((t) => t.savePath.value)
+        .toList();
 
-    final groupTasks = getTasksByGroup(groupId);
+    if (localPaths.isEmpty) {
+      debugPrint('⚠️ 下载组 ${groupInfo.name} 没有成功的任务，跳过保存');
+      return;
+    }
 
-    // 重新计算总数（以实际任务数为准）
-    final actualTotal = groupTasks.length;
-    if (actualTotal != groupInfo.totalCount.value) {
-      debugPrint(
-        '⚠️ Group $groupId total count mismatch: '
-        'expected ${groupInfo.totalCount.value}, actual $actualTotal',
+    try {
+      final importService = Get.find<ImportService>();
+      await importService.saveBookFromPaths(
+        name: groupInfo.name,
+        localPaths: localPaths,
       );
-      groupInfo.totalCount.value = actualTotal;
+      debugPrint('✅ 下载组 ${groupInfo.name} 已自动保存为书籍');
+    } catch (e) {
+      debugPrint('❌ 保存书籍失败: $e');
     }
-
-    int completed = 0;
-    int failed = 0;
-    int running = 0;
-    double totalProgress = 0.0;
-
-    for (final task in groupTasks) {
-      // 累加进度
-      totalProgress += task.progress.value;
-
-      // 统计状态
-      if (task.status.value == TaskStatus.complete) {
-        completed++;
-      } else if (task.status.value == TaskStatus.failed) {
-        failed++;
-      } else if (task.status.value == TaskStatus.running) {
-        running++;
-      }
-    }
-
-    // 更新统计信息
-    groupInfo.completedCount.value = completed;
-    groupInfo.failedCount.value = failed;
-
-    // 计算整体进度
-    final progress = groupTasks.isNotEmpty
-        ? totalProgress / groupTasks.length
-        : 0.0;
-    groupInfo.groupProgress.value = progress;
-
-    debugPrint(
-      '📊 Group $groupId stats: '
-      'total=$actualTotal, completed=$completed, failed=$failed, '
-      'progress=${(progress * 100).toStringAsFixed(1)}%',
-    );
-
-    // 同步到数据库
-    (appDatabase.downloadGroupTable.update()
-          ..where((tbl) => tbl.id.equals(groupId)))
-        .write(
-          DownloadGroupTableCompanion(
-            totalCount: Value(actualTotal),
-            completedCount: Value(completed),
-            failedCount: Value(failed),
-            runningCount: Value(running),
-            groupProgress: Value(progress),
-            updatedAt: Value(DateTime.now()),
-            completedAt: Value(
-              completed == actualTotal && actualTotal > 0
-                  ? DateTime.now()
-                  : null,
-            ),
-          ),
-        );
   }
 
   /// 更新组整体进度
@@ -1003,16 +770,6 @@ class DownloadService extends GetxService {
 
     final progress = totalProgress / groupTasks.length;
     groupInfo.groupProgress.value = progress;
-
-    // 同步进度到数据库 - 使用 update 方法
-    (appDatabase.downloadGroupTable.update()
-          ..where((tbl) => tbl.id.equals(groupId)))
-        .write(
-          DownloadGroupTableCompanion(
-            groupProgress: Value(progress),
-            updatedAt: Value(DateTime.now()),
-          ),
-        );
   }
 
   /// 请求通知权限

@@ -112,6 +112,10 @@ class ExportService extends GetxService {
       int index = 1;
       int notFoundCount = 0;
 
+      // 提前设置 total，让进度条有分母可用
+      record.total = data.localPaths.length;
+      record.progress.value = 0;
+
       for (final path in data.localPaths) {
         final fullPath = "${appDir.path}/$path";
         final file = File(fullPath);
@@ -121,13 +125,12 @@ class ExportService extends GetxService {
           final fileBytes = await file.readAsBytes();
           fileContents.add(MapEntry(fileName, fileBytes));
           index++;
-          record.progress.value = fileContents.length;
         } else {
           notFoundCount++;
         }
+        // 每处理一个文件就更新进度（包括缺失的）
+        record.progress.value++;
       }
-
-      record.total = fileContents.length;
 
       // debug info
       DKLog.s('📊 导出统计: 成功 ${fileContents.length} 个，缺失 $notFoundCount 个');
@@ -138,10 +141,17 @@ class ExportService extends GetxService {
         return;
       }
 
-      final timestamp = DateTime.now().toString().replaceAll(RegExp(r'[:\s.]'), '_');
       final sanitizedName = data.name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-      final zipFileName = '${sanitizedName}_$timestamp.zip';
-      final zipPath = p.join(exportDir, zipFileName);
+
+      // 无后缀优先，冲突时加 (1)(2)...
+      String zipFileName = '$sanitizedName.zip';
+      String zipPath = p.join(exportDir, zipFileName);
+      int suffix = 1;
+      while (await File(zipPath).exists()) {
+        zipFileName = '$sanitizedName($suffix).zip';
+        zipPath = p.join(exportDir, zipFileName);
+        suffix++;
+      }
 
       // compress in isolate
       final zipBytes = await compute(_compressFiles, fileContents);

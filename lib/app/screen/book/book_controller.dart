@@ -134,7 +134,6 @@ class BookController extends GetxController {
     fetchBooks();
   }
 
-  /// ✅ 优化：利用 Service 缓存，按需组装 VO
   Future<void> fetchBooks() async {
     await getBookState.triggerQuery(
       query: () async {
@@ -233,6 +232,7 @@ class BookController extends GetxController {
   }
 
   Future<void> exportMultipleBooks() async {
+
     final ids = selectedBookIds.toList();
     final books =
         await (appDatabase.bookTable.select()..where((tbl) => tbl.id.isIn(ids)))
@@ -247,7 +247,10 @@ class BookController extends GetxController {
 
     // 立即跳转到导出页面查看进度
     if (records.isNotEmpty) {
-      Get.toNamed(AppRoute.export);
+      final homeController = Get.find<HomeController>();
+      homeController.selectedIndex.value = 1;
+      final taskController = Get.find<TaskController>();
+      taskController.tabController.animateTo(2);
     }
   }
 

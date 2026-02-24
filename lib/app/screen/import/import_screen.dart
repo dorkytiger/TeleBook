@@ -24,16 +24,17 @@ class ImportScreen extends GetView<ImportController> {
             return Obx(
               () => ListTile(
                 title: Text(group.name),
-                leading: firstTask?.distSubPath != null
+                leading: firstTask?.distSubPath != null &&
+                        controller.appDocPath.value != null
                     ? Image.file(
                         File(
-                          "${controller.appDocPath}/${firstTask!.distSubPath}",
+                          "${controller.appDocPath.value}/${firstTask!.distSubPath}",
                         ),
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
                       )
-                    : Icon(Icons.insert_drive_file),
+                    : const Icon(Icons.insert_drive_file),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 4,

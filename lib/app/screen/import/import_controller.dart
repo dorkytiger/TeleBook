@@ -7,13 +7,12 @@ class ImportController extends GetxController
     with GetSingleTickerProviderStateMixin {
   late final tabController = TabController(length: 3, vsync: this);
   final importService = Get.find<ImportService>();
-  late final String appDocPath;
+  final appDocPath = RxnString(); // null 表示还未初始化
 
   @override
   void onInit() async {
     super.onInit();
-    // 获取应用文档目录路径
-    appDocPath = await getApplicationDocumentsDirectory().then(
+    appDocPath.value = await getApplicationDocumentsDirectory().then(
       (dir) => dir.path,
     );
   }

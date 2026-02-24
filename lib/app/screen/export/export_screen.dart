@@ -22,19 +22,24 @@ class ExportScreen extends GetView<ExportController> {
           itemCount: records.length,
           itemBuilder: (context, index) {
             final r = records[index];
-            return ListTile(
-              title: Text(r.name),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('状态: ${r.status.value.toString().split('.').last}'),
-                  if (r.total > 0) Text('进度: ${r.progress.value}/${r.total}'),
-                  if (r.error != null)
-                    Text('错误: ${r.error}', style: TextStyle(color: Colors.red)),
-                ],
+            return Obx(
+              () => ListTile(
+                title: Text(r.name),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('状态: ${r.status.value.displayName}'),
+                    if (r.total > 0) Text('进度: ${r.progress.value}/${r.total}'),
+                    if (r.error != null)
+                      Text(
+                        '错误: ${r.error}',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                  ],
+                ),
+                trailing: _buildTrailing(r),
+                onTap: () => controller.openExport(r),
               ),
-              trailing: Obx(() => _buildTrailing(r)),
-              onTap: () => controller.openExport(r),
             );
           },
         );
@@ -43,12 +48,17 @@ class ExportScreen extends GetView<ExportController> {
   }
 
   Widget _buildTrailing(ExportRecord r) {
+    return Obx(() => _buildTrailingContent(r));
+  }
+
+  Widget _buildTrailingContent(ExportRecord r) {
     switch (r.status.value) {
       case ExportStatus.pending:
         return Icon(Icons.hourglass_empty);
       case ExportStatus.running:
         return SizedBox(
-          width: 48,
+          width: 24,
+          height: 24,
           child: Center(
             child: CircularProgressIndicator(
               value: r.total > 0 ? r.progress.value / r.total : null,

@@ -201,38 +201,7 @@ class ImportService extends GetxService {
 
     // 检查是否所有任务都完成
     if (group.tasks.every((t) => t.status.value == ImportStatus.success)) {
-      // 处理数据库
-      final localPaths = group.tasks.map((t) => t.distSubPath.value).toList();
-      DKLog.t("所有任务完成，准备写入数据库");
-      DKLog.t("localPaths 数量: ${localPaths.length}");
-      DKLog.t("localPaths 内容: $localPaths");
-
-      if (localPaths.isEmpty || localPaths.any((p) => p.isEmpty)) {
-        DKLog.e("警告: localPaths 中存在空值！");
-        DKLog.e("详细检查每个任务:");
-        for (var task in group.tasks) {
-          DKLog.e(
-            "  任务 ${task.id}: distSubPath='${task.distSubPath.value}', isEmpty=${task.distSubPath.value.isEmpty}",
-          );
-        }
-      }
-
-      final bookData = BookTableCompanion.insert(
-        name: group.name,
-        localPaths: localPaths,
-      );
-      _eventBus.fire(BookAddedEvent(bookData));
-
-      group.status.value = ImportStatus.success;
-      DKLog.d("导入组完成: ${group.name}");
-
-      // 刷新书籍列表
-      try {
-        final bookController = Get.find<BookController>();
-        await bookController.fetchBooks();
-      } catch (e) {
-        DKLog.w("刷新书籍列表失败: $e");
-      }
+      await saveBookFromGroup(group);
     } else if (group.tasks.any((t) => t.status.value == ImportStatus.failed)) {
       group.status.value = ImportStatus.failed;
       DKLog.w("导入组有失败任务: ${group.name}");
@@ -242,8 +211,55 @@ class ImportService extends GetxService {
     }
   }
 
-  Future<void> restartImport(String groupId) async {
-    final group = getGroupById(groupId);
+  /// 将一个完成的导入组保存为书籍（可被外部调用，如 DownloadService）
+  Future<void> saveBookFromGroup(ImportGroup group) async {
+    final localPaths = group.tasks.map((t) => t.distSubPath.value).toList();
+
+    if (localPaths.isEmpty || localPaths.any((p) => p.isEmpty)) {
+      DKLog.e("警告: localPaths 中存在空值，跳过保存: ${group.name}");
+      return;
+    }
+
+    final bookData = BookTableCompanion.insert(
+      name: group.name,
+      localPaths: localPaths,
+    );
+    _eventBus.fire(BookAddedEvent(bookData));
+
+    group.status.value = ImportStatus.success;
+    DKLog.d("导入组完成，已保存为书籍: ${group.name}");
+
+    try {
+      final bookController = Get.find<BookController>();
+      await bookController.fetchBooks();
+    } catch (e) {
+      DKLog.w("刷新书籍列表失败: $e");
+    }
+  }
+
+  /// 根据已下载文件路径列表直接保存为书籍（供 DownloadService 调用）
+  Future<void> saveBookFromPaths({
+    required String name,
+    required List<String> localPaths,
+  }) async {
+    if (localPaths.isEmpty) return;
+
+    final bookData = BookTableCompanion.insert(
+      name: name,
+      localPaths: localPaths,
+    );
+    _eventBus.fire(BookAddedEvent(bookData));
+    DKLog.d("下载组完成，已保存为书籍: $name");
+
+    try {
+      final bookController = Get.find<BookController>();
+      await bookController.fetchBooks();
+    } catch (e) {
+      DKLog.w("刷新书籍列表失败: $e");
+    }
+  }
+
+  Future<void> restartImport(String groupId) async {    final group = getGroupById(groupId);
     if (group != null) {
       // 重置任务状态
       for (var task in group.tasks) {

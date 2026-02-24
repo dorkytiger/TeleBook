@@ -5,15 +5,14 @@ import 'package:archive/archive.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/screen/home/home_controller.dart';
+import 'package:tele_book/app/screen/task/task_controller.dart';
+import 'package:tele_book/app/service/import_service.dart';
 
 class ParseBatchArchiveController extends GetxController {
   final folderPath = Get.arguments as String;
@@ -22,20 +21,22 @@ class ParseBatchArchiveController extends GetxController {
   final extractArchiveProgress = 0.obs;
   final extractArchiveTotal = 0.obs;
   final archiveFolders = <ArchiveFolder>[].obs;
-  final appDatabase = Get.find<AppDatabase>();
-  late final String appDirectory;
+  final importService = Get.find<ImportService>();
+  final appDir = RxnString();
 
   @override
   void onInit() async {
     super.onInit();
-    appDirectory = (await getApplicationDocumentsDirectory()).path;
     saveAllBooksState.listenEvent(
-      onSuccess: (data) {
-        final bookController = Get.find<BookController>();
-        bookController.fetchBooks();
-        Get.offAndToNamed(AppRoute.home);
+      onSuccess: (_) {
+        Get.back();
+        final homeController = Get.find<HomeController>();
+        homeController.selectedIndex.value = 1;
+        final taskController = Get.find<TaskController>();
+        taskController.tabController.animateTo(1);
       },
     );
+    appDir.value = (await getApplicationDocumentsDirectory()).path;
     unawaited(_scanAndExtractArchives());
   }
 
@@ -145,44 +146,25 @@ class ParseBatchArchiveController extends GetxController {
   Future<void> saveAllBooks() async {
     saveAllBooksState.triggerEvent(
       event: () async {
-        if (archiveFolders.isEmpty) {
-          throw Exception('没有可保存的书籍');
-        }
-
-        final appDocDir = await getApplicationDocumentsDirectory();
+        if (archiveFolders.isEmpty) throw Exception('没有可保存的书籍');
 
         for (final archiveFolder in archiveFolders) {
-          final groupPath =
-              "${archiveFolder.title}-${DateTime.now().microsecondsSinceEpoch}";
-          final saveDir = p.join(appDocDir.path, groupPath);
+          // 将解压后的文件转为 File 列表
+          final files = archiveFolder.files
+              .map((f) => File(f.path))
+              .where((f) => f.existsSync())
+              .toList();
 
-          final localPaths = <String>[];
-          int index = 1;
+          if (files.isEmpty) continue;
 
-          for (final archiveFile in archiveFolder.files) {
-            final file = File(archiveFile.path);
-            if (await file.exists()) {
-              final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-              final savePath = p.join(saveDir, fileName);
-
-              final saveFile = File(savePath);
-              await saveFile.parent.create(recursive: true);
-              await file.copy(savePath);
-
-              localPaths.add(p.join(groupPath, fileName));
-              index++;
-            }
-          }
-
-          if (localPaths.isNotEmpty) {
-            await appDatabase.bookTable.insertOnConflictUpdate(
-              BookTableCompanion(
-                name: Value(archiveFolder.title),
-                localPaths: Value(localPaths),
-                currentPage: Value(0),
-              ),
-            );
-          }
+          final group = await importService.buildImportGroup(
+            name: archiveFolder.title,
+            type: ImportType.zip,
+            files: files,
+          );
+          importService.addImportGroup(group);
+          // 不等待完成，直接加入队列后跳转
+          unawaited(importService.startImport(group.id));
         }
       },
     );
