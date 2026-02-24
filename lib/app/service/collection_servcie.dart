@@ -6,7 +6,6 @@ import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/event/event_bus.dart';
 
 class CollectionService extends GetxService {
-  final _eventBus = Get.find<EventBus>();
   final db = Get.find<AppDatabase>();
   final collections = <CollectionTableData>[].obs;
   final collectionBooks = <CollectionBookTableData>[].obs;

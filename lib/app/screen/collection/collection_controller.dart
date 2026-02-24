@@ -16,4 +16,6 @@ class CollectionController extends GetxController {
   void onInit() {
     super.onInit();
   }
+
+
 }
