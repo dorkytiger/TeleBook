@@ -4,20 +4,16 @@ import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/dao/book/book_table.dart';
 import 'package:tele_book/app/db/dao/collection/book_collection_table.dart';
 import 'package:tele_book/app/db/dao/collection/collection_table.dart';
-import 'package:tele_book/app/db/dao/download/download_task_table.dart';
 import 'package:tele_book/app/db/dao/mark/mark_book_table.dart';
 import 'package:tele_book/app/db/dao/mark/mark_table.dart';
 
 import 'converter/string_list_converter.dart';
-import 'dao/download/download_group_table.dart';
 import 'package:path/path.dart' as p;
 
 part 'app_database.g.dart';
 
 @DriftDatabase(tables: [
   BookTable,
-  DownloadTaskTable,
-  DownloadGroupTable,
   CollectionTable,
   CollectionBookTable,
   MarkTable,

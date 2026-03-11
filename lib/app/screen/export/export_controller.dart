@@ -6,7 +6,6 @@ import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:tele_book/app/service/export_service.dart';
-import 'package:tele_book/app/service/toast_service.dart';
 
 class ExportController extends GetxController {
   final exportService = Get.find<ExportService>();
@@ -23,7 +22,6 @@ class ExportController extends GetxController {
   Future<void> openExport(ExportRecord record) async {
     final path = record.outputPath;
     if (path == null) {
-      ToastService.showError('错误,导出路径为空');
       return;
     }
 
@@ -34,18 +32,17 @@ class ExportController extends GetxController {
 
       // Handle different result types
       if (result.type == ResultType.done) {
-        ToastService.showSuccess('已在文件管理器中打开');
+
       } else if (result.type == ResultType.fileNotFound) {
-        ToastService.showError('文件夹不存在: $folder');
+
       } else if (result.type == ResultType.noAppToOpen) {
-        // Folder can't be opened, try opening the file as fallback
-        ToastService.showText('无法打开文件夹，尝试打开文件');
+
         result = await OpenFilex.open(path);
 
         if (result.type == ResultType.done) {
-          ToastService.showSuccess('已打开文件');
+
         } else {
-          ToastService.showError('无法打开文件，请使用"分享"功能\n路径: $path');
+
         }
       } else if (result.type == ResultType.permissionDenied) {
         // Handle permission denied: request permission first
@@ -55,31 +52,29 @@ class ExportController extends GetxController {
             // Permission granted, retry opening folder
             final retryResult = await OpenFilex.open(folder);
             if (retryResult.type == ResultType.done) {
-              ToastService.showSuccess('已在文件管理器中打开');
+
             } else if (retryResult.type == ResultType.noAppToOpen) {
               // Folder still can't be opened, try file
               final fileResult = await OpenFilex.open(path);
               if (fileResult.type == ResultType.done) {
-                ToastService.showSuccess('已打开文件');
+
               } else {
-                ToastService.showText('无法直接打开，请使用"分享"功能');
+
               }
             } else {
-              // Still can't open
-              ToastService.showText('无法打开文件夹，请使用"分享"功能');
+
             }
           } else {
-            // Permission denied
-            ToastService.showText('需要存储权限才能打开，请使用"分享"功能或授予权限');
+
           }
         } else {
-          ToastService.showError('没有权限访问该文件夹');
+
         }
       } else {
-        ToastService.showError('无法打开文件夹: ${result.message}');
+
       }
     } catch (e) {
-      ToastService.showError('打开时出错: $e\n路径: $path');
+
     }
   }
 
@@ -155,12 +150,12 @@ class ExportController extends GetxController {
       );
 
       if (result.status == ShareResultStatus.success) {
-        ToastService.showSuccess('分享成功');
+
       } else if (result.status == ShareResultStatus.dismissed) {
-        ToastService.showText('分享已取消');
+
       }
     } catch (e) {
-      ToastService.showError('分享失败: $e');
+
     }
   }
 
@@ -168,7 +163,6 @@ class ExportController extends GetxController {
   Future<void> shareExport(ExportRecord record) async {
     final path = record.outputPath;
     if (path == null) {
-      ToastService.showError('错误,导出路径为空');
       return;
     }
 

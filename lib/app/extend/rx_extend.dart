@@ -4,9 +4,8 @@ import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
-import 'package:tele_book/app/service/toast_service.dart';
-import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_loading.dart';
 
 extension RxExtend<T> on Rx<DKStateQuery<T>> {
   Widget displaySuccess({
@@ -21,35 +20,32 @@ extension RxExtend<T> on Rx<DKStateQuery<T>> {
       initialBuilder: () {
         return initialBuilder != null
             ? initialBuilder()
-            : Center(child: TDEmpty(emptyText: "暂无数据"));
+            : Center(child: CustomEmpty(message: '暂无数据'));
       },
       loadingBuilder: () {
         return loadingBuilder != null
             ? loadingBuilder()
-            : const Center(
-                child: TDLoading(size: TDLoadingSize.large, text: "加载中..."),
-              );
+            : const CustomLoading();
       },
       errorBuilder: (message) {
-        ToastService.showError(message);
         return errorBuilder != null
             ? errorBuilder(message)
             : Center(
-                child: TDButton(
-                  text: "加载失败，点击重试",
-                  onTap: () {
-                    ToastService.dismiss();
-                    if (onRetry != null) {
-                      onRetry();
-                    }
-                  },
-                ),
-              );
+          child: FilledButton.icon(
+            label: Text('加载失败，点击重试'),
+            icon: Icon(Icons.refresh),
+            onPressed: () {
+              if (onRetry != null) {
+                onRetry();
+              }
+            },
+          ),
+        );
       },
       emptyBuilder: () {
         return emptyBuilder != null
             ? emptyBuilder()
-            : Center(child: TDEmpty(emptyText: "暂无数据"));
+            : Center(child: CustomEmpty(message: '暂无数据'));
       },
       successBuilder: successBuilder,
     );
@@ -71,28 +67,34 @@ extension RXDKStateEventExtension<T> on Rx<DKStateEvent<T>> {
     return listen((state) {
       DKStateEventHelper.handleState<T>(
         state,
-        onLoading: () {
-          ToastService.dismiss();
-          if (showLoadingToast) {
-            ToastService.showLoading("加载中...");
-          }
-          if (onLoading != null) {
-            onLoading();
-          }
-        },
+        // onLoading: () {
+        //   ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
+        //   if (showLoadingToast) {
+        //     ScaffoldMessenger.of(
+        //       Get.context!,
+        //     ).showSnackBar(const SnackBar(content: Text('加载中...')));
+        //   }
+        //   if (onLoading != null) {
+        //     onLoading();
+        //   }
+        // },
         onSuccess: (data) {
-          ToastService.dismiss();
+          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showSuccessToast) {
-            ToastService.showSuccess("操作成功");
+            ScaffoldMessenger.of(
+              Get.context!,
+            ).showSnackBar(const SnackBar(content: Text('操作成功')));
           }
           if (onSuccess != null) {
             onSuccess(data);
           }
         },
         onError: (message, error, stackTrace) {
-          ToastService.dismiss();
+          ScaffoldMessenger.of(Get.context!).removeCurrentSnackBar();
           if (showErrorToast) {
-            ToastService.showError(message);
+            ScaffoldMessenger.of(
+              Get.context!,
+            ).showSnackBar(SnackBar(content: Text('操作失败: $message')));
           }
           if (onError != null) {
             onError(message, error, stackTrace);

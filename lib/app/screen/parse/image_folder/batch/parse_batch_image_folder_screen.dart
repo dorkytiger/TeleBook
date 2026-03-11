@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'parse_batch_image_folder_controller.dart';
-class ParseBatchImageFolderScreen extends GetView<ParseBatchImageFolderController> {
+
+class ParseBatchImageFolderScreen
+    extends GetView<ParseBatchImageFolderController> {
   const ParseBatchImageFolderScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: "批量导入图片文件夹",
-        onBack: () => Get.back(),
-      ),
+      appBar: AppBar(title: Text("批量导入图片文件夹")),
       body: controller.scanFoldersState.displaySuccess(
-        loadingBuilder: () => Center(
-          child: TDLoading(size: TDLoadingSize.large, text: "正在扫描文件夹..."),
-        ),
         successBuilder: (data) {
           return Column(
             children: [
@@ -23,12 +19,11 @@ class ParseBatchImageFolderScreen extends GetView<ParseBatchImageFolderControlle
                 padding: EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Icon(Icons.info_outline, color: TDTheme.of(context).brandNormalColor),
+                    Icon(Icons.info_outline),
                     SizedBox(width: 8),
                     Expanded(
-                      child: TDText(
+                      child: Text(
                         "找到 ${data.length} 个文件夹，共 ${data.fold<int>(0, (sum, folder) => sum + folder.images.length)} 张图片",
-                        font: TDTheme.of(context).fontBodyMedium,
                       ),
                     ),
                   ],
@@ -49,20 +44,9 @@ class ParseBatchImageFolderScreen extends GetView<ParseBatchImageFolderControlle
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.folder, color: TDTheme.of(context).brandNormalColor),
+                                Icon(Icons.folder),
                                 SizedBox(width: 8),
-                                Expanded(
-                                  child: TDText(
-                                    folderInfo.folderName,
-                                    font: TDTheme.of(context).fontBodyLarge,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                TDTag(
-                                  "${folderInfo.images.length} 张",
-                                  size: TDTagSize.small,
-                                  theme: TDTagTheme.primary,
-                                ),
+                                Expanded(child: Text(folderInfo.folderName)),
                               ],
                             ),
                             SizedBox(height: 8),
@@ -93,12 +77,10 @@ class ParseBatchImageFolderScreen extends GetView<ParseBatchImageFolderControlle
               ),
               Padding(
                 padding: EdgeInsets.all(16),
-                child: TDButton(
-                  text: "批量保存到本地",
-                  width: double.infinity,
-                  theme: TDButtonTheme.primary,
-                  size: TDButtonSize.large,
-                  onTap: () => controller.saveAllToLocal(),
+                child: ElevatedButton(
+                  child: Text("批量保存到本地"),
+
+                  onPressed: () => controller.saveAllToLocal(),
                 ),
               ),
             ],

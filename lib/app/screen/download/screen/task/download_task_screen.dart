@@ -3,9 +3,7 @@ import 'dart:io';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_controller.dart';
-import 'package:tele_book/app/widget/td/td_action_sheet_item_icon_widget.dart';
 
 class DownloadTaskScreen extends GetView<DownloadTaskController> {
   const DownloadTaskScreen({super.key});
@@ -13,20 +11,21 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(title: '下载任务'),
+      appBar: AppBar(title: Text('下载任务')),
       body: Obx(() {
-        final tasks = controller.downloadService.tasks.values.where(
-          (task) => task.groupId == controller.groupId,
-        );
+        final tasks = controller.downloadService.tasks.values
+            .where((task) => task.groupId == controller.groupId)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
         return ListView.builder(
           itemCount: tasks.length,
           cacheExtent: 500,
           itemBuilder: (context, index) {
             final task = tasks.elementAt(index);
             return Obx(
-              () => TDCell(
-                title: task.filename,
-                leftIconWidget: () {
+              () => ListTile(
+                title: Text(task.filename),
+                leading: () {
                   if (task.status.value == TaskStatus.complete &&
                       task.savePath.value.isNotEmpty) {
                     // 使用 FutureBuilder 动态获取完整路径
@@ -46,7 +45,6 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                                 return Icon(
                                   Icons.broken_image,
                                   size: 50,
-                                  color: TDTheme.of(context).grayColor4,
                                 );
                               },
                             ),
@@ -58,7 +56,6 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                           child: Icon(
                             Icons.image,
                             size: 50,
-                            color: TDTheme.of(context).grayColor4,
                           ),
                         );
                       },
@@ -72,9 +69,9 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                         child: SizedBox(
                           height: 16,
                           width: 16,
-                          child: TDProgress(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
                             value: task.progress.value,
-                            type: TDProgressType.circular,
                           ),
                         ),
                       ),
@@ -86,67 +83,34 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                     child: Icon(
                       Icons.downloading,
                       size: 32,
-                      color: TDTheme.of(context).brandNormalColor,
                     ),
                   );
                 }(),
-                description:
-                    '状态: ${task.status.value.name}\n进度: ${(task.progress.value * 100).toStringAsFixed(1)}%',
-                noteWidget: TDButton(
-                  icon: Icons.more_horiz_outlined,
-                  theme: TDButtonTheme.primary,
-                  size: TDButtonSize.small,
-                  type: TDButtonType.text,
-                  onTap: () {
-                    TDActionSheet.showGroupActionSheet(
-                      context,
-                      onSelected: (actionItem, actionIndex) {
-                        if (actionIndex == 0) {
-                          controller.downloadService.resume(task.taskId);
-                        }
-                        if (actionIndex == 1) {
-                          controller.downloadService.pause(task.taskId);
-                        }
-                        if (actionIndex == 2) {
-                          controller.downloadService.cancel(task.taskId);
-                        }
-                        if (actionIndex == 3) {
-                          controller.downloadService.retry(task.taskId);
-                        }
-                      },
-                      items: [
-                        TDActionSheetItem(
-                          label: "继续",
-                          icon: TDActionSheetItemIconWidget(
-                            iconData: Icons.play_arrow,
-                          ),
-                          group: "操作",
-                        ),
-                        TDActionSheetItem(
-                          label: "暂停",
-                          icon: TDActionSheetItemIconWidget(
-                            iconData: Icons.pause,
-                          ),
-                          group: "操作",
-                        ),
-                        TDActionSheetItem(
-                          label: "删除",
-                          icon: TDActionSheetItemIconWidget(
-                            iconData: Icons.delete,
-                            bgColor: TDTheme.of(context).errorLightColor,
-                            iconColor: TDTheme.of(context).errorNormalColor,
-                          ),
-                          group: "操作",
-                        ),
-                        TDActionSheetItem(
-                          label: "重试",
-                          icon: TDActionSheetItemIconWidget(
-                            iconData: Icons.refresh,
-                          ),
-                          group: "操作",
-                        ),
-                      ],
-                    );
+                subtitle: Text(
+                  '状态: ${task.status.value.name}\n进度: ${(task.progress.value * 100).toStringAsFixed(1)}%',
+                ),
+                trailing: PopupMenuButton(
+                  itemBuilder: (context) {
+                    return [
+                      PopupMenuItem(value: "resume", child: Text("继续")),
+                      PopupMenuItem(value: "pause", child: Text("暂停")),
+                      PopupMenuItem(value: "cancel", child: Text("删除")),
+                      PopupMenuItem(value: "retry", child: Text("重试")),
+                    ];
+                  },
+                  onSelected: (value) {
+                    if (value == "resume") {
+                      controller.downloadService.resume(task.taskId);
+                    }
+                    if (value == "pause") {
+                      controller.downloadService.pause(task.taskId);
+                    }
+                    if (value == "cancel") {
+                      controller.downloadService.cancel(task.taskId);
+                    }
+                    if (value == "retry") {
+                      controller.downloadService.retry(task.taskId);
+                    }
                   },
                 ),
               ),

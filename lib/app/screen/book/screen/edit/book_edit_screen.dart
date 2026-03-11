@@ -2,9 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class BookEditScreen extends GetView<BookEditController> {
@@ -13,58 +11,24 @@ class BookEditScreen extends GetView<BookEditController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: TDNavBar(
-        title: '编辑书籍',
-        backIconColor: TDTheme.of(context).brandNormalColor,
-      ),
+      appBar: AppBar(title: Text('编辑书籍')),
       body: Obx(() {
-        return Column(
-          children: [
-            // 书籍名称输入框
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TDInput(
+        return Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            spacing: 16,
+            children: [
+              // 书籍名称输入框
+              Text('书籍名'),
+              TextField(
                 controller: controller.bookName,
-                hintText: '请输入书籍名称',
-                leftLabel: '书籍名称',
-                backgroundColor: TDTheme.of(context).bgColorContainer,
-                rightBtn: TDButton(
-                  text: '重命名',
-                  size: TDButtonSize.small,
-                  theme: TDButtonTheme.primary,
-                  onTap: () => controller.renameBook(),
-                ),
+                decoration: InputDecoration(labelText: "书籍名称",suffix: IconButton.filled(onPressed: (){}, icon: Icon(Icons.edit))),
               ),
-            ),
 
-            // 工具栏
-            Padding(
-              padding: EdgeInsets.all(16),
-              child: Container(
-                padding: EdgeInsets.all(16),
-                color: TDTheme.of(context).bgColorContainer,
-                child: Row(
-                  children: [
-                    TDText(
-                      '共 ${controller.imageList.length} 页',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    ),
-                    const Spacer(),
-                    TDButton(
-                      text: '添加图片',
-                      size: TDButtonSize.small,
-                      theme: TDButtonTheme.primary,
-                      icon: Icons.add_photo_alternate,
-                      onTap: () => controller.addImages(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 可拖拽的网格列表
-            Expanded(child: ReorderableGridView(controller: controller)),
-          ],
+              // 可拖拽的网格列表
+              Expanded(child: ReorderableGridView(controller: controller)),
+            ],
+          ),
         );
       }),
     );
@@ -96,15 +60,12 @@ class ReorderableGridView extends StatelessWidget {
 
         return KeyedSubtree(
           key: ValueKey(imagePath),
-          child: TDCell(
-            title: "第 ${index + 1} 页",
-            leftIconWidget: CustomImageLoader(localUrl: fullPath),
-            rightIconWidget: TDButton(
-              icon: Icons.delete_outline,
-              theme: TDButtonTheme.danger,
-              type: TDButtonType.text,
-              size: TDButtonSize.small,
-              onTap: () => _showDeleteConfirm(context, index),
+          child: ListTile(
+            title: Text("第 ${index + 1} 页"),
+            leading: CustomImageLoader(localUrl: fullPath),
+            trailing: IconButton(
+              icon: Icon(Icons.delete_outline),
+              onPressed: () => _showDeleteConfirm(context, index),
             ),
           ),
         );
@@ -114,23 +75,12 @@ class ReorderableGridView extends StatelessWidget {
 
   void _showDeleteConfirm(BuildContext context, int index) {
     Get.dialog(
-      TDAlertDialog(
-        title: '确认删除',
-        content: '确定要删除这张图片吗？',
-        rightBtn: TDDialogButtonOptions(
-          title: '删除',
-          theme: TDButtonTheme.danger,
-          action: () async {
-            Get.back();
-            await controller.deleteImage(index);
-          },
-        ),
-        leftBtn: TDDialogButtonOptions(
-          title: '取消',
-          action: () {
-            Get.back();
-          },
-        ),
+      AlertDialog(
+        title:Text( '确认删除'),
+        content: Text('确定要删除这张图片吗？'),
+        actions:[
+          // TextButton(onPressed: onPressed, child: child)
+        ]
       ),
     );
   }

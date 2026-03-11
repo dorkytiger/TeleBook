@@ -5,41 +5,37 @@ import 'package:archive/archive.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/util/request_state.dart';
+import 'package:tele_book/app/screen/home/home_controller.dart';
+import 'package:tele_book/app/screen/task/task_controller.dart';
+import 'package:tele_book/app/service/import_service.dart';
 
 class ParseSingleArchiveController extends GetxController {
   final file = Get.arguments as String;
   final extractArchiveState = Rx<DKStateQuery<void>>(DkStateQueryIdle());
-  final saveToBookState = Rx<DKStateEventIdle<void>>(DKStateEventIdle());
+  final importArchiveState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final importService = Get.find<ImportService>();
   final archives = <File>[].obs;
   final appDatabase = Get.find<AppDatabase>();
 
   @override
   void onInit() {
     super.onInit();
-    saveToBookState.listenEvent(
+    importArchiveState.listenEventToast(
       onSuccess: (_) {
-        final bookController = Get.find<BookController>();
-        bookController.fetchBooks();
-        Get.offAndToNamed(AppRoute.book);
+        Get.back();
+        final homeController = Get.find<HomeController>();
+        homeController.selectedIndex.value = 1;
+        final taskController = Get.find<TaskController>();
+        taskController.tabController.animateTo(1);
       },
     );
     unawaited(extractArchive());
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
   }
 
   Future<void> extractArchive() async {
@@ -83,38 +79,21 @@ class ParseSingleArchiveController extends GetxController {
     return extractedPaths;
   }
 
-  Future<void> saveToBook() async {
-    saveToBookState.triggerEvent(
+  Future<void> importArchive() async {
+    await importArchiveState.triggerEvent(
       event: () async {
-        final title = p.basenameWithoutExtension(file);
-        final groupPath = "$title-${DateTime.now().microsecondsSinceEpoch}";
-        final appDocDir = await getApplicationDocumentsDirectory();
-        final saveDir = p.join(appDocDir.path, groupPath);
+        if (archives.isEmpty) return;
+        final name = p.basenameWithoutExtension(file);
+        final type = ImportType.zip;
 
-        final localPaths = <String>[];
-        int index = 1;
-        for (final archive in archives) {
-          // 重命名为统一格式：00000001.jpg, 00000002.jpg, ...
-          final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-          final savePath = p.join(saveDir, fileName);
-
-          // 确保父目录存在
-          final saveFile = File(savePath);
-          await saveFile.parent.create(recursive: true);
-
-          // 复制文件
-          await archive.copy(savePath);
-          localPaths.add(p.join(groupPath, fileName));
-          index++;
-        }
-
-        await appDatabase.bookTable.insertOnConflictUpdate(
-          BookTableCompanion(
-            name: Value(title),
-            localPaths: Value(localPaths),
-            currentPage: Value(0),
-          ),
+        final importGroup = await importService.buildImportGroup(
+          name: name,
+          type: type,
+          files: archives,
         );
+
+        importService.addImportGroup(importGroup);
+        importService.startImport(importGroup.id);
       },
     );
   }

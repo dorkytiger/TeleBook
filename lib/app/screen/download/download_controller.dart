@@ -8,26 +8,23 @@ import 'package:get/get.dart' hide Value;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/download_service.dart';
 
 class DownloadController extends GetxController {
   final downloadService = Get.find<DownloadService>();
+  final bookService = Get.find<BookService>();
   final appDatabase = Get.find<AppDatabase>();
   final saveToBookState = Rx<DKStateEvent>(DKStateEventIdle());
 
   @override
   void onInit() {
     super.onInit();
-    saveToBookState.listenEvent(
-      onSuccess: (_) {
-        final bookController = Get.find<BookController>();
-        bookController.fetchBooks();
-      },
-    );
+    saveToBookState.listenEvent();
   }
 
   Future<void> savaToBook(String groupId) async {
-    saveToBookState.triggerEvent(
+    await saveToBookState.triggerEvent(
       event: () async {
         final group = downloadService.groups[groupId];
         if (group == null) {
@@ -66,11 +63,10 @@ class DownloadController extends GetxController {
           throw Exception('没有找到任何有效的下载文件');
         }
 
-        await appDatabase.bookTable.insertOnConflictUpdate(
-          BookTableCompanion(
-            name: Value(group.name),
-            localPaths: Value(validSavePaths),
-            currentPage: Value(0),
+        await bookService.addBook(
+          BookTableCompanion.insert(
+            name: group.name,
+            localPaths: validSavePaths,
           ),
         );
       },

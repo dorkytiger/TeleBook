@@ -11,8 +11,7 @@ import 'package:tele_book/app/screen/collection/collection_bind.dart';
 import 'package:tele_book/app/screen/collection/collection_screen.dart';
 import 'package:tele_book/app/screen/download/download_binding.dart';
 import 'package:tele_book/app/screen/download/download_screen.dart';
-import 'package:tele_book/app/screen/download/screen/form/download_form_binding.dart';
-import 'package:tele_book/app/screen/download/screen/form/download_form_screen.dart';
+
 import 'package:tele_book/app/screen/download/screen/task/download_task_binding.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_screen.dart';
 import 'package:tele_book/app/screen/home/home_bind.dart';
@@ -54,7 +53,6 @@ class AppRoute {
   static const parseBatchImageFolder = "/parse/batch_image_folder";
 
   static const download = "/download";
-  static const downloadForm = "/download/form";
   static const downloadTask = "/download/task";
 
   static const collection = "/collection";
@@ -120,11 +118,6 @@ class AppRoute {
       name: download,
       page: () => DownloadScreen(),
       binding: DownloadBinding(),
-    ),
-    GetPage(
-      name: downloadForm,
-      page: () => DownloadFormScreen(),
-      binding: DownloadFormBinding(),
     ),
     GetPage(
       name: downloadTask,
