@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tele_book/app/constant/mark_constant.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 
 import 'mark_controller.dart';

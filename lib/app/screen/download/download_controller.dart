@@ -2,12 +2,10 @@ import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_event_get.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/download_service.dart';
 

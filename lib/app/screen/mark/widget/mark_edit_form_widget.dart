@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:tele_book/app/constant/mark_constant.dart';
 
 class MarkEditFormWidget extends StatelessWidget {
   final Function onConfirm;
@@ -70,7 +69,6 @@ class MarkEditFormWidget extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-
                 onPressed: () {
                   onConfirm();
                   Navigator.of(context).pop();
@@ -78,7 +76,7 @@ class MarkEditFormWidget extends StatelessWidget {
                 label: Text("确认"),
                 icon: Icon(Icons.check),
               ),
-            )
+            ),
           ],
         ),
       ),

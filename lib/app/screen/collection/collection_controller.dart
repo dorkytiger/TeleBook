@@ -14,11 +14,6 @@ class CollectionController extends GetxController {
   final collectionService = Get.find<CollectionService>();
   final isEditMode = false.obs;
 
-  @override
-  void onInit() {
-    super.onInit();
-  }
-
   void toggleEditMode() {
     isEditMode.value = !isEditMode.value;
   }

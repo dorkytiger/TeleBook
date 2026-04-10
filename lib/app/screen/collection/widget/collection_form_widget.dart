@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:tele_book/app/constant/collection_constant.dart';
 
 class CollectionFormWidget extends StatefulWidget {
   final CollectionFormData? initialData;

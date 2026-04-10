@@ -5,7 +5,6 @@ import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:path/path.dart' as p;
 import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
 import 'package:tele_book/app/screen/home/home_controller.dart';
 import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/service/import_service.dart';

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import 'package:get/get.dart' hide Value;
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/event/event_bus.dart';
 
 class CollectionService extends GetxService {
   final db = Get.find<AppDatabase>();
@@ -67,7 +66,7 @@ class CollectionService extends GetxService {
       CollectionTableCompanion(
         id: id != null ? Value(id) : Value.absent(),
         name: Value(name),
-        description: Value(description)
+        description: Value(description),
       ),
     );
   }

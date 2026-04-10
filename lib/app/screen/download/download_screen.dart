@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widget_previews.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/download/download_controller.dart';

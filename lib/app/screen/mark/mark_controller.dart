@@ -16,12 +16,6 @@ class MarkController extends GetxController {
   final markDescriptionController = TextEditingController();
   final markNameError = RxnString();
 
-
-  @override
-  void onInit() {
-    super.onInit();
-  }
-
   bool validateMarkName() {
     final name = markNameController.text.trim();
     if (name.isEmpty) {
@@ -38,14 +32,10 @@ class MarkController extends GetxController {
   }
 }
 
-class MarkFormData{
+class MarkFormData {
   final int? id;
   final String name;
   final String? description;
 
-  MarkFormData({
-    this.id,
-    required this.name,
-    this.description,
-  });
+  MarkFormData({this.id, required this.name, this.description});
 }

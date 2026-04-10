@@ -73,7 +73,7 @@ class BookEditController extends GetxController {
 
         // 创建保存目录
         final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final saveDir = p.join(appDirectory, 'book_$bookId\_$timestamp');
+        final saveDir = p.join(appDirectory, 'book_${bookId}_$timestamp');
         await Directory(saveDir).create(recursive: true);
 
         final newPaths = <String>[];
@@ -121,7 +121,6 @@ class BookEditController extends GetxController {
       final bookController = Get.find<BookController>();
       await bookController.fetchBooks();
 
-
       DKLog.i('书籍重命名成功: $sanitizedName');
     } catch (e) {
       DKLog.e('重命名书籍失败: $e');
@@ -144,7 +143,6 @@ class BookEditController extends GetxController {
       DKLog.e('删除图片失败: $e');
     }
   }
-
 
   /// 移动图片（同步方法，用于ReorderableListView）
   void reorderImages(int oldIndex, int newIndex) {
@@ -177,9 +175,9 @@ class BookEditController extends GetxController {
         );
 
         // 更新数据库
-        await (appDatabase.update(appDatabase.bookTable)
-              ..where((tbl) => tbl.id.equals(bookId)))
-            .write(
+        await (appDatabase.update(
+          appDatabase.bookTable,
+        )..where((tbl) => tbl.id.equals(bookId))).write(
           BookTableCompanion(
             name: drift.Value(sanitizedName),
             localPaths: drift.Value(imageList.toList()),

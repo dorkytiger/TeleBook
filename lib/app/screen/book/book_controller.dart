@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/home/home_controller.dart';
 import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/service/book_service.dart';
@@ -232,7 +231,6 @@ class BookController extends GetxController {
   }
 
   Future<void> exportMultipleBooks() async {
-
     final ids = selectedBookIds.toList();
     final books =
         await (appDatabase.bookTable.select()..where((tbl) => tbl.id.isIn(ids)))

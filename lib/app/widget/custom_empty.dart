@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+
 class CustomEmpty extends StatelessWidget {
-  const CustomEmpty({Key? key, required this.message}) : super(key: key);
+  const CustomEmpty({super.key, required this.message});
 
   final String message;
 
