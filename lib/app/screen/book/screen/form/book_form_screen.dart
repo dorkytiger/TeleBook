@@ -15,6 +15,14 @@ class BookFormScreen extends GetView<BookFormController> {
             Get.back();
           },
         ),
+        actions: [
+          IconButton(
+            onPressed: () {
+              controller.submitForm();
+            },
+            icon: Icon(Icons.check),
+          ),
+        ],
       ),
       body: Obx(
         () => Container(
@@ -25,81 +33,130 @@ class BookFormScreen extends GetView<BookFormController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("选择导入源", style: Theme.of(context).textTheme.titleMedium),
-                _buildSourceSelection(context),
-                Text("输入信息", style: Theme.of(context).textTheme.titleMedium),
+                _buildSourceDialog(context),
+                controller.source.value == null
+                    ? SizedBox.shrink()
+                    : Text(
+                        "输入信息",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                 _buildForm(context),
               ],
             ),
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.all(16),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            label: Text("提交"),
-            onPressed: () {
-              controller.submitForm();
-            },
-            icon: Icon(Icons.check),
-          ),
+    );
+  }
+
+  Widget _buildSourceDialog(BuildContext context) {
+    return TextField(
+      controller: controller.sourceController,
+      decoration: InputDecoration(
+        labelText: "导入源",
+        hintText: "请选择导入源",
+        border: OutlineInputBorder(),
+        suffixIcon: TextButton(
+          onPressed: () {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              builder: (context) {
+                return DraggableScrollableSheet(
+                  expand: false,
+                  maxChildSize: 0.9,
+                  initialChildSize: 0.7,
+                  builder: (context, scrollController) {
+                    return SingleChildScrollView(
+                      controller: scrollController,
+                      child: _buildSourceSelection(context),
+                    );
+                  },
+                );
+              },
+            );
+          },
+          child: Text('选择'),
         ),
       ),
+      readOnly: true,
     );
   }
 
   Widget _buildSourceSelection(BuildContext context) {
     return Column(
       children: [
-        RadioGroup<BookFormSources>(
-          onChanged: (value) {
-            controller.source.value = value!;
-          },
-          groupValue: controller.source.value,
-          child: Column(
-            children: [
-              RadioListTile(
-                value: BookFormSources.web,
-
-                selected: controller.source.value == BookFormSources.web,
-                title: Text("来自网页"),
-                subtitle: Text("从网页解析后,下载书籍到本地"),
+        Row(
+          children: [
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Icon(Icons.close),
+            ),
+            Expanded(
+              child: Center(
+                child: Text(
+                  "选择导入源",
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-              RadioListTile(
-                value: BookFormSources.archive,
-                selected: controller.source.value == BookFormSources.archive,
-                title: Text("来自压缩包"),
-                subtitle: Text("从压缩包中提取书籍到本地"),
-              ),
-              RadioListTile(
-                value: BookFormSources.batchArchive,
-                selected:
-                    controller.source.value == BookFormSources.batchArchive,
-                title: Text("来自批量压缩包"),
-                subtitle: Text("选择文件夹,从文件夹里面多个压缩包中提取书籍到本地"),
-              ),
-              RadioListTile(
-                value: BookFormSources.pdf,
-                selected: controller.source.value == BookFormSources.pdf,
-                title: Text("来自PDF文件"),
-                subtitle: Text("从PDF文件中提取书籍到本地"),
-              ),
-              RadioListTile(
-                value: BookFormSources.imageFolder,
-                selected:
-                    controller.source.value == BookFormSources.imageFolder,
-                title: Text("来自图片文件夹"),
-                subtitle: Text("从图片文件夹中提取书籍到本地"),
-              ),
-              RadioListTile(
-                value: BookFormSources.batchImageFolder,
-                selected:
-                    controller.source.value == BookFormSources.batchImageFolder,
-                title: Text("来自批量图片文件夹"),
-                subtitle: Text("选择文件夹,从文件夹里面多个图片文件夹中提取书籍到本地"),
-              ),
-            ],
+            ),
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: Icon(Icons.check),
+            ),
+          ],
+        ),
+        Obx(
+          () => RadioGroup<BookFormSources>(
+            onChanged: (value) {
+              controller.source.value = value!;
+              controller.sourceController.text = value.desc;
+            },
+            groupValue: controller.source.value,
+            child: Column(
+              children: [
+                RadioListTile(
+                  value: BookFormSources.web,
+                  selected: controller.source.value == BookFormSources.web,
+                  title: Text("来自网页"),
+                  subtitle: Text("从网页解析后,下载书籍到本地"),
+                ),
+                RadioListTile(
+                  value: BookFormSources.archive,
+                  selected: controller.source.value == BookFormSources.archive,
+                  title: Text("来自压缩包"),
+                  subtitle: Text("从压缩包中提取书籍到本地"),
+                ),
+                RadioListTile(
+                  value: BookFormSources.batchArchive,
+                  selected:
+                      controller.source.value == BookFormSources.batchArchive,
+                  title: Text("来自批量压缩包"),
+                  subtitle: Text("选择文件夹,从文件夹里面多个压缩包中提取书籍到本地"),
+                ),
+                RadioListTile(
+                  value: BookFormSources.pdf,
+                  selected: controller.source.value == BookFormSources.pdf,
+                  title: Text("来自PDF文件"),
+                  subtitle: Text("从PDF文件中提取书籍到本地"),
+                ),
+                RadioListTile(
+                  value: BookFormSources.imageFolder,
+                  selected:
+                      controller.source.value == BookFormSources.imageFolder,
+                  title: Text("来自图片文件夹"),
+                  subtitle: Text("从图片文件夹中提取书籍到本地"),
+                ),
+                RadioListTile(
+                  value: BookFormSources.batchImageFolder,
+                  selected:
+                      controller.source.value ==
+                      BookFormSources.batchImageFolder,
+                  title: Text("来自批量图片文件夹"),
+                  subtitle: Text("选择文件夹,从文件夹里面多个图片文件夹中提取书籍到本地"),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -115,12 +172,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "网页地址",
             hintText: "请输入网页地址",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pasteFromClipboard(context);
               },
-              label: Text('粘贴'),
-              icon: Icon(Icons.paste),
+              child: Text('粘贴'),
             ),
           ),
           autofocus: false,
@@ -132,12 +188,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "压缩包文件",
             hintText: "请选择压缩包文件",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pickArchiveFile();
               },
-              label: Text("选择文件"),
-              icon: Icon(Icons.folder_open),
+              child: Text("选择文件"),
             ),
           ),
           readOnly: true,
@@ -149,12 +204,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "压缩包文件夹",
             hintText: "请选择包含压缩包的文件夹",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pickFolder();
               },
-              label: Text("选择文件夹"),
-              icon: Icon(Icons.folder_open),
+              child: Text("选择文件夹"),
             ),
           ),
           readOnly: true,
@@ -166,12 +220,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "PDF文件",
             hintText: "请选择PDF文件",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pickPdf();
               },
-              label: Text("选择文件"),
-              icon: Icon(Icons.folder_open),
+              child: Text("选择文件"),
             ),
           ),
           readOnly: true,
@@ -183,12 +236,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "图片文件夹",
             hintText: "请选择图片文件夹",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pickImageFolder();
               },
-              label: Text("选择文件夹"),
-              icon: Icon(Icons.folder_open),
+              child: Text("选择文件夹"),
             ),
           ),
           readOnly: true,
@@ -200,12 +252,11 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "图片文件夹",
             hintText: "请选择包含图片文件夹的文件夹",
             border: OutlineInputBorder(),
-            suffixIcon: FilledButton.icon(
+            suffixIcon: TextButton(
               onPressed: () {
                 controller.pickBatchImageFolder();
               },
-              label: Text("选择文件夹"),
-              icon: Icon(Icons.folder_open),
+              child: Text("选择文件夹"),
             ),
           ),
           readOnly: true,

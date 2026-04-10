@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:tele_book/app/constant/collection_constant.dart';
 
 class CollectionFormWidget extends StatefulWidget {
-  final ScrollController scrollController;
   final CollectionFormData? initialData;
   final Function(CollectionFormData) onConfirm;
+  final ScrollController? scrollController;
 
   const CollectionFormWidget({
     super.key,
-    required this.scrollController,
     this.initialData,
     required this.onConfirm,
+    this.scrollController,
   });
 
   @override
@@ -19,136 +19,119 @@ class CollectionFormWidget extends StatefulWidget {
 
 class _CollectionFormWidgetState extends State<CollectionFormWidget> {
   final TextEditingController nameController = TextEditingController();
-  Color selectedColor = CollectionConstant.colorList.first;
-  IconData selectedIcon = CollectionConstant.iconList.first;
+  final TextEditingController descriptionController = TextEditingController();
+  String? nameErrorText;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialData != null) {
-      final initIcon = CollectionConstant.iconList.firstWhere(
-        (iconData) => iconData.codePoint == widget.initialData!.iconData,
-        orElse: () => CollectionConstant.iconList.first,
-      );
-      final initColor = CollectionConstant.colorList.firstWhere(
-        (color) => color.toARGB32() == widget.initialData!.color,
-        orElse: () => CollectionConstant.colorList.first,
-      );
       setState(() {
         nameController.text = widget.initialData!.name;
-        selectedIcon = initIcon;
-        selectedColor = initColor;
+        descriptionController.text = widget.initialData!.description ?? "";
       });
     }
   }
 
+  bool _validateName() {
+    final name = nameController.text.trim();
+    if (name.isEmpty) {
+      setState(() {
+        nameErrorText = "收藏夹名称不能为空";
+      });
+      return false;
+    }
+    setState(() {
+      nameErrorText = null;
+    });
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.initialData == null ? "新建收藏夹" : "编辑收藏夹"),
-        leading: IconButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          icon: Icon(Icons.close),
-        ),
-      ),
-      body: SingleChildScrollView(
-        controller: widget.scrollController,
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 16,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  hintText: "请输入收藏夹名称",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+    // Use a lightweight Material container instead of nested Scaffold to avoid
+    // layout/hittest issues when this widget is shown inside a bottom sheet.
+    return Material(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // header
+          Container(
+            height: kToolbarHeight,
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(
+                      widget.initialData == null ? "新建收藏夹" : "编辑收藏夹",
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                   ),
                 ),
-              ),
-              Text("收藏夹颜色"),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<Color>(
-                  onSelectionChanged: (color) {
-                    setState(() {
-                      selectedColor = color.first;
-                    });
+                // confirm button on the right of the header
+                IconButton(
+                  onPressed: () {
+                    if (!_validateName()) {
+                      return;
+                    }
+                    widget.onConfirm(
+                      CollectionFormData(
+                        id: widget.initialData?.id,
+                        name: nameController.text.trim(),
+                        description: descriptionController.text.trim().isEmpty
+                            ? null
+                            : descriptionController.text.trim(),
+                      ),
+                    );
                   },
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return selectedColor;
-                      }
-                      return Colors.transparent;
-                    }),
-                  ),
-                  segments: [
-                    ...CollectionConstant.colorList.map(
-                      (color) => ButtonSegment(
-                        value: color,
-                        label: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: selectedColor != color
-                                ? color
-                                : Theme.of(context).colorScheme.onPrimary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
+                  icon: Icon(Icons.check),
+                ),
+              ],
+            ),
+          ),
+
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              child: Column(
+                spacing: 12,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("收藏夹名称"),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: "请输入收藏夹名称",
+                      errorText: nameErrorText,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                  ],
-                  selected: {selectedColor},
-                ),
-              ),
-              Text("收藏夹图标"),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<IconData>(
-                  showSelectedIcon: false,
-                  onSelectionChanged: (iconData) {
-                    setState(() {
-                      selectedIcon = iconData.first;
-                    });
-                  },
-                  segments: [
-                    ...CollectionConstant.iconList.map(
-                      (iconData) =>
-                          ButtonSegment(value: iconData, label: Icon(iconData)),
+                  ),
+                  Text("收藏夹描述"),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(
+                      hintText: "请输入收藏夹描述（可选）",
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
-                  ],
-                  selected: {selectedIcon},
-                ),
+                    maxLines: 3,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        padding: EdgeInsets.all(16),
-        child: FilledButton.icon(
-          onPressed: () {
-            widget.onConfirm(
-              CollectionFormData(
-                id: widget.initialData?.id,
-                name: nameController.text,
-                color: selectedColor.toARGB32(),
-                iconData: selectedIcon.codePoint,
-              ),
-            );
-          },
-          label: Text("确认"),
-          icon: Icon(Icons.check),
-        ),
+        ],
       ),
     );
   }
@@ -157,13 +140,7 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
 class CollectionFormData {
   final int? id;
   final String name;
-  final int iconData;
-  final int color;
+  final String? description;
 
-  CollectionFormData({
-    this.id,
-    required this.name,
-    required this.iconData,
-    required this.color,
-  });
+  CollectionFormData({this.id, required this.name, this.description});
 }

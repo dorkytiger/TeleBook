@@ -1,10 +1,10 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
 import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
+import 'package:tele_book/app/widget/custom_empty.dart';
 
 class ParseWebScreen extends GetView<ParseWebController> {
   const ParseWebScreen({super.key});
@@ -21,6 +21,16 @@ class ParseWebScreen extends GetView<ParseWebController> {
               controller.webViewController.reload();
             },
           ),
+
+          IconButton(
+            onPressed: () {
+              _showParseImageList(context);
+            },
+            icon: Obx(()=>Badge.count(
+              count: controller.images.length,
+              child: Icon(Icons.download),
+            )),
+          ),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(4),
@@ -31,15 +41,7 @@ class ParseWebScreen extends GetView<ParseWebController> {
           ),
         ),
       ),
-      floatingActionButton: Obx(
-        () => FloatingActionButton.extended(
-          onPressed: () {
-            _showParseImageList(context);
-          },
-          label: Text("解析结果 ${controller.images.length}"),
-          icon: Icon(Icons.book),
-        ),
-      ),
+
       body: Column(
         children: [
           Expanded(
@@ -71,89 +73,87 @@ class ParseWebScreen extends GetView<ParseWebController> {
                     icon: Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
-                ),
-                body: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    spacing: 16,
-                    children: [
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: controller.images.length,
-                          itemBuilder: (context, index) {
-                            final image = controller.images[index];
-                            return ListTile(
-                              leading: Image.network(
-                                 image,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-
-                              ),
-                              title: Text(image),
-                              trailing: PopupMenuButton(
-                                itemBuilder: (context) {
-                                  return [
-                                    PopupMenuItem(
-                                      value: 'copy',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.copy, size: 16),
-                                          SizedBox(width: 8),
-                                          Text('复制链接'),
-                                        ],
-                                      ),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'download',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.download, size: 16),
-                                          SizedBox(width: 8),
-                                          Text('下载图片'),
-                                        ],
-                                      ),
-                                    ),
-                                  ];
-                                },
-                                onSelected: (value) {
-                                  if (value == 'copy') {
-                                    Clipboard.setData(
-                                      ClipboardData(text: image),
-                                    );
-                                  } else if (value == 'download') {
-                                    controller.saveImageTo(image);
-                                  }
-                                },
-                              ),
+                  actions: [
+                    IconButton(
+                      onPressed: () {
+                        Get.back(
+                          result: () {
+                            controller.downloadService.downloadBatch(
+                              urls: controller.images,
+                              groupName: controller.title.value,
                             );
+                            Get.back();
+                            final taskController = Get.find<TaskController>();
+                            taskController.tabController.animateTo(0);
                           },
+                        );
+                      },
+                      icon: Icon(Icons.check),
+                    ),
+                  ],
+                ),
+                body: controller.images.isEmpty
+                    ? Center(child: CustomEmpty(message: '暂无图片'))
+                    : Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Column(
+                          spacing: 16,
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: controller.images.length,
+                                itemBuilder: (context, index) {
+                                  final image = controller.images[index];
+                                  return ListTile(
+                                    leading: Image.network(
+                                      image,
+                                      width: 50,
+                                      height: 50,
+                                      fit: BoxFit.cover,
+                                    ),
+                                    title: Text(image),
+                                    trailing: PopupMenuButton(
+                                      itemBuilder: (context) {
+                                        return [
+                                          PopupMenuItem(
+                                            value: 'copy',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.copy, size: 16),
+                                                SizedBox(width: 8),
+                                                Text('复制链接'),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'download',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.download, size: 16),
+                                                SizedBox(width: 8),
+                                                Text('下载图片'),
+                                              ],
+                                            ),
+                                          ),
+                                        ];
+                                      },
+                                      onSelected: (value) {
+                                        if (value == 'copy') {
+                                          Clipboard.setData(
+                                            ClipboardData(text: image),
+                                          );
+                                        } else if (value == 'download') {
+                                          controller.saveImageTo(image);
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                bottomSheet: Container(
-                  padding: EdgeInsets.all(16),
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Get.back(
-                        result: () {
-                          controller.downloadService.downloadBatch(
-                            urls: controller.images,
-                            groupName: controller.title.value,
-                          );
-                          Get.back();
-                          final taskController = Get.find<TaskController>();
-                          taskController.tabController.animateTo(0);
-                        },
-                      );
-                    },
-                    label: Text("下载"),
-                    icon: Icon(Icons.download),
-                  ),
-                ),
               ),
             );
           },

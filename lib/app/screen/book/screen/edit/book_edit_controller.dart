@@ -131,45 +131,20 @@ class BookEditController extends GetxController {
   /// 删除图片
   Future<void> deleteImage(int index) async {
     if (imageList.length <= 1) {
+      DKLog.w('至少需要保留一张图片');
       return;
     }
 
     try {
-      // 获取要删除的图片路径
-      final imagePath = imageList[index];
-      final fullPath = p.join(appDirectory, imagePath);
-      final file = File(fullPath);
-
-      // 删除物理文件
-      if (await file.exists()) {
-        await file.delete();
-        DKLog.i('已删除物理文件: $fullPath');
-      }
-
-      // 从列表中移除
+      // 只从列表中移除，不删除物理文件，也不更新数据库
+      // 物理文件的删除和数据库更新将在保存时进行
       imageList.removeAt(index);
-
-      // 立即更新数据库
-      await _updateDatabasePaths();
-
+      DKLog.i('图片已从列表中移除，等待保存');
     } catch (e) {
       DKLog.e('删除图片失败: $e');
     }
   }
 
-  /// 更新数据库中的图片路径
-  Future<void> _updateDatabasePaths() async {
-    try {
-      await (appDatabase.update(
-        appDatabase.bookTable,
-      )..where((tbl) => tbl.id.equals(bookId))).write(
-        BookTableCompanion(localPaths: drift.Value(imageList.toList())),
-      );
-      DKLog.i('数据库图片路径已更新');
-    } catch (e) {
-      DKLog.e('更新数据库失败: $e');
-    }
-  }
 
   /// 移动图片（同步方法，用于ReorderableListView）
   void reorderImages(int oldIndex, int newIndex) {
@@ -178,33 +153,22 @@ class BookEditController extends GetxController {
     }
     final item = imageList.removeAt(oldIndex);
     imageList.insert(newIndex, item);
-
-    // 异步更新数据库，不阻塞UI
-    reorderImagesAsync(oldIndex, newIndex);
-  }
-
-  /// 移动图片（异步方法，用于更新数据库）
-  Future<void> reorderImagesAsync(int oldIndex, int newIndex) async {
-    try {
-      // 更新数据库中的顺序
-      await _updateDatabasePaths();
-      DKLog.i('图片顺序已更新到数据库');
-    } catch (e) {
-      DKLog.e('更新图片顺序失败: $e');
-    }
+    DKLog.i('图片顺序已调整，等待保存');
   }
 
   /// 保存修改
   Future<void> saveChanges() async {
     if (bookName.text.trim().isEmpty) {
+      Get.snackbar('错误', '书籍名称不能为空');
       return;
     }
 
     if (imageList.isEmpty) {
+      Get.snackbar('错误', '至少需要一张图片');
       return;
     }
 
-    saveState.triggerEvent(
+    await saveState.triggerEvent(
       event: () async {
         // 清理名称中的非法字符
         final sanitizedName = bookName.text.trim().replaceAll(
@@ -212,16 +176,17 @@ class BookEditController extends GetxController {
           '_',
         );
 
-        await appDatabase.bookTable.update().replace(
-          BookTableData(
-            id: bookId,
-            name: sanitizedName,
-            localPaths: imageList.toList(),
-            readCount: 0,
-            currentPage: 0,
-            createdAt: DateTime.now(),
+        // 更新数据库
+        await (appDatabase.update(appDatabase.bookTable)
+              ..where((tbl) => tbl.id.equals(bookId)))
+            .write(
+          BookTableCompanion(
+            name: drift.Value(sanitizedName),
+            localPaths: drift.Value(imageList.toList()),
           ),
         );
+
+        DKLog.i('书籍已保存: $sanitizedName');
       },
     );
   }

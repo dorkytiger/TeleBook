@@ -5,9 +5,7 @@ class CollectionTable extends Table {
 
   TextColumn get name => text()();
 
-  IntColumn get icon => integer()();
-
-  IntColumn get color => integer()();
+  TextColumn get description => text().nullable()();
 
   IntColumn get order => integer().withDefault(const Constant(0))();
 

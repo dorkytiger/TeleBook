@@ -431,23 +431,16 @@ class $CollectionTableTable extends CollectionTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
-  @override
-  late final GeneratedColumn<int> icon = GeneratedColumn<int>(
-    'icon',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
   );
-  static const VerificationMeta _colorMeta = const VerificationMeta('color');
   @override
-  late final GeneratedColumn<int> color = GeneratedColumn<int>(
-    'color',
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
     aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _orderMeta = const VerificationMeta('order');
   @override
@@ -475,8 +468,7 @@ class $CollectionTableTable extends CollectionTable
   List<GeneratedColumn> get $columns => [
     id,
     name,
-    icon,
-    color,
+    description,
     order,
     createdAt,
   ];
@@ -503,21 +495,14 @@ class $CollectionTableTable extends CollectionTable
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
-    if (data.containsKey('icon')) {
+    if (data.containsKey('description')) {
       context.handle(
-        _iconMeta,
-        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
       );
-    } else if (isInserting) {
-      context.missing(_iconMeta);
-    }
-    if (data.containsKey('color')) {
-      context.handle(
-        _colorMeta,
-        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_colorMeta);
     }
     if (data.containsKey('order')) {
       context.handle(
@@ -548,14 +533,10 @@ class $CollectionTableTable extends CollectionTable
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
-      icon: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}icon'],
-      )!,
-      color: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}color'],
-      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
       order: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}order'],
@@ -577,15 +558,13 @@ class CollectionTableData extends DataClass
     implements Insertable<CollectionTableData> {
   final int id;
   final String name;
-  final int icon;
-  final int color;
+  final String? description;
   final int order;
   final DateTime createdAt;
   const CollectionTableData({
     required this.id,
     required this.name,
-    required this.icon,
-    required this.color,
+    this.description,
     required this.order,
     required this.createdAt,
   });
@@ -594,8 +573,9 @@ class CollectionTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    map['icon'] = Variable<int>(icon);
-    map['color'] = Variable<int>(color);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
     map['order'] = Variable<int>(order);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -605,8 +585,9 @@ class CollectionTableData extends DataClass
     return CollectionTableCompanion(
       id: Value(id),
       name: Value(name),
-      icon: Value(icon),
-      color: Value(color),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
       order: Value(order),
       createdAt: Value(createdAt),
     );
@@ -620,8 +601,7 @@ class CollectionTableData extends DataClass
     return CollectionTableData(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      icon: serializer.fromJson<int>(json['icon']),
-      color: serializer.fromJson<int>(json['color']),
+      description: serializer.fromJson<String?>(json['description']),
       order: serializer.fromJson<int>(json['order']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -632,8 +612,7 @@ class CollectionTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'icon': serializer.toJson<int>(icon),
-      'color': serializer.toJson<int>(color),
+      'description': serializer.toJson<String?>(description),
       'order': serializer.toJson<int>(order),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -642,15 +621,13 @@ class CollectionTableData extends DataClass
   CollectionTableData copyWith({
     int? id,
     String? name,
-    int? icon,
-    int? color,
+    Value<String?> description = const Value.absent(),
     int? order,
     DateTime? createdAt,
   }) => CollectionTableData(
     id: id ?? this.id,
     name: name ?? this.name,
-    icon: icon ?? this.icon,
-    color: color ?? this.color,
+    description: description.present ? description.value : this.description,
     order: order ?? this.order,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -658,8 +635,9 @@ class CollectionTableData extends DataClass
     return CollectionTableData(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      icon: data.icon.present ? data.icon.value : this.icon,
-      color: data.color.present ? data.color.value : this.color,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
       order: data.order.present ? data.order.value : this.order,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -670,8 +648,7 @@ class CollectionTableData extends DataClass
     return (StringBuffer('CollectionTableData(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('icon: $icon, ')
-          ..write('color: $color, ')
+          ..write('description: $description, ')
           ..write('order: $order, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -679,15 +656,14 @@ class CollectionTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(id, name, icon, color, order, createdAt);
+  int get hashCode => Object.hash(id, name, description, order, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CollectionTableData &&
           other.id == this.id &&
           other.name == this.name &&
-          other.icon == this.icon &&
-          other.color == this.color &&
+          other.description == this.description &&
           other.order == this.order &&
           other.createdAt == this.createdAt);
 }
@@ -695,41 +671,34 @@ class CollectionTableData extends DataClass
 class CollectionTableCompanion extends UpdateCompanion<CollectionTableData> {
   final Value<int> id;
   final Value<String> name;
-  final Value<int> icon;
-  final Value<int> color;
+  final Value<String?> description;
   final Value<int> order;
   final Value<DateTime> createdAt;
   const CollectionTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.icon = const Value.absent(),
-    this.color = const Value.absent(),
+    this.description = const Value.absent(),
     this.order = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CollectionTableCompanion.insert({
     this.id = const Value.absent(),
     required String name,
-    required int icon,
-    required int color,
+    this.description = const Value.absent(),
     this.order = const Value.absent(),
     this.createdAt = const Value.absent(),
-  }) : name = Value(name),
-       icon = Value(icon),
-       color = Value(color);
+  }) : name = Value(name);
   static Insertable<CollectionTableData> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<int>? icon,
-    Expression<int>? color,
+    Expression<String>? description,
     Expression<int>? order,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (icon != null) 'icon': icon,
-      if (color != null) 'color': color,
+      if (description != null) 'description': description,
       if (order != null) 'order': order,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -738,16 +707,14 @@ class CollectionTableCompanion extends UpdateCompanion<CollectionTableData> {
   CollectionTableCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
-    Value<int>? icon,
-    Value<int>? color,
+    Value<String?>? description,
     Value<int>? order,
     Value<DateTime>? createdAt,
   }) {
     return CollectionTableCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      icon: icon ?? this.icon,
-      color: color ?? this.color,
+      description: description ?? this.description,
       order: order ?? this.order,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -762,11 +729,8 @@ class CollectionTableCompanion extends UpdateCompanion<CollectionTableData> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (icon.present) {
-      map['icon'] = Variable<int>(icon.value);
-    }
-    if (color.present) {
-      map['color'] = Variable<int>(color.value);
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
     }
     if (order.present) {
       map['order'] = Variable<int>(order.value);
@@ -782,8 +746,7 @@ class CollectionTableCompanion extends UpdateCompanion<CollectionTableData> {
     return (StringBuffer('CollectionTableCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('icon: $icon, ')
-          ..write('color: $color, ')
+          ..write('description: $description, ')
           ..write('order: $order, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -1100,15 +1063,6 @@ class $MarkTableTable extends MarkTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _colorMeta = const VerificationMeta('color');
-  @override
-  late final GeneratedColumn<int> color = GeneratedColumn<int>(
-    'color',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _descriptionMeta = const VerificationMeta(
     'description',
   );
@@ -1121,7 +1075,7 @@ class $MarkTableTable extends MarkTable
     requiredDuringInsert: false,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, color, description];
+  List<GeneratedColumn> get $columns => [id, name, description];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1144,14 +1098,6 @@ class $MarkTableTable extends MarkTable
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
-    }
-    if (data.containsKey('color')) {
-      context.handle(
-        _colorMeta,
-        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_colorMeta);
     }
     if (data.containsKey('description')) {
       context.handle(
@@ -1179,10 +1125,6 @@ class $MarkTableTable extends MarkTable
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
-      color: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}color'],
-      )!,
       description: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}description'],
@@ -1199,20 +1141,13 @@ class $MarkTableTable extends MarkTable
 class MarkTableData extends DataClass implements Insertable<MarkTableData> {
   final int id;
   final String name;
-  final int color;
   final String? description;
-  const MarkTableData({
-    required this.id,
-    required this.name,
-    required this.color,
-    this.description,
-  });
+  const MarkTableData({required this.id, required this.name, this.description});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    map['color'] = Variable<int>(color);
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
@@ -1223,7 +1158,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     return MarkTableCompanion(
       id: Value(id),
       name: Value(name),
-      color: Value(color),
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
@@ -1238,7 +1172,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     return MarkTableData(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      color: serializer.fromJson<int>(json['color']),
       description: serializer.fromJson<String?>(json['description']),
     );
   }
@@ -1248,7 +1181,6 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'color': serializer.toJson<int>(color),
       'description': serializer.toJson<String?>(description),
     };
   }
@@ -1256,19 +1188,16 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
   MarkTableData copyWith({
     int? id,
     String? name,
-    int? color,
     Value<String?> description = const Value.absent(),
   }) => MarkTableData(
     id: id ?? this.id,
     name: name ?? this.name,
-    color: color ?? this.color,
     description: description.present ? description.value : this.description,
   );
   MarkTableData copyWithCompanion(MarkTableCompanion data) {
     return MarkTableData(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
-      color: data.color.present ? data.color.value : this.color,
       description: data.description.present
           ? data.description.value
           : this.description,
@@ -1280,52 +1209,44 @@ class MarkTableData extends DataClass implements Insertable<MarkTableData> {
     return (StringBuffer('MarkTableData(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('color: $color, ')
           ..write('description: $description')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, color, description);
+  int get hashCode => Object.hash(id, name, description);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is MarkTableData &&
           other.id == this.id &&
           other.name == this.name &&
-          other.color == this.color &&
           other.description == this.description);
 }
 
 class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
   final Value<int> id;
   final Value<String> name;
-  final Value<int> color;
   final Value<String?> description;
   const MarkTableCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
-    this.color = const Value.absent(),
     this.description = const Value.absent(),
   });
   MarkTableCompanion.insert({
     this.id = const Value.absent(),
     required String name,
-    required int color,
     this.description = const Value.absent(),
-  }) : name = Value(name),
-       color = Value(color);
+  }) : name = Value(name);
   static Insertable<MarkTableData> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<int>? color,
     Expression<String>? description,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
-      if (color != null) 'color': color,
       if (description != null) 'description': description,
     });
   }
@@ -1333,13 +1254,11 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
   MarkTableCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
-    Value<int>? color,
     Value<String?>? description,
   }) {
     return MarkTableCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
-      color: color ?? this.color,
       description: description ?? this.description,
     );
   }
@@ -1353,9 +1272,6 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
-    if (color.present) {
-      map['color'] = Variable<int>(color.value);
-    }
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
@@ -1367,7 +1283,6 @@ class MarkTableCompanion extends UpdateCompanion<MarkTableData> {
     return (StringBuffer('MarkTableCompanion(')
           ..write('id: $id, ')
           ..write('name: $name, ')
-          ..write('color: $color, ')
           ..write('description: $description')
           ..write(')'))
         .toString();
@@ -1988,8 +1903,7 @@ typedef $$CollectionTableTableCreateCompanionBuilder =
     CollectionTableCompanion Function({
       Value<int> id,
       required String name,
-      required int icon,
-      required int color,
+      Value<String?> description,
       Value<int> order,
       Value<DateTime> createdAt,
     });
@@ -1997,8 +1911,7 @@ typedef $$CollectionTableTableUpdateCompanionBuilder =
     CollectionTableCompanion Function({
       Value<int> id,
       Value<String> name,
-      Value<int> icon,
-      Value<int> color,
+      Value<String?> description,
       Value<int> order,
       Value<DateTime> createdAt,
     });
@@ -2063,13 +1976,8 @@ class $$CollectionTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get icon => $composableBuilder(
-    column: $table.icon,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get color => $composableBuilder(
-    column: $table.color,
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2128,13 +2036,8 @@ class $$CollectionTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get icon => $composableBuilder(
-    column: $table.icon,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get color => $composableBuilder(
-    column: $table.color,
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -2164,11 +2067,10 @@ class $$CollectionTableTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<int> get icon =>
-      $composableBuilder(column: $table.icon, builder: (column) => column);
-
-  GeneratedColumn<int> get color =>
-      $composableBuilder(column: $table.color, builder: (column) => column);
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<int> get order =>
       $composableBuilder(column: $table.order, builder: (column) => column);
@@ -2235,15 +2137,13 @@ class $$CollectionTableTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<int> icon = const Value.absent(),
-                Value<int> color = const Value.absent(),
+                Value<String?> description = const Value.absent(),
                 Value<int> order = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CollectionTableCompanion(
                 id: id,
                 name: name,
-                icon: icon,
-                color: color,
+                description: description,
                 order: order,
                 createdAt: createdAt,
               ),
@@ -2251,15 +2151,13 @@ class $$CollectionTableTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
-                required int icon,
-                required int color,
+                Value<String?> description = const Value.absent(),
                 Value<int> order = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CollectionTableCompanion.insert(
                 id: id,
                 name: name,
-                icon: icon,
-                color: color,
+                description: description,
                 order: order,
                 createdAt: createdAt,
               ),
@@ -2720,14 +2618,12 @@ typedef $$MarkTableTableCreateCompanionBuilder =
     MarkTableCompanion Function({
       Value<int> id,
       required String name,
-      required int color,
       Value<String?> description,
     });
 typedef $$MarkTableTableUpdateCompanionBuilder =
     MarkTableCompanion Function({
       Value<int> id,
       Value<String> name,
-      Value<int> color,
       Value<String?> description,
     });
 
@@ -2747,11 +2643,6 @@ class $$MarkTableTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get color => $composableBuilder(
-    column: $table.color,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2780,11 +2671,6 @@ class $$MarkTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get color => $composableBuilder(
-    column: $table.color,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get description => $composableBuilder(
     column: $table.description,
     builder: (column) => ColumnOrderings(column),
@@ -2805,9 +2691,6 @@ class $$MarkTableTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<int> get color =>
-      $composableBuilder(column: $table.color, builder: (column) => column);
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
@@ -2848,24 +2731,20 @@ class $$MarkTableTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<int> color = const Value.absent(),
                 Value<String?> description = const Value.absent(),
               }) => MarkTableCompanion(
                 id: id,
                 name: name,
-                color: color,
                 description: description,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
-                required int color,
                 Value<String?> description = const Value.absent(),
               }) => MarkTableCompanion.insert(
                 id: id,
                 name: name,
-                color: color,
                 description: description,
               ),
           withReferenceMapper: (p0) => p0

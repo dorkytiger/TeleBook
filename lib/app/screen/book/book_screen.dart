@@ -81,26 +81,58 @@ class BookScreen extends GetView<BookController> {
               }
             }
 
-            final leading = Image.file(
-              File(
-                controller.pathService.getBookFilePath(
-                  bookData.book.localPaths.first,
+            final leading = ClipRRect(
+              borderRadius: BorderRadius.all(Radius.circular(4)),
+              child: Image.file(
+                File(
+                  controller.pathService.getBookFilePath(
+                    bookData.book.localPaths.first,
+                  ),
                 ),
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, size: 40),
               ),
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image, size: 40),
             );
 
-            final title = Text(
-              bookData.book.name,
-            );
+            final title = Text(bookData.book.name);
 
-            final subTitle = Text(
-              '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            // 构建包含创建时间和标签的 subtitle
+            final subTitle = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 4,
+              children: [
+                // 创建时间
+                Text(
+                  '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                ),
+                // 标签信息 - 使用 tag 风格
+                if (bookData.marks.isNotEmpty)
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: bookData.marks.map((mark) {
+                      return Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          mark.name,
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+              ],
             );
 
             return ListTile(
@@ -109,6 +141,7 @@ class BookScreen extends GetView<BookController> {
               leading: leading,
               title: title,
               subtitle: subTitle,
+              trailing: _buildEditPopupButton(context, bookData.book,isVerticalLayout: true),
             );
           },
           itemCount: data.length,
@@ -122,165 +155,121 @@ class BookScreen extends GetView<BookController> {
       successBuilder: (data) {
         return GridView.builder(
           padding: EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200,
             childAspectRatio: 9 / 16,
             crossAxisSpacing: 8,
             mainAxisSpacing: 16,
           ),
           itemBuilder: (context, index) {
             final bookData = data[index];
-            return Obx(
-              () => Card(
-                shape: controller.selectedBookIds.contains(bookData.book.id)
-                    ? RoundedRectangleBorder(
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.primary,
-                          width: 2,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      )
-                    : null,
-                child: InkWell(
-                  onTap: () {
-                    if (controller.multiEditMode.value) {
-                      controller.toggleSelectBook(bookData.book.id);
-                    } else {
-                      Get.toNamed(
-                        AppRoute.bookPage,
-                        arguments: bookData.book.id,
-                      );
-                    }
-                  },
-                  onLongPress: () {
-                    if (!controller.multiEditMode.value) {
-                      controller.triggerMultiEditMode(true);
-                      controller.toggleSelectBook(bookData.book.id);
-                      _showBottomSheet(context);
-                    }
-                  },
-                  child: Column(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Image.file(
-                            File(
-                              controller.pathService.getBookFilePath(
-                                bookData.book.localPaths.first,
-                              ),
+            return InkWell(
+              onTap: () {
+                if (controller.multiEditMode.value) {
+                  controller.toggleSelectBook(bookData.book.id);
+                } else {
+                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+                }
+              },
+              onLongPress: () {
+                if (!controller.multiEditMode.value) {
+                  controller.triggerMultiEditMode(true);
+                  controller.toggleSelectBook(bookData.book.id);
+                  _showBottomSheet(context);
+                }
+              },
+              child: Column(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: Image.file(
+                          File(
+                            controller.pathService.getBookFilePath(
+                              bookData.book.localPaths.first,
                             ),
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(Icons.broken_image, size: 40);
-                            },
-                            fit: BoxFit.fitWidth,
                           ),
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              alignment: Alignment.center,
+                              child: Icon(Icons.broken_image, size: 40),
+                            );
+                          },
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      Expanded(
-                        flex: 1,
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Column(
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      spacing: 4,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          bookData.book.name,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(color: Colors.grey),
-                                        ),
-                                        if (bookData.marks.isNotEmpty)
-                                          Wrap(
-                                            spacing: 4,
-                                            runSpacing: 4,
-                                            children: [
-                                              ...bookData.marks.map(
-                                                (e) => Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    border: Border.all(
-                                                      color: Color(e.color),
-                                                    ),
-                                                    color: Color(
-                                                      e.color,
-                                                    ).withOpacity(0.1),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
-                                                  ),
-                                                  child: Text(
-                                                    e.name,
-                                                    style: TextStyle(
-                                                      fontSize: 10,
-                                                      color: Color(e.color),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        if (bookData.collection != null) ...[
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
+                              Expanded(
+                                child: Column(
+                                  spacing: 4,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // 书名
+                                    Text(
+                                      bookData.book.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    // 标签信息 - 使用 tag 风格
+                                    if (bookData.marks.isNotEmpty)
+                                      Wrap(
+                                        spacing: 3,
+                                        runSpacing: 3,
+                                        children: bookData.marks.take(2).map((mark) {
+                                          return Container(
+                                            padding: EdgeInsets.symmetric(
                                               horizontal: 6,
                                               vertical: 2,
                                             ),
                                             decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurfaceVariant,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
+                                              color: Colors.grey[200],
+                                              borderRadius: BorderRadius.circular(8),
                                             ),
                                             child: Text(
-                                              bookData.collection!.name,
-                                              style: Theme.of(
-                                                context,
-                                              ).textTheme.labelSmall,
+                                              mark.name,
+                                              style: TextStyle(
+                                                color: Colors.grey[700],
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-
-                                  _buildEditPopupButton(context, bookData.book),
-                                ],
+                                          );
+                                        }).toList(),
+                                      ),
+                                  ],
+                                ),
                               ),
 
-                              Spacer(),
-                              SizedBox(height: 4),
+                              _buildEditPopupButton(context, bookData.book),
                             ],
                           ),
-                        ),
+
+                          Spacer(),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
             );
           },
@@ -495,125 +484,174 @@ class BookScreen extends GetView<BookController> {
     );
   }
 
-  Widget _buildEditPopupButton(BuildContext context, BookTableData book) {
-    return SizedBox(
-      height: 40,
-      width: 40,
-      child: PopupMenuButton(
-        icon: Icon(Icons.more_vert),
-        onSelected: (value) {
-          if (value == "edit") {
-            Get.toNamed(AppRoute.bookEdit, arguments: book.id);
-          }
-          if (value == "collection") {
-            _addBookToCollection(context, book);
-          }
-          if (value == "export") {
-            controller.exportBook(book);
-          }
-          if (value == "mark") {
-            _addBookToMarks(context, book);
-          }
-          if (value == "delete") {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text("确认删除"),
-                  content: Text("确定要删除《${book.name}》吗？此操作无法撤销"),
-                  actions: [
-                    TextButton(
-                      onPressed: () {
-                        Get.back();
-                      },
-                      child: Text("取消"),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        controller.deleteBook(book.id);
-                        Get.back();
-                      },
-                      child: Text("删除"),
-                    ),
+  Widget _buildEditPopupButton(
+    BuildContext context,
+    BookTableData book, {
+    bool isVerticalLayout = false,
+  }) {
+    return Obx(() {
+      // 在批量选择模式下显示勾选框
+      if (controller.multiEditMode.value) {
+        final isSelected = controller.selectedBookIds.contains(book.id);
+        return SizedBox(
+          height: 40,
+          width: 40,
+          child: Checkbox(
+            value: isSelected,
+            onChanged: (value) {
+              controller.toggleSelectBook(book.id);
+            },
+          ),
+        );
+      }
+
+      // 正常模式下显示弹出菜单
+      return SizedBox(
+        height: 40,
+        width: 40,
+        child: PopupMenuButton(
+          icon: Icon(isVerticalLayout ? Icons.more_vert : Icons.more_horiz),
+          onSelected: (value) {
+            if (value == "edit") {
+              Get.toNamed(AppRoute.bookEdit, arguments: book.id);
+            }
+            if (value == "collection") {
+              _addBookToCollection(context, book);
+            }
+            if (value == "export") {
+              controller.exportBook(book);
+            }
+            if (value == "mark") {
+              _addBookToMarks(context, book);
+            }
+            if (value == "delete") {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text("确认删除"),
+                    content: Text("确定要删除《${book.name}》吗？此操作无法撤销"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Get.back();
+                        },
+                        child: Text("取消"),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          controller.deleteBook(book.id);
+                          Get.back();
+                        },
+                        child: Text("删除"),
+                      ),
+                    ],
+                  );
+                },
+              );
+            }
+          },
+          itemBuilder: (BuildContext context) {
+            return [
+              PopupMenuItem(
+                value: "edit",
+                child: Row(
+                  children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
+                ),
+              ),
+              PopupMenuItem(
+                value: "collection",
+                child: Row(
+                  children: [Icon(Icons.star), SizedBox(width: 8), Text("收藏夹")],
+                ),
+              ),
+              PopupMenuItem(
+                value: "export",
+                child: Row(
+                  children: [
+                    Icon(Icons.upload),
+                    SizedBox(width: 8),
+                    Text("导出"),
                   ],
-                );
-              },
-            );
-          }
-        },
-        itemBuilder: (BuildContext context) {
-          return [
-            PopupMenuItem(
-              value: "edit",
-              child: Row(
-                children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: "collection",
-              child: Row(
-                children: [Icon(Icons.star), SizedBox(width: 8), Text("加入收藏夹")],
+              PopupMenuItem(
+                value: "mark",
+                child: Row(
+                  children: [
+                    Icon(Icons.bookmark),
+                    SizedBox(width: 8),
+                    Text("书签"),
+                  ],
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: "export",
-              child: Row(
-                children: [Icon(Icons.upload), SizedBox(width: 8), Text("导出")],
+              PopupMenuItem(
+                value: "delete",
+                child: Row(
+                  children: [
+                    Icon(Icons.delete),
+                    SizedBox(width: 8),
+                    Text("删除"),
+                  ],
+                ),
               ),
-            ),
-            PopupMenuItem(
-              value: "mark",
-              child: Row(
-                children: [
-                  Icon(Icons.bookmark),
-                  SizedBox(width: 8),
-                  Text("添加书签"),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "delete",
-              child: Row(
-                children: [Icon(Icons.delete), SizedBox(width: 8), Text("删除")],
-              ),
-            ),
-          ];
-        },
-      ),
-    );
+            ];
+          },
+        ),
+      );
+    });
   }
 
   Future<void> _addBookToCollection(
     BuildContext context,
     BookTableData book,
   ) async {
+    // 获取当前书籍的收藏夹数据
+    final bookVo = controller.getBookState.value.data.firstWhereOrNull(
+      (vo) => vo.book.id == book.id,
+    );
+
     final collection = await showDialog(
       context: context,
       builder: (context) {
-        final selectedCollection = Rxn<CollectionTableData>();
+        final selectedCollection = Rxn<CollectionTableData>(bookVo?.collection);
 
         return AlertDialog(
           title: Text("选择收藏夹"),
           content: Obx(() {
             final data = controller.collectionService.collections;
             return SingleChildScrollView(
-              child: RadioGroup<CollectionTableData>(
+              child: RadioGroup<CollectionTableData?>(
                 onChanged: (value) {
                   selectedCollection.value = value;
                 },
                 groupValue: selectedCollection.value,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: data
-                      .map(
-                        (collection) => RadioListTile<CollectionTableData>(
-                          value: collection,
-                          selected:
-                              selectedCollection.value?.id == collection.id,
-                          title: Text(collection.name),
-                        ),
-                      )
-                      .toList(),
+                  children: [
+                    // 移除收藏选项
+                    RadioListTile<CollectionTableData?>(
+                      value: null,
+                      title: Text("不加入收藏夹"),
+                      subtitle: selectedCollection.value == null
+                          ? Text("当前状态", style: TextStyle(color: Colors.grey))
+                          : null,
+                    ),
+                    Divider(),
+                    // 收藏夹列表
+                    ...data.map(
+                      (collection) => RadioListTile<CollectionTableData?>(
+                        value: collection,
+                        title: Text(collection.name),
+                        subtitle: selectedCollection.value?.id == collection.id
+                            ? Text(
+                                "当前收藏夹",
+                                style: TextStyle(color: Colors.grey),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -635,11 +673,16 @@ class BookScreen extends GetView<BookController> {
         );
       },
     );
+
+    // 注意：这里需要处理 null 的情况，collection 可能是 null 也可能是未选择（对话框被取消）
     if (collection != null) {
       await controller.collectionService.updateBookCollection(
-        collection!.id,
+        collection.id,
         book.id,
       );
+    } else if (collection == null && bookVo?.collection != null) {
+      // 用户明确选择了"不加入收藏夹"，移除收藏
+      await controller.collectionService.updateBookCollection(0, book.id);
     }
   }
 
@@ -657,23 +700,28 @@ class BookScreen extends GetView<BookController> {
           content: Obx(() {
             final data = controller.collectionService.collections;
             return SingleChildScrollView(
-              child: RadioGroup<CollectionTableData>(
+              child: RadioGroup<CollectionTableData?>(
                 onChanged: (value) {
                   selectedCollection.value = value;
                 },
                 groupValue: selectedCollection.value,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: data
-                      .map(
-                        (collection) => RadioListTile<CollectionTableData>(
-                          value: collection,
-                          selected:
-                              selectedCollection.value?.id == collection.id,
-                          title: Text(collection.name),
-                        ),
-                      )
-                      .toList(),
+                  children: [
+                    // 移除收藏选项
+                    RadioListTile<CollectionTableData?>(
+                      value: null,
+                      title: Text("不加入收藏夹"),
+                    ),
+                    Divider(),
+                    // 收藏夹列表
+                    ...data.map(
+                      (collection) => RadioListTile<CollectionTableData?>(
+                        value: collection,
+                        title: Text(collection.name),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -695,21 +743,35 @@ class BookScreen extends GetView<BookController> {
         );
       },
     );
+
     if (collection != null) {
       for (var id in bookIds) {
         await controller.collectionService.updateBookCollection(
-          collection!.id,
+          collection.id,
           id,
         );
+      }
+    } else if (collection == null) {
+      // 用户选择了"不加入收藏夹"，移除所有选中书籍的收藏
+      for (var id in bookIds) {
+        await controller.collectionService.updateBookCollection(0, id);
       }
     }
   }
 
   Future<void> _addBookToMarks(BuildContext context, BookTableData book) async {
+    // 获取当前书籍的标签数据
+    final bookVo = controller.getBookState.value.data.firstWhereOrNull(
+      (vo) => vo.book.id == book.id,
+    );
+
     final marks = await showDialog(
       context: context,
       builder: (context) {
-        final selectedMarks = <int>{}.obs;
+        // 预选当前已有的标签
+        final selectedMarks = <int>{
+          if (bookVo != null) ...bookVo.marks.map((mark) => mark.id),
+        }.obs;
 
         return AlertDialog(
           title: Text("选择标签"),

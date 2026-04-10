@@ -13,23 +13,39 @@ class MarkController extends GetxController {
   final db = Get.find<AppDatabase>();
   final markService = Get.find<MarkService>();
   final markNameController = TextEditingController();
-  final selectedMarkColor = Rx<Color>(MarkConstant.colorList.first);
+  final markDescriptionController = TextEditingController();
+  final markNameError = RxnString();
 
 
   @override
   void onInit() {
     super.onInit();
   }
+
+  bool validateMarkName() {
+    final name = markNameController.text.trim();
+    if (name.isEmpty) {
+      markNameError.value = "标签名称不能为空";
+      return false;
+    }
+    markNameError.value = null;
+    return true;
+  }
+
+  void resetMarkForm() {
+    markNameController.clear();
+    markNameError.value = null;
+  }
 }
 
 class MarkFormData{
   final int? id;
   final String name;
-  final int color;
+  final String? description;
 
   MarkFormData({
     this.id,
     required this.name,
-    required this.color,
+    this.description,
   });
 }

@@ -30,7 +30,6 @@ class MarkScreen extends GetView<MarkController> {
                 itemBuilder: (context, index) {
                   final mark = controller.markService.marks[index];
                   return ListTile(
-                    leading: CircleAvatar(backgroundColor: Color(mark.color)),
                     title: Text(mark.name),
                     trailing: PopupMenuButton(
                       itemBuilder: (context) {
@@ -46,7 +45,7 @@ class MarkScreen extends GetView<MarkController> {
                             initData: MarkFormData(
                               id: mark.id,
                               name: mark.name,
-                              color: mark.color,
+                              description: mark.description,
                             ),
                           );
                         } else if (value == 'delete') {
@@ -62,110 +61,102 @@ class MarkScreen extends GetView<MarkController> {
   }
 
   void _saveMark(BuildContext context, {MarkFormData? initData}) {
+    // 重置或设置表单数据
+    if (initData != null) {
+      controller.markNameController.text = initData.name;
+      controller.markDescriptionController.text = initData.description ?? "";
+    } else {
+      controller.resetMarkForm();
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.6,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return Scaffold(
-              appBar: AppBar(
-                title: Text(initData == null ? "添加书签" : "编辑书签"),
-                leading: IconButton(
-                  icon: Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ),
-              body: Padding(
-                padding: EdgeInsets.all(16),
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    spacing: 16,
+        // Return a simple Material-based form so the confirm button can be
+        // placed in the header (right side) and content stays non-scrollable.
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Material(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  height: kToolbarHeight,
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  alignment: Alignment.centerLeft,
+                  child: Row(
                     children: [
-                      Text("标签名称"),
-                      TextField(
-                        controller: controller.markNameController,
-                        decoration: InputDecoration(
-                          hintText: "请输入标签名称",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      IconButton(
+                        icon: Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            initData == null ? "添加书签" : "编辑书签",
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
                       ),
-                      Text("标签颜色"),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Obx(
-                          () => SegmentedButton(
-                            onSelectionChanged: (newSelection) {
-                              final color = MarkConstant.colorList.firstWhere(
-                                (color) => color == newSelection.first,
-                              );
-                              controller.selectedMarkColor.value = color;
-                            },
-                            style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith((
-                                states,
-                              ) {
-                                if (states.contains(WidgetState.selected)) {
-                                  return controller.selectedMarkColor.value;
-                                }
-                                return Colors.transparent;
-                              }),
-                            ),
-                            showSelectedIcon: false,
-                            segments: [
-                              ...MarkConstant.colorList.map(
-                                (color) => ButtonSegment<Color>(
-                                  value: color,
-                                  label: Container(
-                                    width: 24,
-                                    height: 24,
-                                    decoration: BoxDecoration(
-                                      color:
-                                          controller.selectedMarkColor.value !=
-                                              color
-                                          ? color
-                                          : Theme.of(
-                                              context,
-                                            ).colorScheme.onPrimary,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            selected: {controller.selectedMarkColor.value},
-                          ),
-                        ),
+                      IconButton(
+                        icon: Icon(Icons.check),
+                        onPressed: () {
+                          if (!controller.validateMarkName()) {
+                            return;
+                          }
+                          controller.markService.saveMark(
+                            id: initData?.id,
+                            name: controller.markNameController.text.trim(),
+                          );
+                          Navigator.of(context).pop();
+                        },
                       ),
                     ],
                   ),
                 ),
-              ),
-              bottomNavigationBar: Container(
-                padding: EdgeInsets.all(16),
-                child: FilledButton.icon(
-                  onPressed: () {
-                    controller.markService.saveMark(
-                      id: initData?.id,
-                      name: controller.markNameController.text,
-                      color: controller.selectedMarkColor.value.toARGB32(),
-                    );
-                    Get.back();
-                  },
-                  label: Text("确认"),
-                  icon: Icon(Icons.check),
+
+                // content (non-scrollable)
+                SafeArea(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      spacing: 12,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("标签名称"),
+                        Obx(() {
+                          return TextField(
+                            controller: controller.markNameController,
+                            decoration: InputDecoration(
+                              hintText: "请输入标签名称",
+                              errorText: controller.markNameError.value,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          );
+                        }),
+                        Text("标签描述"),
+                        TextField(
+                          controller: controller.markDescriptionController,
+                          decoration: InputDecoration(
+                            hintText: "请输入标签描述",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            );
-          },
+              ],
+            ),
+          ),
         );
       },
     );

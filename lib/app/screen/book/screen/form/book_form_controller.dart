@@ -10,6 +10,7 @@ import 'package:tele_book/app/util/pick_file_util.dart';
 class BookFormController extends GetxController {
   final source = Rxn<BookFormSources>(null);
   final submitFormState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  final sourceController = TextEditingController();
   final webUrlController = TextEditingController();
   final filePathController = TextEditingController();
   final folderPathController = TextEditingController();

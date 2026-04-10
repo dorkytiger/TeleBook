@@ -51,3 +51,5 @@ app.*.map.json
 *.keystore
 keystore_base64.txt
 
+pubspec.lock
+

@@ -51,10 +51,6 @@ class DownloadScreen extends GetView<DownloadController> {
               '总数: ${group.totalCount.value} | 完成: ${group.completedCount.value} | 失败: ${group.failedCount.value}',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            Text(
-              '进度: ${(group.groupProgress.value * 100).toStringAsFixed(1)}%',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
             LinearProgressIndicator(value: group.groupProgress.value),
           ],
         ),

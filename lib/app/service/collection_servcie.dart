@@ -61,15 +61,13 @@ class CollectionService extends GetxService {
   Future<void> saveCollection({
     int? id,
     required String name,
-    required int color,
-    required int icon,
+    String? description,
   }) async {
     await db.collectionTable.insertOnConflictUpdate(
       CollectionTableCompanion(
         id: id != null ? Value(id) : Value.absent(),
         name: Value(name),
-        color: Value(color),
-        icon: Value(icon),
+        description: Value(description)
       ),
     );
   }

@@ -11,26 +11,35 @@ class BookEditScreen extends GetView<BookEditController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('编辑书籍')),
-      body: Obx(() {
-        return Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            spacing: 16,
-            children: [
-              // 书籍名称输入框
-              Text('书籍名'),
-              TextField(
-                controller: controller.bookName,
-                decoration: InputDecoration(labelText: "书籍名称",suffix: IconButton.filled(onPressed: (){}, icon: Icon(Icons.edit))),
-              ),
-
-              // 可拖拽的网格列表
-              Expanded(child: ReorderableGridView(controller: controller)),
-            ],
+      appBar: AppBar(
+        title: Text('编辑书籍'),
+        actions: [
+          IconButton(
+            onPressed: () {
+              controller.saveChanges();
+            },
+            icon: Icon(Icons.save),
+            tooltip: '保存',
           ),
-        );
-      }),
+        ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          spacing: 16,
+          children: [
+            TextField(
+              controller: controller.bookName,
+              decoration: InputDecoration(
+                labelText: "书籍名称",
+              ),
+            ),
+
+            // 可拖拽的网格列表
+            Expanded(child: ReorderableGridView(controller: controller)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -43,44 +52,100 @@ class ReorderableGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ReorderableListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: controller.imageList.length,
-      onReorder: controller.reorderImages,
-      proxyDecorator: (child, index, animation) {
-        return Material(
-          elevation: 8,
-          borderRadius: BorderRadius.circular(8),
-          child: child,
-        );
-      },
-      itemBuilder: (context, index) {
-        final imagePath = controller.imageList[index];
-        final fullPath = '${controller.appDirectory}/$imagePath';
-
-        return KeyedSubtree(
-          key: ValueKey(imagePath),
-          child: ListTile(
-            title: Text("第 ${index + 1} 页"),
-            leading: CustomImageLoader(localUrl: fullPath),
-            trailing: IconButton(
-              icon: Icon(Icons.delete_outline),
-              onPressed: () => _showDeleteConfirm(context, index),
-            ),
+    return Obx(() {
+      if (controller.imageList.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.image_outlined, size: 64, color: Colors.grey[400]),
+              SizedBox(height: 16),
+              Text(
+                '暂无图片',
+                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              ),
+            ],
           ),
         );
-      },
-    );
+      }
+
+      return ReorderableListView.builder(
+        itemCount: controller.imageList.length,
+        onReorder: controller.reorderImages,
+        proxyDecorator: (child, index, animation) {
+          return Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(8),
+            child: child,
+          );
+        },
+        itemBuilder: (context, index) {
+          final imagePath = controller.imageList[index];
+          final fullPath = '${controller.appDirectory}/$imagePath';
+
+          return Container(
+            key: ValueKey(imagePath),
+            margin: EdgeInsets.only(bottom: 8),
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                // 拖拽手柄
+                Icon(Icons.drag_handle, color: Colors.grey[400]),
+                SizedBox(width: 12),
+                // 图片缩略图
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.grey[200],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: CustomImageLoader(localUrl: fullPath),
+                ),
+                SizedBox(width: 12),
+                // 页码
+                Expanded(
+                  child: Text(
+                    "第 ${index + 1} 页",
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+                // 删除按钮
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red[400]),
+                  onPressed: () => _showDeleteConfirm(context, index),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 
   void _showDeleteConfirm(BuildContext context, int index) {
     Get.dialog(
       AlertDialog(
-        title:Text( '确认删除'),
-        content: Text('确定要删除这张图片吗？'),
-        actions:[
-          // TextButton(onPressed: onPressed, child: child)
-        ]
+        title: Text('确认删除'),
+        content: Text('确定要删除第 ${index + 1} 页吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              controller.deleteImage(index);
+              Get.back();
+            },
+            child: Text('删除', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }

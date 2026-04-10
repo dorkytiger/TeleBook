@@ -19,7 +19,6 @@ class MarkService extends GetxService {
     _markSubscription = db.markTable.select().watch().listen((_) {
       getAllMarks();
       getAllMarkBooks();
-
     });
     _markBookSubscription = db.markBookTable.select().watch().listen((_) {
       getAllMarks();
@@ -53,7 +52,7 @@ class MarkService extends GetxService {
   Future<void> saveMark({
     int? id,
     required String name,
-    required int color,
+    String? description,
   }) async {
     await db.transaction(() async {
       if (id != null) {
@@ -65,7 +64,7 @@ class MarkService extends GetxService {
       final markCompanion = MarkTableCompanion(
         id: id != null ? Value(id) : Value.absent(),
         name: Value(name),
-        color: Value(color),
+        description: Value(description),
       );
       await db.markTable.insertOnConflictUpdate(markCompanion);
     });
