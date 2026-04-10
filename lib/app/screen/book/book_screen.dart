@@ -65,153 +65,50 @@ class BookScreen extends GetView<BookController> {
         return ListView.builder(
           itemBuilder: (context, index) {
             final bookData = data[index];
-            return InkWell(
-              onTap: () {
-                if (controller.multiEditMode.value) {
-                  controller.toggleSelectBook(bookData.book.id);
-                } else {
-                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
-                }
-              },
-              onLongPress: () {
-                if (!controller.multiEditMode.value) {
-                  controller.triggerMultiEditMode(true);
-                  controller.toggleSelectBook(bookData.book.id);
-                  _showBottomSheet(context);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                height: 130,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 多选 checkbox
-                    Obx(
-                      () => controller.multiEditMode.value
-                          ? Checkbox(
-                              value: controller.selectedBookIds.contains(
-                                bookData.book.id,
-                              ),
-                              onChanged: (_) {
-                                controller.toggleSelectBook(bookData.book.id);
-                              },
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    // 封面图片
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        width: 100,
-                        child: Image.file(
-                          File(
-                            controller.pathService.getBookFilePath(
-                              bookData.book.localPaths.first,
-                            ),
-                          ),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.broken_image, size: 40),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    // 信息区域
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                spacing: 6,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      bookData.book.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
-                                  ),
-                                  Text(
-                                    '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: Colors.grey),
-                                  ),
-                                  if (bookData.marks.isNotEmpty)
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      children: bookData.marks
-                                          .map(
-                                            (e) => Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                  color: Color(e.color),
-                                                ),
-                                                color: Color(
-                                                  e.color,
-                                                ).withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                e.name,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .labelSmall
-                                                    ?.copyWith(
-                                                      color: Color(e.color),
-                                                    ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                    ),
-                                  if (bookData.collection != null) ...[
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        border: Border.all(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurfaceVariant,
-                                        ),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        bookData.collection!.name,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.labelSmall,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            _buildEditPopupButton(context, bookData.book),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+            void onTap() {
+              if (controller.multiEditMode.value) {
+                controller.toggleSelectBook(bookData.book.id);
+              } else {
+                Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+              }
+            }
+
+            void onLongTap() {
+              if (!controller.multiEditMode.value) {
+                controller.triggerMultiEditMode(true);
+                controller.toggleSelectBook(bookData.book.id);
+                _showBottomSheet(context);
+              }
+            }
+
+            final leading = Image.file(
+              File(
+                controller.pathService.getBookFilePath(
+                  bookData.book.localPaths.first,
                 ),
               ),
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.broken_image, size: 40),
+            );
+
+            final title = Text(
+              bookData.book.name,
+            );
+
+            final subTitle = Text(
+              '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            );
+
+            return ListTile(
+              onTap: onTap,
+              onLongPress: onLongTap,
+              leading: leading,
+              title: title,
+              subtitle: subTitle,
             );
           },
           itemCount: data.length,
