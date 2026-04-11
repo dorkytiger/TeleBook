@@ -271,15 +271,20 @@ class ImportService extends GetxService {
     }
   }
 
+  int _groupIdCounter = 0;
+  int _taskIdCounter = 0;
+
   String generateGroupId() {
-    // 生成唯一ID的逻辑，可以使用UUID或者其他方式
+    // 使用微秒时间戳 + 递增计数器确保唯一性
     final now = DateTime.now();
-    return "group_${now.millisecondsSinceEpoch}";
+    _groupIdCounter++;
+    return "group_${now.microsecondsSinceEpoch}_${_groupIdCounter}";
   }
 
   String generateTaskId() {
-    // 生成唯一ID的逻辑，可以使用UUID或者其他方式
+    // 使用微秒时间戳 + 递增计数器确保唯一性
     final now = DateTime.now();
-    return "task_${now.millisecondsSinceEpoch}";
+    _taskIdCounter++;
+    return "task_${now.microsecondsSinceEpoch}_${_taskIdCounter}";
   }
 }

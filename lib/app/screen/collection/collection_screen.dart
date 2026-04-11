@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/collection/widget/collection_form_widget.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 
@@ -41,23 +42,45 @@ class CollectionScreen extends GetView<CollectionController> {
                   .length;
               final isEditMode = controller.isEditMode.value;
 
-              return Container(
+              return Card(
                 margin: EdgeInsets.only(bottom: 12),
-                // decoration: BoxDecoration(
-                //   borderRadius: BorderRadius.circular(12),
-                //   border: Border.all(color: Colors.grey[300]!),
-                // ),
                 child: ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   onTap: isEditMode
                       ? null
                       : () => _showCollectionBooks(context, collection),
                   title: Text(
                     collection.name,
-                    style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  subtitle: Text(
-                    '$bookCount 本书籍',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          '$bookCount 本书籍',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                      if (collection.description != null && collection.description!.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Text(
+                            collection.description!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                              fontStyle: FontStyle.italic,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
                   ),
                   trailing: isEditMode
                       ? Row(
@@ -70,6 +93,7 @@ class CollectionScreen extends GetView<CollectionController> {
                                 initData: CollectionFormData(
                                   id: collection.id,
                                   name: collection.name,
+                                  description: collection.description,
                                 ),
                               ),
                             ),
@@ -128,6 +152,9 @@ class CollectionScreen extends GetView<CollectionController> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -139,6 +166,7 @@ class CollectionScreen extends GetView<CollectionController> {
               controller.collectionService.saveCollection(
                 id: initData?.id,
                 name: data.name,
+                description: data.description,
               );
               Navigator.of(context).pop();
             },

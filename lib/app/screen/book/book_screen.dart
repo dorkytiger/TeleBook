@@ -63,6 +63,7 @@ class BookScreen extends GetView<BookController> {
     return controller.getBookState.displaySuccess(
       successBuilder: (data) {
         return ListView.builder(
+          padding: EdgeInsets.all(16),
           itemBuilder: (context, index) {
             final bookData = data[index];
             void onTap() {
@@ -81,67 +82,150 @@ class BookScreen extends GetView<BookController> {
               }
             }
 
-            final leading = ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(4)),
-              child: Image.file(
-                File(
-                  controller.pathService.getBookFilePath(
-                    bookData.book.localPaths.first,
-                  ),
-                ),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, size: 40),
-              ),
-            );
-
-            final title = Text(bookData.book.name);
-
-            // 构建包含创建时间和标签的 subtitle
-            final subTitle = Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 4,
-              children: [
-                // 创建时间
-                Text(
-                  '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                ),
-                // 标签信息 - 使用 tag 风格
-                if (bookData.marks.isNotEmpty)
-                  Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: bookData.marks.map((mark) {
-                      return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          mark.name,
-                          style: TextStyle(
-                            color: Colors.grey[700],
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
+            return Card(
+              margin: EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                onTap: onTap,
+                onLongPress: onLongTap,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 封面
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: SizedBox(
+                          width: 60,
+                          height: 90,
+                          child: Image.file(
+                            File(
+                              controller.pathService.getBookFilePath(
+                                bookData.book.localPaths.first,
+                              ),
+                            ),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Container(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                              child: const Icon(Icons.broken_image, size: 40),
+                            ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      SizedBox(width: 12),
+                      // 信息区域
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 标题
+                            Text(
+                              bookData.book.name,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: 6),
+                            // 创建时间
+                            Text(
+                              '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color
+                                        ?.withValues(alpha: 0.7),
+                                  ),
+                            ),
+                            SizedBox(height: 6),
+                            // 收藏夹信息
+                            if (bookData.collection != null)
+                              Padding(
+                                padding: EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.folder,
+                                      size: 14,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                    SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(
+                                        bookData.collection!.name,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            // 标签信息
+                            if (bookData.marks.isNotEmpty)
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: bookData.marks.map((mark) {
+                                  return Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      mark.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSecondaryContainer,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ),
+                      ),
+                      // 操作按钮
+                      _buildEditPopupButton(
+                        context,
+                        bookData.book,
+                        isVerticalLayout: true,
+                      ),
+                    ],
                   ),
-              ],
-            );
-
-            return ListTile(
-              onTap: onTap,
-              onLongPress: onLongTap,
-              leading: leading,
-              title: title,
-              subtitle: subTitle,
-              trailing: _buildEditPopupButton(context, bookData.book,isVerticalLayout: true),
+                ),
+              ),
             );
           },
           itemCount: data.length,
@@ -157,119 +241,187 @@ class BookScreen extends GetView<BookController> {
           padding: EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 200,
-            childAspectRatio: 9 / 16,
-            crossAxisSpacing: 8,
+            childAspectRatio: 0.65,
+            crossAxisSpacing: 12,
             mainAxisSpacing: 16,
           ),
           itemBuilder: (context, index) {
             final bookData = data[index];
-            return InkWell(
-              onTap: () {
-                if (controller.multiEditMode.value) {
-                  controller.toggleSelectBook(bookData.book.id);
-                } else {
-                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
-                }
-              },
-              onLongPress: () {
-                if (!controller.multiEditMode.value) {
-                  controller.triggerMultiEditMode(true);
-                  controller.toggleSelectBook(bookData.book.id);
-                  _showBottomSheet(context);
-                }
-              },
-              child: Column(
-                children: [
-                  Expanded(
-                    flex: 2,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: Image.file(
-                          File(
-                            controller.pathService.getBookFilePath(
-                              bookData.book.localPaths.first,
-                            ),
-                          ),
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[200],
-                              alignment: Alignment.center,
-                              child: Icon(Icons.broken_image, size: 40),
-                            );
-                          },
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 1,
-                    child: Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  if (controller.multiEditMode.value) {
+                    controller.toggleSelectBook(bookData.book.id);
+                  } else {
+                    Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+                  }
+                },
+                onLongPress: () {
+                  if (!controller.multiEditMode.value) {
+                    controller.triggerMultiEditMode(true);
+                    controller.toggleSelectBook(bookData.book.id);
+                    _showBottomSheet(context);
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 封面图片 (2:3 比例)
+                    Expanded(
+                      flex: 2,
+                      child: Stack(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  spacing: 4,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 书名
-                                    Text(
-                                      bookData.book.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    // 标签信息 - 使用 tag 风格
-                                    if (bookData.marks.isNotEmpty)
-                                      Wrap(
-                                        spacing: 3,
-                                        runSpacing: 3,
-                                        children: bookData.marks.take(2).map((mark) {
-                                          return Container(
-                                            padding: EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey[200],
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              mark.name,
-                                              style: TextStyle(
-                                                color: Colors.grey[700],
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                  ],
+                          SizedBox(
+                            width: double.infinity,
+                            height: double.infinity,
+                            child: Image.file(
+                              File(
+                                controller.pathService.getBookFilePath(
+                                  bookData.book.localPaths.first,
                                 ),
                               ),
-
-                              _buildEditPopupButton(context, bookData.book),
-                            ],
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 40,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                );
+                              },
+                              fit: BoxFit.cover,
+                            ),
                           ),
-
-                          Spacer(),
+                          // 右上角显示收藏夹和标签
+                          if (bookData.collection != null ||
+                              bookData.marks.isNotEmpty)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                spacing: 4,
+                                children: [
+                                  // 收藏夹图标
+                                  if (bookData.collection != null)
+                                    Container(
+                                      padding: EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        Icons.folder,
+                                        size: 16,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  // 标签指示器（显示数量）
+                                  if (bookData.marks.isNotEmpty)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.secondaryContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.2,
+                                            ),
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.bookmark,
+                                            size: 12,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSecondaryContainer,
+                                          ),
+                                          SizedBox(width: 2),
+                                          Text(
+                                            '${bookData.marks.length}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSecondaryContainer,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                  ),
-                ],
+                    // 信息区域
+                    Expanded(
+                      flex: 1,
+                      child: Padding(
+                        padding: EdgeInsets.all(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 书名和操作按钮在同一行
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    bookData.book.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                _buildEditPopupButton(context, bookData.book),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -278,6 +430,7 @@ class BookScreen extends GetView<BookController> {
       },
     );
   }
+
 
   void _showBottomSheet(BuildContext context) {
     PersistentBottomSheetController? bottomSheetController;
@@ -321,7 +474,7 @@ class BookScreen extends GetView<BookController> {
                     _addBooksToCollection(context, selectedBooks);
                   },
                   label: Text("加入到收藏夹"),
-                  icon: Icon(Icons.check),
+                  icon: Icon(Icons.folder),
                 ),
                 OutlinedButton.icon(
                   onPressed: () {
@@ -351,6 +504,27 @@ class BookScreen extends GetView<BookController> {
                   },
                   label: Text("导出"),
                   icon: Icon(Icons.upload),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    final selectedBooks = controller.selectedBookIds.toList();
+                    if (selectedBooks.isEmpty) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text("请至少选择一本书籍")));
+                      return;
+                    }
+                    _deleteBooksConfirm(context, selectedBooks);
+                  },
+                  label: Text("删除"),
+                  icon: Icon(
+                    Icons.delete,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.error,
+
+                  ),
                 ),
               ],
             ),
@@ -589,9 +763,17 @@ class BookScreen extends GetView<BookController> {
                 value: "delete",
                 child: Row(
                   children: [
-                    Icon(Icons.delete),
+                    Icon(
+                      Icons.delete,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     SizedBox(width: 8),
-                    Text("删除"),
+                    Text(
+                      "删除",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -879,6 +1061,51 @@ class BookScreen extends GetView<BookController> {
     if (marks != null) {
       for (var id in bookIds) {
         await controller.markService.updateBookMarks(id, marks);
+      }
+    }
+  }
+
+  Future<void> _deleteBooksConfirm(
+    BuildContext context,
+    List<int> bookIds,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("确认删除"),
+          content: Text("确定要删除选中的 ${bookIds.length} 本书籍吗？此操作无法撤销"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Get.back(result: false);
+              },
+              child: Text("取消"),
+            ),
+            TextButton(
+              onPressed: () {
+                Get.back(result: true);
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: Text("删除"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      for (var id in bookIds) {
+        await controller.deleteBook(id);
+      }
+      // 删除完成后退出批量编辑模式
+      controller.triggerMultiEditMode(false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("已删除 ${bookIds.length} 本书籍")));
       }
     }
   }

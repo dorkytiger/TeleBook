@@ -32,14 +32,7 @@ class BookFormScreen extends GetView<BookFormController> {
               spacing: 16,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("选择导入源", style: Theme.of(context).textTheme.titleMedium),
                 _buildSourceDialog(context),
-                controller.source.value == null
-                    ? SizedBox.shrink()
-                    : Text(
-                        "输入信息",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
                 _buildForm(context),
               ],
             ),
@@ -55,7 +48,12 @@ class BookFormScreen extends GetView<BookFormController> {
       decoration: InputDecoration(
         labelText: "导入源",
         hintText: "请选择导入源",
-        border: OutlineInputBorder(),
+        prefixIcon: Icon(Icons.source),
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
         suffixIcon: TextButton(
           onPressed: () {
             showModalBottomSheet(
@@ -171,7 +169,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "网页地址",
             hintText: "请输入网页地址",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.link),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pasteFromClipboard(context);
@@ -187,7 +190,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "压缩包文件",
             hintText: "请选择压缩包文件",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.archive),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickArchiveFile();
@@ -203,7 +211,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "压缩包文件夹",
             hintText: "请选择包含压缩包的文件夹",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.folder),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickFolder();
@@ -219,7 +232,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "PDF文件",
             hintText: "请选择PDF文件",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.picture_as_pdf),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickPdf();
@@ -235,7 +253,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "图片文件夹",
             hintText: "请选择图片文件夹",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.folder),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickImageFolder();
@@ -251,7 +274,12 @@ class BookFormScreen extends GetView<BookFormController> {
           decoration: InputDecoration(
             labelText: "图片文件夹",
             hintText: "请选择包含图片文件夹的文件夹",
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.folder),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickBatchImageFolder();

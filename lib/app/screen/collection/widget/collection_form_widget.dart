@@ -52,6 +52,7 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
     // layout/hittest issues when this widget is shown inside a bottom sheet.
     return Material(
       color: Theme.of(context).scaffoldBackgroundColor,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -60,6 +61,14 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
             height: kToolbarHeight,
             padding: EdgeInsets.symmetric(horizontal: 8),
             alignment: Alignment.centerLeft,
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                  width: 0.5,
+                ),
+              ),
+            ),
             child: Row(
               children: [
                 IconButton(
@@ -70,7 +79,9 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
                   child: Center(
                     child: Text(
                       widget.initialData == null ? "新建收藏夹" : "编辑收藏夹",
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -98,30 +109,36 @@ class _CollectionFormWidgetState extends State<CollectionFormWidget> {
 
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+              padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
               child: Column(
-                spacing: 12,
+                spacing: 20,
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("收藏夹名称"),
                   TextField(
                     controller: nameController,
                     decoration: InputDecoration(
+                      labelText: "收藏夹名称",
                       hintText: "请输入收藏夹名称",
                       errorText: nameErrorText,
+                      prefixIcon: Icon(Icons.folder),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                   ),
-                  Text("收藏夹描述"),
                   TextField(
                     controller: descriptionController,
                     decoration: InputDecoration(
+                      labelText: "收藏夹描述",
                       hintText: "请输入收藏夹描述（可选）",
+                      prefixIcon: Icon(Icons.description),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     maxLines: 3,

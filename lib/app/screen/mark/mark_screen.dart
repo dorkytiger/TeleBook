@@ -25,32 +25,55 @@ class MarkScreen extends GetView<MarkController> {
         () => controller.markService.marks.isEmpty
             ? Center(child: CustomEmpty(message: "暂无书签，点击右上角添加"))
             : ListView.builder(
+                padding: EdgeInsets.all(16),
                 itemCount: controller.markService.marks.length,
                 itemBuilder: (context, index) {
                   final mark = controller.markService.marks[index];
-                  return ListTile(
-                    title: Text(mark.name),
-                    trailing: PopupMenuButton(
-                      itemBuilder: (context) {
-                        return [
-                          PopupMenuItem(value: 'edit', child: Text('编辑')),
-                          PopupMenuItem(value: 'delete', child: Text('删除')),
-                        ];
-                      },
-                      onSelected: (value) {
-                        if (value == 'edit') {
-                          _saveMark(
-                            context,
-                            initData: MarkFormData(
-                              id: mark.id,
-                              name: mark.name,
-                              description: mark.description,
-                            ),
-                          );
-                        } else if (value == 'delete') {
-                          controller.markService.deleteMark(mark.id);
-                        }
-                      },
+                  return Card(
+                    margin: EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      title: Text(
+                        mark.name,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: mark.description != null && mark.description!.isNotEmpty
+                          ? Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                mark.description!,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            )
+                          : null,
+                      trailing: PopupMenuButton(
+                        itemBuilder: (context) {
+                          return [
+                            PopupMenuItem(value: 'edit', child: Text('编辑')),
+                            PopupMenuItem(value: 'delete', child: Text('删除')),
+                          ];
+                        },
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            _saveMark(
+                              context,
+                              initData: MarkFormData(
+                                id: mark.id,
+                                name: mark.name,
+                                description: mark.description,
+                              ),
+                            );
+                          } else if (value == 'delete') {
+                            controller.markService.deleteMark(mark.id);
+                          }
+                        },
+                      ),
                     ),
                   );
                 },
@@ -80,6 +103,7 @@ class MarkScreen extends GetView<MarkController> {
           ),
           child: Material(
             color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -87,6 +111,14 @@ class MarkScreen extends GetView<MarkController> {
                   height: kToolbarHeight,
                   padding: EdgeInsets.symmetric(horizontal: 8),
                   alignment: Alignment.centerLeft,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
                   child: Row(
                     children: [
                       IconButton(
@@ -97,7 +129,9 @@ class MarkScreen extends GetView<MarkController> {
                         child: Center(
                           child: Text(
                             initData == null ? "添加书签" : "编辑书签",
-                            style: Theme.of(context).textTheme.titleLarge,
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -110,6 +144,9 @@ class MarkScreen extends GetView<MarkController> {
                           controller.markService.saveMark(
                             id: initData?.id,
                             name: controller.markNameController.text.trim(),
+                            description: controller.markDescriptionController.text.trim().isEmpty
+                                ? null
+                                : controller.markDescriptionController.text.trim(),
                           );
                           Navigator.of(context).pop();
                         },
@@ -121,33 +158,41 @@ class MarkScreen extends GetView<MarkController> {
                 // content (non-scrollable)
                 SafeArea(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
                     child: Column(
-                      spacing: 12,
+                      spacing: 20,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("标签名称"),
                         Obx(() {
                           return TextField(
                             controller: controller.markNameController,
                             decoration: InputDecoration(
-                              hintText: "请输入标签名称",
+                              hintText: "请输入书签名称",
+                              labelText: "书签名称",
+                              prefixIcon: Icon(Icons.bookmark_outline),
                               errorText: controller.markNameError.value,
+                              filled: true,
+                              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           );
                         }),
-                        Text("标签描述"),
                         TextField(
                           controller: controller.markDescriptionController,
                           decoration: InputDecoration(
-                            hintText: "请输入标签描述",
+                            hintText: "请输入书签描述（可选）",
+                            labelText: "书签描述",
+                            prefixIcon: Icon(Icons.description_outlined),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                             ),
+
                           ),
+                          maxLines: 3,
                         ),
                       ],
                     ),

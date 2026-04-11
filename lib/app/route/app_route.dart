@@ -3,6 +3,8 @@ import 'package:tele_book/app/screen/book/book_binding.dart';
 import 'package:tele_book/app/screen/book/book_screen.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_binding.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_screen.dart';
+import 'package:tele_book/app/screen/book/screen/filter/book_filter_binding.dart';
+import 'package:tele_book/app/screen/book/screen/filter/book_filter_screen.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_binding.dart';
 import 'package:tele_book/app/screen/book/screen/form/book_form_screen.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_binding.dart';
@@ -11,9 +13,10 @@ import 'package:tele_book/app/screen/collection/collection_bind.dart';
 import 'package:tele_book/app/screen/collection/collection_screen.dart';
 import 'package:tele_book/app/screen/download/download_binding.dart';
 import 'package:tele_book/app/screen/download/download_screen.dart';
-
 import 'package:tele_book/app/screen/download/screen/task/download_task_binding.dart';
 import 'package:tele_book/app/screen/download/screen/task/download_task_screen.dart';
+import 'package:tele_book/app/screen/export/export_binding.dart';
+import 'package:tele_book/app/screen/export/export_screen.dart';
 import 'package:tele_book/app/screen/home/home_bind.dart';
 import 'package:tele_book/app/screen/home/home_screen.dart';
 import 'package:tele_book/app/screen/mark/mark_bind.dart';
@@ -24,16 +27,14 @@ import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit
 import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_screen.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_binding.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/single/parse_single_archive_screen.dart';
-import 'package:tele_book/app/screen/parse/pdf/parse_pdf_binding.dart';
-import 'package:tele_book/app/screen/parse/pdf/parse_pdf_screen.dart';
-import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_binding.dart';
-import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_screen.dart';
 import 'package:tele_book/app/screen/parse/image_folder/batch/parse_batch_image_folder_binding.dart';
 import 'package:tele_book/app/screen/parse/image_folder/batch/parse_batch_image_folder_screen.dart';
+import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_binding.dart';
+import 'package:tele_book/app/screen/parse/image_folder/single/parse_image_folder_screen.dart';
+import 'package:tele_book/app/screen/parse/pdf/parse_pdf_binding.dart';
+import 'package:tele_book/app/screen/parse/pdf/parse_pdf_screen.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_binding.dart';
 import 'package:tele_book/app/screen/parse/web/parse_web_screen.dart';
-import 'package:tele_book/app/screen/export/export_binding.dart';
-import 'package:tele_book/app/screen/export/export_screen.dart';
 
 class AppRoute {
   static const home = "/home";
@@ -43,6 +44,7 @@ class AppRoute {
   static const bookForm = "/book/form";
   static const bookEdit = "/book/edit";
   static const bookPage = "/book/page";
+  static const bookFilter = "/book/filter";
 
   static const parseWeb = "/parse/web";
   static const parsePdf = "/parse/pdf";
@@ -78,6 +80,11 @@ class AppRoute {
       name: bookPage,
       page: () => BookPageScreen(),
       binding: BookPageBinding(),
+    ),
+    GetPage(
+      name: bookFilter,
+      page: () => BookFilterScreen(),
+      binding: BookFilterBinding(),
     ),
     GetPage(
       name: parseWeb,

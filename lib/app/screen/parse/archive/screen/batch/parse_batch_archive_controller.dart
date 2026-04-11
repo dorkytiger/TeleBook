@@ -28,7 +28,7 @@ class ParseBatchArchiveController extends GetxController {
   void onInit() async {
     super.onInit();
     saveAllBooksState.listenEvent(
-      onSuccess: (_) {
+      onIdle: () {
         Get.back();
         final homeController = Get.find<HomeController>();
         homeController.selectedIndex.value = 1;
@@ -148,6 +148,7 @@ class ParseBatchArchiveController extends GetxController {
       event: () async {
         if (archiveFolders.isEmpty) throw Exception('没有可保存的书籍');
 
+        // 顺序处理每个压缩包，避免并发冲突
         for (final archiveFolder in archiveFolders) {
           // 将解压后的文件转为 File 列表
           final files = archiveFolder.files
@@ -163,8 +164,8 @@ class ParseBatchArchiveController extends GetxController {
             files: files,
           );
           importService.addImportGroup(group);
-          // 不等待完成，直接加入队列后跳转
-          unawaited(importService.startImport(group.id));
+          // 等待每个任务完成后再处理下一个，避免并发冲突
+          await importService.startImport(group.id);
         }
       },
     );

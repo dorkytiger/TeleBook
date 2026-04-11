@@ -19,6 +19,6 @@ class CollectionController extends GetxController {
   }
 
   void showCollectionBooks(CollectionTableData collection) {
-    Get.toNamed(AppRoute.book, arguments: {'collectionId': collection.id});
+    Get.toNamed(AppRoute.bookFilter, arguments: {'collectionId': collection.id});
   }
 }
