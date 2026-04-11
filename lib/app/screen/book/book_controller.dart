@@ -271,6 +271,16 @@ class BookController extends GetxController {
       },
     );
   }
+
+  @override
+  void onClose() {
+    booksSubscription?.cancel();
+    collectionsSubscription?.cancel();
+    collectionBooksSubscription?.cancel();
+    marksSubscription?.cancel();
+    markBooksSubscription?.cancel();
+    super.onClose();
+  }
 }
 
 class BookVo {
