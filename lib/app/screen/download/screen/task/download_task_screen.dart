@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -70,29 +68,44 @@ class DownloadTaskScreen extends GetView<DownloadTaskController> {
                       subtitle: Text(
                         '状态: ${task.status.value.name} 进度: ${(task.progress.value * 100).toStringAsFixed(1)}%',
                       ),
-                      trailing: PopupMenuButton(
-                        itemBuilder: (context) {
-                          return [
-                            PopupMenuItem(value: "resume", child: Text("继续")),
-                            PopupMenuItem(value: "pause", child: Text("暂停")),
-                            PopupMenuItem(value: "cancel", child: Text("删除")),
-                            PopupMenuItem(value: "retry", child: Text("重试")),
-                          ];
-                        },
-                        onSelected: (value) {
-                          if (value == "resume") {
-                            controller.downloadService.resume(task.taskId);
-                          }
-                          if (value == "pause") {
-                            controller.downloadService.pause(task.taskId);
-                          }
-                          if (value == "cancel") {
-                            controller.downloadService.cancel(task.taskId);
-                          }
-                          if (value == "retry") {
-                            controller.downloadService.retry(task.taskId);
-                          }
-                        },
+                      trailing: MenuAnchor(
+                        menuChildren: [
+                          MenuItemButton(
+                            leadingIcon: const Icon(Icons.play_arrow),
+                            onPressed: () {
+                              controller.downloadService.resume(task.taskId);
+                            },
+                            child: const Text("继续"),
+                          ),
+                          MenuItemButton(
+                            leadingIcon: const Icon(Icons.pause),
+                            onPressed: () {
+                              controller.downloadService.pause(task.taskId);
+                            },
+                            child: const Text("暂停"),
+                          ),
+                          MenuItemButton(
+                            leadingIcon: const Icon(Icons.delete),
+                            onPressed: () {
+                              controller.downloadService.cancel(task.taskId);
+                            },
+                            child: const Text("删除"),
+                          ),
+                          MenuItemButton(
+                            leadingIcon: const Icon(Icons.refresh),
+                            onPressed: () {
+                              controller.downloadService.retry(task.taskId);
+                            },
+                            child: const Text("重试"),
+                          ),
+                        ],
+                        builder: (btnContext, menuController, child) =>
+                            IconButton(
+                              icon: const Icon(Icons.more_vert),
+                              onPressed: () => menuController.isOpen
+                                  ? menuController.close()
+                                  : menuController.open(),
+                            ),
                       ),
                     ),
                   ),

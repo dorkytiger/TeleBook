@@ -377,7 +377,7 @@ class BookScreen extends GetView<BookController> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 12,),
+                  SizedBox(height: 12),
                   // 信息区域
                   Expanded(
                     flex: 1,
@@ -518,122 +518,95 @@ class BookScreen extends GetView<BookController> {
     return SizedBox(
       height: 40,
       width: 40,
-      child: PopupMenuButton(
-        icon: Icon(Icons.filter_list),
-        onSelected: (value) {
-          if (value == "grid") {
-            controller.bookLayout.value = BookLayoutSetting.grid;
-          }
-          if (value == "list") {
-            controller.bookLayout.value = BookLayoutSetting.list;
-          }
-          if (value == "titleAsc") {
-            controller.sortBy.value = BookSort(
-              type: BookSortType.title,
-              order: BookSortOrder.asc,
-            );
-          }
-          if (value == "titleDesc") {
-            controller.sortBy.value = BookSort(
-              type: BookSortType.title,
-              order: BookSortOrder.desc,
-            );
-          }
-          if (value == "addTimeAsc") {
-            controller.sortBy.value = BookSort(
-              type: BookSortType.addTime,
-              order: BookSortOrder.asc,
-            );
-          }
-          if (value == "addTimeDesc") {
-            controller.sortBy.value = BookSort(
-              type: BookSortType.addTime,
-              order: BookSortOrder.desc,
-            );
-          }
-        },
-        itemBuilder: (BuildContext context) {
-          return [
-            PopupMenuItem(
-              value: "grid",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.grid_view),
-                  Text("网格布局"),
-                  if (controller.bookLayout.value == BookLayoutSetting.grid)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "list",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.list),
-
-                  Text("列表布局"),
-
-                  if (controller.bookLayout.value == BookLayoutSetting.list)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "titleAsc",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.sort_by_alpha),
-                  Text("标题升序"),
-                  if (controller.sortBy.value.type == BookSortType.title &&
-                      controller.sortBy.value.order == BookSortOrder.asc)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "titleDesc",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.sort_by_alpha_outlined),
-                  Text("标题降序"),
-                  if (controller.sortBy.value.type == BookSortType.title &&
-                      controller.sortBy.value.order == BookSortOrder.desc)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "addTimeAsc",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.access_time),
-                  Text("添加时间升序"),
-                  if (controller.sortBy.value.type == BookSortType.addTime &&
-                      controller.sortBy.value.order == BookSortOrder.asc)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: "addTimeDesc",
-              child: Row(
-                spacing: 8,
-                children: [
-                  Icon(Icons.access_time_outlined),
-                  Text("添加时间降序"),
-                  if (controller.sortBy.value.type == BookSortType.addTime &&
-                      controller.sortBy.value.order == BookSortOrder.desc)
-                    Icon(Icons.check, size: 16),
-                ],
-              ),
-            ),
-          ];
-        },
+      child: MenuAnchor(
+        menuChildren: [
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.grid_view),
+            trailingIcon: controller.bookLayout.value == BookLayoutSetting.grid
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.bookLayout.value = BookLayoutSetting.grid;
+            },
+            child: const Text("网格布局"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.list),
+            trailingIcon: controller.bookLayout.value == BookLayoutSetting.list
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.bookLayout.value = BookLayoutSetting.list;
+            },
+            child: const Text("列表布局"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.sort_by_alpha),
+            trailingIcon:
+                controller.sortBy.value.type == BookSortType.title &&
+                    controller.sortBy.value.order == BookSortOrder.asc
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.sortBy.value = BookSort(
+                type: BookSortType.title,
+                order: BookSortOrder.asc,
+              );
+            },
+            child: const Text("标题升序"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.sort_by_alpha_outlined),
+            trailingIcon:
+                controller.sortBy.value.type == BookSortType.title &&
+                    controller.sortBy.value.order == BookSortOrder.desc
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.sortBy.value = BookSort(
+                type: BookSortType.title,
+                order: BookSortOrder.desc,
+              );
+            },
+            child: const Text("标题降序"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.access_time),
+            trailingIcon:
+                controller.sortBy.value.type == BookSortType.addTime &&
+                    controller.sortBy.value.order == BookSortOrder.asc
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.sortBy.value = BookSort(
+                type: BookSortType.addTime,
+                order: BookSortOrder.asc,
+              );
+            },
+            child: const Text("添加时间升序"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.access_time_outlined),
+            trailingIcon:
+                controller.sortBy.value.type == BookSortType.addTime &&
+                    controller.sortBy.value.order == BookSortOrder.desc
+                ? const Icon(Icons.check, size: 16)
+                : null,
+            onPressed: () {
+              controller.sortBy.value = BookSort(
+                type: BookSortType.addTime,
+                order: BookSortOrder.desc,
+              );
+            },
+            child: const Text("添加时间降序"),
+          ),
+        ],
+        builder: (btnContext, menuController, child) => IconButton(
+          icon: const Icon(Icons.filter_list),
+          onPressed: () => menuController.isOpen
+              ? menuController.close()
+              : menuController.open(),
+        ),
       ),
     );
   }
@@ -660,105 +633,79 @@ class BookScreen extends GetView<BookController> {
       }
 
       // 正常模式下显示弹出菜单
-      return SizedBox(
-        height: 40,
-        width: 40,
-        child: PopupMenuButton(
-          icon: Icon(isVerticalLayout ? Icons.more_horiz : Icons.more_vert),
-          onSelected: (value) {
-            if (value == "edit") {
+      return MenuAnchor(
+        alignmentOffset: Offset(-64, 0),
+        menuChildren: [
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.edit),
+            onPressed: () {
               Get.toNamed(AppRoute.bookEdit, arguments: book.id);
-            }
-            if (value == "collection") {
+            },
+            child: const Text("编辑"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.star),
+            onPressed: () {
               _addBookToCollection(context, book);
-            }
-            if (value == "export") {
+            },
+            child: const Text("收藏夹"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.upload),
+            onPressed: () {
               controller.exportBook(book);
-            }
-            if (value == "mark") {
+            },
+            child: const Text("导出"),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.bookmark),
+            onPressed: () {
               _addBookToMarks(context, book);
-            }
-            if (value == "delete") {
+            },
+            child: const Text("书签"),
+          ),
+          MenuItemButton(
+            leadingIcon: Icon(
+              Icons.delete,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) {
                   return AlertDialog(
-                    title: Text("确认删除"),
+                    title: const Text("确认删除"),
                     content: Text("确定要删除《${book.name}》吗？此操作无法撤销"),
                     actions: [
                       TextButton(
                         onPressed: () {
                           Get.back();
                         },
-                        child: Text("取消"),
+                        child: const Text("取消"),
                       ),
                       TextButton(
                         onPressed: () {
                           controller.deleteBook(book.id);
                           Get.back();
                         },
-                        child: Text("删除"),
+                        child: const Text("删除"),
                       ),
                     ],
                   );
                 },
               );
-            }
-          },
-          itemBuilder: (BuildContext context) {
-            return [
-              PopupMenuItem(
-                value: "edit",
-                child: Row(
-                  children: [Icon(Icons.edit), SizedBox(width: 8), Text("编辑")],
-                ),
-              ),
-              PopupMenuItem(
-                value: "collection",
-                child: Row(
-                  children: [Icon(Icons.star), SizedBox(width: 8), Text("收藏夹")],
-                ),
-              ),
-              PopupMenuItem(
-                value: "export",
-                child: Row(
-                  children: [
-                    Icon(Icons.upload),
-                    SizedBox(width: 8),
-                    Text("导出"),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: "mark",
-                child: Row(
-                  children: [
-                    Icon(Icons.bookmark),
-                    SizedBox(width: 8),
-                    Text("书签"),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: "delete",
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      "删除",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ];
-          },
+            },
+            child: Text(
+              "删除",
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+        builder: (btnContext, menuController, child) => IconButton(
+          icon: Icon(isVerticalLayout ? Icons.more_horiz : Icons.more_vert),
+          onPressed: () => menuController.isOpen
+              ? menuController.close()
+              : menuController.open(),
         ),
       );
     });

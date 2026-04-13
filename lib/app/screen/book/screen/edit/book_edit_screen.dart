@@ -23,22 +23,27 @@ class BookEditScreen extends GetView<BookEditController> {
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          spacing: 16,
-          children: [
-            TextField(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: TextField(
               controller: controller.bookName,
               decoration: InputDecoration(
                 labelText: "书籍名称",
+                fillColor: Colors.transparent,
+                prefixIcon: Icon(Icons.book),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
+          ),
 
-            // 可拖拽的网格列表
-            Expanded(child: ReorderableGridView(controller: controller)),
-          ],
-        ),
+          // 可拖拽的网格列表
+          Expanded(child: ReorderableGridView(controller: controller)),
+        ],
       ),
     );
   }
@@ -72,6 +77,7 @@ class ReorderableGridView extends StatelessWidget {
       return ReorderableListView.builder(
         itemCount: controller.imageList.length,
         onReorder: controller.reorderImages,
+        padding: EdgeInsets.all(16),
         proxyDecorator: (child, index, animation) {
           return Material(
             elevation: 8,
@@ -79,49 +85,25 @@ class ReorderableGridView extends StatelessWidget {
             child: child,
           );
         },
+
         itemBuilder: (context, index) {
           final imagePath = controller.imageList[index];
           final fullPath = '${controller.appDirectory}/$imagePath';
-
-          return Container(
+          return Column(
             key: ValueKey(imagePath),
-            margin: EdgeInsets.only(bottom: 8),
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                // 拖拽手柄
-                Icon(Icons.drag_handle, color: Colors.grey[400]),
-                SizedBox(width: 12),
-                // 图片缩略图
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    color: Colors.grey[200],
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: CustomImageLoader(localUrl: fullPath),
-                ),
-                SizedBox(width: 12),
-                // 页码
-                Expanded(
-                  child: Text(
-                    "第 ${index + 1} 页",
-                    style: TextStyle(fontSize: 14),
-                  ),
-                ),
-                // 删除按钮
-                IconButton(
+            mainAxisSize: MainAxisSize.min, // ← 加这个
+            children: [
+              ListTile(
+                // ← 直接放 ListTile，不套 Expanded
+                leading: CustomImageLoader(localUrl: fullPath),
+                title: Text("第 ${index + 1} 页", style: TextStyle(fontSize: 14)),
+                trailing: IconButton(
                   icon: Icon(Icons.delete_outline, color: Colors.red[400]),
                   onPressed: () => _showDeleteConfirm(context, index),
                 ),
-              ],
-            ),
+              ),
+              SizedBox(height: 16),
+            ],
           );
         },
       );
@@ -134,113 +116,13 @@ class ReorderableGridView extends StatelessWidget {
         title: Text('确认删除'),
         content: Text('确定要删除第 ${index + 1} 页吗？'),
         actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('取消'),
-          ),
+          TextButton(onPressed: () => Get.back(), child: Text('取消')),
           TextButton(
             onPressed: () {
               controller.deleteImage(index);
               Get.back();
             },
             child: Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 网格图片项
-class GridImageItem extends StatelessWidget {
-  final int index;
-  final String fullPath;
-  final VoidCallback onDelete;
-
-  const GridImageItem({
-    super.key,
-    required this.index,
-    required this.fullPath,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[300]!, width: 1),
-      ),
-      child: Stack(
-        children: [
-          // 图片内容
-          Row(
-            children: [
-              // 拖拽手柄
-              Container(
-                width: 40,
-                alignment: Alignment.center,
-                child: Icon(Icons.drag_handle, color: Colors.grey[400]),
-              ),
-              // 缩略图
-              Container(
-                width: 80,
-                height: 80,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  color: Colors.grey[200],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: File(fullPath).existsSync()
-                    ? Image.file(
-                        File(fullPath),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              color: Colors.grey[400],
-                            ),
-                          );
-                        },
-                      )
-                    : Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              // 页码信息
-              Expanded(
-                child: Text(
-                  '第 ${index + 1} 页',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          // 删除按钮
-          Positioned(
-            right: 8,
-            top: 0,
-            bottom: 0,
-            child: Center(
-              child: IconButton(
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red[400],
-                  size: 22,
-                ),
-                onPressed: onDelete,
-              ),
-            ),
           ),
         ],
       ),

@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
@@ -42,7 +40,7 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
               ),
               Expanded(
                 child: ListView.builder(
-                  padding: EdgeInsets.all( 12),
+                  padding: EdgeInsets.all(12),
                   itemCount: controller.archiveFolders.length,
                   itemBuilder: (context, index) {
                     final archiveFolder = controller.archiveFolders[index];

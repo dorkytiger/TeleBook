@@ -4,7 +4,7 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-def localProperties = new Properties()
+def localProperties = new java.util.Properties()
 def localPropertiesFile = rootProject.file('local.properties')
 if (localPropertiesFile.exists()) {
     localPropertiesFile.withReader('UTF-8') { reader ->
@@ -12,10 +12,10 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def keystoreProperties = new Properties()
+def keystoreProperties = new java.util.Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+    keystoreProperties.load(new java.io.FileInputStream(keystorePropertiesFile))
 }
 
 def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
@@ -31,8 +31,8 @@ if (flutterVersionName == null) {
 def updatePubspecVersion() {
     def versionPropsFile = file('../../version.properties')
     if (versionPropsFile.canRead()) {
-        def Properties versionProps = new Properties()
-        versionProps.load(new FileInputStream(versionPropsFile))
+        def versionProps = new java.util.Properties()
+        versionProps.load(new java.io.FileInputStream(versionPropsFile))
 
         def versionName = versionProps['VERSION_NAME']
         def versionCode = versionProps['VERSION_CODE']
@@ -93,10 +93,17 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            // Only assign the release signingConfig when a release keystore is present.
+            // This avoids Gradle trying to use an empty 'release' signingConfig when
+            // key.properties is not provided (which causes the missing storeFile error).
+            if (keystorePropertiesFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
         debug {
-            signingConfig signingConfigs.release
+            // Use the default debug signing (do not force the release signingConfig).
+            // When key.properties is absent, this prevents the missing storeFile error
+            // during debug builds.
         }
     }
 }

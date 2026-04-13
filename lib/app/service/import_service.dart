@@ -87,7 +87,6 @@ class ImportService extends GetxService {
     return group;
   }
 
-
   // 添加一个新的导入组
   void addImportGroup(ImportGroup group) {
     groups.add(group);
@@ -259,7 +258,8 @@ class ImportService extends GetxService {
     }
   }
 
-  Future<void> restartImport(String groupId) async {    final group = getGroupById(groupId);
+  Future<void> restartImport(String groupId) async {
+    final group = getGroupById(groupId);
     if (group != null) {
       // 重置任务状态
       for (var task in group.tasks) {
@@ -278,13 +278,13 @@ class ImportService extends GetxService {
     // 使用微秒时间戳 + 递增计数器确保唯一性
     final now = DateTime.now();
     _groupIdCounter++;
-    return "group_${now.microsecondsSinceEpoch}_${_groupIdCounter}";
+    return "group_${now.microsecondsSinceEpoch}_$_groupIdCounter";
   }
 
   String generateTaskId() {
     // 使用微秒时间戳 + 递增计数器确保唯一性
     final now = DateTime.now();
     _taskIdCounter++;
-    return "task_${now.microsecondsSinceEpoch}_${_taskIdCounter}";
+    return "task_${now.microsecondsSinceEpoch}_$_taskIdCounter";
   }
 }

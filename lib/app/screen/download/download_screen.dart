@@ -119,90 +119,59 @@ class DownloadScreen extends GetView<DownloadController> {
             ),
           ),
           // 操作按钮
-          PopupMenuButton<String>(
-            itemBuilder: (context) {
-              return [
-                if (group.completedCount.value == group.totalCount.value)
-                  PopupMenuItem(
-                    value: "save",
-                    child: Row(
-                      children: [
-                        Icon(Icons.save),
-                        SizedBox(width: 8),
-                        Text("保存到书架"),
-                      ],
-                    ),
-                  ),
-                if (group.completedCount.value != group.totalCount.value)
-                  PopupMenuItem(
-                    value: "cancel",
-                    child: Row(
-                      children: [
-                        Icon(Icons.cancel),
-                        SizedBox(width: 8),
-                        Text("取消下载"),
-                      ],
-                    ),
-                  ),
-                PopupMenuItem(
-                  value: "resume",
-                  child: Row(
-                    children: [
-                      Icon(Icons.play_arrow),
-                      SizedBox(width: 8),
-                      Text("继续下载"),
-                    ],
-                  ),
+          MenuAnchor(
+            menuChildren: [
+              if (group.completedCount.value == group.totalCount.value)
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.save),
+                  onPressed: () {
+                    controller.savaToBook(groupId);
+                  },
+                  child: const Text("保存到书架"),
                 ),
-                PopupMenuItem(
-                  value: "pause",
-                  child: Row(
-                    children: [
-                      Icon(Icons.pause),
-                      SizedBox(width: 8),
-                      Text("暂停下载"),
-                    ],
-                  ),
+              if (group.completedCount.value != group.totalCount.value)
+                MenuItemButton(
+                  leadingIcon: const Icon(Icons.cancel),
+                  onPressed: () {
+                    controller.downloadService.cancelGroup(groupId);
+                  },
+                  child: const Text("取消下载"),
                 ),
-                PopupMenuItem(
-                  value: "retry",
-                  child: Row(
-                    children: [
-                      Icon(Icons.refresh),
-                      SizedBox(width: 8),
-                      Text("重试下载"),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: "delete",
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete),
-                      SizedBox(width: 8),
-                      Text("删除下载"),
-                    ],
-                  ),
-                ),
-              ];
-            },
-            onSelected: (value) {
-              if (value == "save") {
-                controller.savaToBook(groupId);
-              }
-              if (value == "cancel") {
-                controller.downloadService.cancelGroup(groupId);
-              }
-              if (value == "resume") {
-                controller.downloadService.resumeGroup(groupId);
-              }
-              if (value == "delete") {
-                controller.downloadService.deleteGroup(groupId);
-              }
-              if (value == "retry") {
-                controller.downloadService.retryGroup(groupId);
-              }
-            },
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.play_arrow),
+                onPressed: () {
+                  controller.downloadService.resumeGroup(groupId);
+                },
+                child: const Text("继续下载"),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.pause),
+                onPressed: () {
+                  controller.downloadService.pauseGroup(groupId);
+                },
+                child: const Text("暂停下载"),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.refresh),
+                onPressed: () {
+                  controller.downloadService.retryGroup(groupId);
+                },
+                child: const Text("重试下载"),
+              ),
+              MenuItemButton(
+                leadingIcon: const Icon(Icons.delete),
+                onPressed: () {
+                  controller.downloadService.deleteGroup(groupId);
+                },
+                child: const Text("删除下载"),
+              ),
+            ],
+            builder: (btnContext, menuController, child) => IconButton(
+              icon: const Icon(Icons.more_vert),
+              onPressed: () => menuController.isOpen
+                  ? menuController.close()
+                  : menuController.open(),
+            ),
           ),
         ],
       ),

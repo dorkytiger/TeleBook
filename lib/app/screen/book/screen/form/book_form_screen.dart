@@ -31,10 +31,7 @@ class BookFormScreen extends GetView<BookFormController> {
             child: Column(
               spacing: 16,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSourceDialog(context),
-                _buildForm(context),
-              ],
+              children: [_buildSourceDialog(context), _buildForm(context)],
             ),
           ),
         ),
@@ -48,7 +45,8 @@ class BookFormScreen extends GetView<BookFormController> {
       decoration: InputDecoration(
         labelText: "导入源",
         hintText: "请选择导入源",
-        border: OutlineInputBorder(),
+        fillColor: Colors.transparent,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         prefixIcon: Icon(Icons.source),
         suffixIcon: TextButton(
           onPressed: () {
@@ -166,8 +164,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "网页地址",
             hintText: "请输入网页地址",
             prefixIcon: Icon(Icons.link),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pasteFromClipboard(context);
@@ -184,8 +182,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "压缩包文件",
             hintText: "请选择压缩包文件",
             prefixIcon: Icon(Icons.archive),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickArchiveFile();
@@ -202,8 +200,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "压缩包文件夹",
             hintText: "请选择包含压缩包的文件夹",
             prefixIcon: Icon(Icons.folder),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickFolder();
@@ -220,8 +218,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "PDF文件",
             hintText: "请选择PDF文件",
             prefixIcon: Icon(Icons.picture_as_pdf),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickPdf();
@@ -238,8 +236,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "图片文件夹",
             hintText: "请选择图片文件夹",
             prefixIcon: Icon(Icons.folder),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickImageFolder();
@@ -256,8 +254,8 @@ class BookFormScreen extends GetView<BookFormController> {
             labelText: "图片文件夹",
             hintText: "请选择包含图片文件夹的文件夹",
             prefixIcon: Icon(Icons.folder),
-            border: OutlineInputBorder(
-            ),
+            fillColor: Colors.transparent,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             suffixIcon: TextButton(
               onPressed: () {
                 controller.pickBatchImageFolder();

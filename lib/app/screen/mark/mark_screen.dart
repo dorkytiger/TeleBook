@@ -24,55 +24,72 @@ class MarkScreen extends GetView<MarkController> {
       body: Obx(
         () => controller.markService.marks.isEmpty
             ? Center(child: CustomEmpty(message: "暂无书签，点击右上角添加"))
-            : ListView.builder(
+            : ListView.separated(
                 padding: EdgeInsets.all(16),
+                separatorBuilder: (context, index) => Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Divider(
+                    height: 16,
+                    thickness: 0.5,
+                    color: Theme.of(context).dividerColor,
+                  ),
+                ),
                 itemCount: controller.markService.marks.length,
                 itemBuilder: (context, index) {
                   final mark = controller.markService.marks[index];
-                  return Card(
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      title: Text(
-                        mark.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                  return ListTile(
+                    title: Text(
+                      mark.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
-                      subtitle: mark.description != null && mark.description!.isNotEmpty
-                          ? Padding(
-                              padding: EdgeInsets.only(top: 4),
-                              child: Text(
-                                mark.description!,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            )
-                          : null,
-                      trailing: PopupMenuButton(
-                        itemBuilder: (context) {
-                          return [
-                            PopupMenuItem(value: 'edit', child: Text('编辑')),
-                            PopupMenuItem(value: 'delete', child: Text('删除')),
-                          ];
-                        },
-                        onSelected: (value) {
-                          if (value == 'edit') {
-                            _saveMark(
-                              context,
-                              initData: MarkFormData(
-                                id: mark.id,
-                                name: mark.name,
-                                description: mark.description,
-                              ),
-                            );
-                          } else if (value == 'delete') {
-                            controller.markService.deleteMark(mark.id);
-                          }
-                        },
+                    ),
+                    subtitle:
+                        mark.description != null && mark.description!.isNotEmpty
+                        ? Padding(
+                            padding: EdgeInsets.only(top: 4),
+                            child: Text(
+                              mark.description!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color
+                                        ?.withValues(alpha: 0.7),
+                                  ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )
+                        : null,
+                    trailing: MenuAnchor(
+                      alignmentOffset: Offset(-32, 0),
+                      menuChildren: [
+                        MenuItemButton(
+                          leadingIcon: const Icon(Icons.edit),
+                          onPressed: () => _saveMark(
+                            context,
+                            initData: MarkFormData(
+                              id: mark.id,
+                              name: mark.name,
+                              description: mark.description,
+                            ),
+                          ),
+                          child: const Text('编辑'),
+                        ),
+                        MenuItemButton(
+                          leadingIcon: const Icon(Icons.delete),
+                          onPressed: () =>
+                              controller.markService.deleteMark(mark.id),
+                          child: const Text('删除'),
+                        ),
+                      ],
+                      builder: (context, controller, child) => IconButton(
+                        icon: const Icon(Icons.more_vert),
+                        onPressed: () => controller.isOpen
+                            ? controller.close()
+                            : controller.open(),
                       ),
                     ),
                   );
@@ -129,9 +146,8 @@ class MarkScreen extends GetView<MarkController> {
                         child: Center(
                           child: Text(
                             initData == null ? "添加书签" : "编辑书签",
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),
@@ -144,9 +160,13 @@ class MarkScreen extends GetView<MarkController> {
                           controller.markService.saveMark(
                             id: initData?.id,
                             name: controller.markNameController.text.trim(),
-                            description: controller.markDescriptionController.text.trim().isEmpty
+                            description:
+                                controller.markDescriptionController.text
+                                    .trim()
+                                    .isEmpty
                                 ? null
-                                : controller.markDescriptionController.text.trim(),
+                                : controller.markDescriptionController.text
+                                      .trim(),
                           );
                           Navigator.of(context).pop();
                         },
@@ -171,10 +191,9 @@ class MarkScreen extends GetView<MarkController> {
                               labelText: "书签名称",
                               prefixIcon: Icon(Icons.bookmark_outline),
                               errorText: controller.markNameError.value,
-                              filled: true,
-                              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              fillColor: Colors.transparent,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                           );
@@ -185,12 +204,10 @@ class MarkScreen extends GetView<MarkController> {
                             hintText: "请输入书签描述（可选）",
                             labelText: "书签描述",
                             prefixIcon: Icon(Icons.description_outlined),
-                            filled: true,
-                            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                            fillColor: Colors.transparent,
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-
                           ),
                           maxLines: 3,
                         ),

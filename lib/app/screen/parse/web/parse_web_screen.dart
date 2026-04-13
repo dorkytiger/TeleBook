@@ -121,46 +121,43 @@ class ParseWebScreen extends GetView<ParseWebController> {
                                           ),
                                         ),
                                       ),
-                                      PopupMenuButton(
-                                        itemBuilder: (context) {
-                                          return [
-                                            PopupMenuItem(
-                                              value: 'copy',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.copy,
-                                                    size: 16,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text('复制链接'),
-                                                ],
-                                              ),
+                                      MenuAnchor(
+                                        menuChildren: [
+                                          MenuItemButton(
+                                            leadingIcon: const Icon(
+                                              Icons.copy,
+                                              size: 16,
                                             ),
-                                            PopupMenuItem(
-                                              value: 'download',
-                                              child: Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.download,
-                                                    size: 16,
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  Text('下载图片'),
-                                                ],
-                                              ),
+                                            onPressed: () {
+                                              Clipboard.setData(
+                                                ClipboardData(text: image),
+                                              );
+                                            },
+                                            child: const Text('复制链接'),
+                                          ),
+                                          MenuItemButton(
+                                            leadingIcon: const Icon(
+                                              Icons.download,
+                                              size: 16,
                                             ),
-                                          ];
-                                        },
-                                        onSelected: (value) {
-                                          if (value == 'copy') {
-                                            Clipboard.setData(
-                                              ClipboardData(text: image),
-                                            );
-                                          } else if (value == 'download') {
-                                            controller.saveImageTo(image);
-                                          }
-                                        },
+                                            onPressed: () {
+                                              controller.saveImageTo(image);
+                                            },
+                                            child: const Text('下载图片'),
+                                          ),
+                                        ],
+                                        builder:
+                                            (
+                                              btnContext,
+                                              menuController,
+                                              child,
+                                            ) => IconButton(
+                                              icon: const Icon(Icons.more_vert),
+                                              onPressed: () =>
+                                                  menuController.isOpen
+                                                  ? menuController.close()
+                                                  : menuController.open(),
+                                            ),
                                       ),
                                     ],
                                   );
