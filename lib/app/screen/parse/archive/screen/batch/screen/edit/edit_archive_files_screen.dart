@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_controller.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
   const EditArchiveFilesScreen({super.key});
@@ -50,6 +51,7 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
             ),
             Expanded(
               child: ReorderableListView.builder(
+                padding: EdgeInsets.all(12),
                 itemCount: controller.files.length,
                 onReorder: (oldIndex, newIndex) {
                   if (newIndex > oldIndex) {
@@ -73,19 +75,22 @@ class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
   Widget _buildFileItem(BuildContext context, ArchiveFile file, int index) {
     return KeyedSubtree(
       key: ValueKey(file.path),
-      child: ListTile(
-        title: Text(file.path.split(Platform.pathSeparator).last),
-        subtitle: Text(file.path.split(Platform.pathSeparator).last),
-        leading: AspectRatio(
-          aspectRatio: 9 / 16,
-          child: Image.file(File(file.path)),
-        ),
-        trailing: IconButton(
-          onPressed: () {
-            controller.removeFile(index);
-          },
-          icon: Icon(Icons.delete),
-        ),
+      child: Row(
+        children: [
+          CustomImageLoader(localUrl: file.path),
+          Expanded(
+            child: ListTile(
+              title: Text(file.path.split(Platform.pathSeparator).last),
+              subtitle: Text(file.path.split(Platform.pathSeparator).last),
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              controller.removeFile(index);
+            },
+            icon: Icon(Icons.delete),
+          ),
+        ],
       ),
     );
   }

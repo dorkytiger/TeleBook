@@ -62,8 +62,11 @@ class BookScreen extends GetView<BookController> {
   Widget _buildBookList() {
     return controller.getBookState.displaySuccess(
       successBuilder: (data) {
-        return ListView.builder(
+        return ListView.separated(
           padding: EdgeInsets.all(16),
+          separatorBuilder: (context, index) {
+            return SizedBox(height: 16);
+          },
           itemBuilder: (context, index) {
             final bookData = data[index];
             void onTap() {
@@ -82,149 +85,133 @@ class BookScreen extends GetView<BookController> {
               }
             }
 
-            return Card(
-              margin: EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: onTap,
-                onLongPress: onLongTap,
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 封面
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 60,
-                          height: 90,
-                          child: Image.file(
-                            File(
-                              controller.pathService.getBookFilePath(
-                                bookData.book.localPaths.first,
-                              ),
-                            ),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              child: const Icon(Icons.broken_image, size: 40),
-                            ),
+            return InkWell(
+              onTap: onTap,
+              onLongPress: onLongTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 封面
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: Image.file(
+                        File(
+                          controller.pathService.getBookFilePath(
+                            bookData.book.localPaths.first,
                           ),
                         ),
-                      ),
-                      SizedBox(width: 12),
-                      // 信息区域
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 标题
-                            Text(
-                              bookData.book.name,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: 6),
-                            // 创建时间
-                            Text(
-                              '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.color
-                                        ?.withValues(alpha: 0.7),
-                                  ),
-                            ),
-                            SizedBox(height: 6),
-                            // 收藏夹信息
-                            if (bookData.collection != null)
-                              Padding(
-                                padding: EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.folder,
-                                      size: 14,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    SizedBox(width: 4),
-                                    Flexible(
-                                      child: Text(
-                                        bookData.collection!.name,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            // 标签信息
-                            if (bookData.marks.isNotEmpty)
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: bookData.marks.map((mark) {
-                                  return Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondaryContainer,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      mark.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSecondaryContainer,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                          ],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          child: const Icon(Icons.broken_image, size: 40),
                         ),
                       ),
-                      // 操作按钮
-                      _buildEditPopupButton(
-                        context,
-                        bookData.book,
-                        isVerticalLayout: true,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  SizedBox(width: 12),
+                  // 信息区域
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 标题
+                        Text(
+                          bookData.book.name,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 6),
+                        // 创建时间
+                        Text(
+                          '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.color
+                                    ?.withValues(alpha: 0.7),
+                              ),
+                        ),
+                        SizedBox(height: 6),
+                        // 收藏夹信息
+                        if (bookData.collection != null)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.folder,
+                                  size: 14,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    bookData.collection!.name,
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        // 标签信息
+                        if (bookData.marks.isNotEmpty)
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: bookData.marks.map((mark) {
+                              return Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  mark.name,
+                                  style: Theme.of(context).textTheme.labelSmall
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSecondaryContainer,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // 操作按钮
+                  _buildEditPopupButton(
+                    context,
+                    bookData.book,
+                    isVerticalLayout: true,
+                  ),
+                ],
               ),
             );
           },
@@ -238,38 +225,37 @@ class BookScreen extends GetView<BookController> {
     return controller.getBookState.displaySuccess(
       successBuilder: (data) {
         return GridView.builder(
-          padding: EdgeInsets.all(16),
+          padding: EdgeInsets.all(12),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 200,
             childAspectRatio: 0.65,
-            crossAxisSpacing: 12,
+            crossAxisSpacing: 16,
             mainAxisSpacing: 16,
           ),
           itemBuilder: (context, index) {
             final bookData = data[index];
-            return Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () {
-                  if (controller.multiEditMode.value) {
-                    controller.toggleSelectBook(bookData.book.id);
-                  } else {
-                    Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
-                  }
-                },
-                onLongPress: () {
-                  if (!controller.multiEditMode.value) {
-                    controller.triggerMultiEditMode(true);
-                    controller.toggleSelectBook(bookData.book.id);
-                    _showBottomSheet(context);
-                  }
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 封面图片 (2:3 比例)
-                    Expanded(
-                      flex: 2,
+            return InkWell(
+              onTap: () {
+                if (controller.multiEditMode.value) {
+                  controller.toggleSelectBook(bookData.book.id);
+                } else {
+                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+                }
+              },
+              onLongPress: () {
+                if (!controller.multiEditMode.value) {
+                  controller.triggerMultiEditMode(true);
+                  controller.toggleSelectBook(bookData.book.id);
+                  _showBottomSheet(context);
+                }
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
                       child: Stack(
                         children: [
                           SizedBox(
@@ -390,38 +376,34 @@ class BookScreen extends GetView<BookController> {
                         ],
                       ),
                     ),
-                    // 信息区域
-                    Expanded(
-                      flex: 1,
-                      child: Padding(
-                        padding: EdgeInsets.all(8),
-                        child: Column(
+                  ),
+                  SizedBox(height: 12,),
+                  // 信息区域
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 书名和操作按钮在同一行
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 书名和操作按钮在同一行
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    bookData.book.name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                                _buildEditPopupButton(context, bookData.book),
-                              ],
+                            Expanded(
+                              child: Text(
+                                bookData.book.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
                             ),
+                            _buildEditPopupButton(context, bookData.book),
                           ],
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -430,7 +412,6 @@ class BookScreen extends GetView<BookController> {
       },
     );
   }
-
 
   void _showBottomSheet(BuildContext context) {
     PersistentBottomSheetController? bottomSheetController;
@@ -523,7 +504,6 @@ class BookScreen extends GetView<BookController> {
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Theme.of(context).colorScheme.error,
-
                   ),
                 ),
               ],
@@ -684,7 +664,7 @@ class BookScreen extends GetView<BookController> {
         height: 40,
         width: 40,
         child: PopupMenuButton(
-          icon: Icon(isVerticalLayout ? Icons.more_vert : Icons.more_horiz),
+          icon: Icon(isVerticalLayout ? Icons.more_horiz : Icons.more_vert),
           onSelected: (value) {
             if (value == "edit") {
               Get.toNamed(AppRoute.bookEdit, arguments: book.id);

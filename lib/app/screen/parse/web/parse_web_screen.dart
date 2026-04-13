@@ -5,6 +5,7 @@ import 'package:tele_book/app/screen/parse/web/parse_web_controller.dart';
 import 'package:tele_book/app/screen/task/task_controller.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class ParseWebScreen extends GetView<ParseWebController> {
   const ParseWebScreen({super.key});
@@ -21,16 +22,6 @@ class ParseWebScreen extends GetView<ParseWebController> {
               controller.webViewController.reload();
             },
           ),
-
-          IconButton(
-            onPressed: () {
-              _showParseImageList(context);
-            },
-            icon: Obx(()=>Badge.count(
-              count: controller.images.length,
-              child: Icon(Icons.download),
-            )),
-          ),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(4),
@@ -41,7 +32,19 @@ class ParseWebScreen extends GetView<ParseWebController> {
           ),
         ),
       ),
-
+      floatingActionButton: Obx(
+        () => controller.images.isEmpty
+            ? SizedBox.shrink()
+            : FloatingActionButton(
+                onPressed: () {
+                  _showParseImageList(context);
+                },
+                child: Badge.count(
+                  count: controller.images.length,
+                  child: Icon(Icons.download),
+                ),
+              ),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -100,53 +103,66 @@ class ParseWebScreen extends GetView<ParseWebController> {
                           spacing: 16,
                           children: [
                             Expanded(
-                              child: ListView.builder(
+                              child: ListView.separated(
                                 itemCount: controller.images.length,
+                                separatorBuilder: (context, index) =>
+                                    SizedBox(height: 16),
                                 itemBuilder: (context, index) {
                                   final image = controller.images[index];
-                                  return ListTile(
-                                    leading: Image.network(
-                                      image,
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                    ),
-                                    title: Text(image),
-                                    trailing: PopupMenuButton(
-                                      itemBuilder: (context) {
-                                        return [
-                                          PopupMenuItem(
-                                            value: 'copy',
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.copy, size: 16),
-                                                SizedBox(width: 8),
-                                                Text('复制链接'),
-                                              ],
-                                            ),
+                                  return Row(
+                                    children: [
+                                      CustomImageLoader(networkUrl: image),
+                                      Expanded(
+                                        child: ListTile(
+                                          title: Text(
+                                            image,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          PopupMenuItem(
-                                            value: 'download',
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.download, size: 16),
-                                                SizedBox(width: 8),
-                                                Text('下载图片'),
-                                              ],
+                                        ),
+                                      ),
+                                      PopupMenuButton(
+                                        itemBuilder: (context) {
+                                          return [
+                                            PopupMenuItem(
+                                              value: 'copy',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.copy,
+                                                    size: 16,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('复制链接'),
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ];
-                                      },
-                                      onSelected: (value) {
-                                        if (value == 'copy') {
-                                          Clipboard.setData(
-                                            ClipboardData(text: image),
-                                          );
-                                        } else if (value == 'download') {
-                                          controller.saveImageTo(image);
-                                        }
-                                      },
-                                    ),
+                                            PopupMenuItem(
+                                              value: 'download',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.download,
+                                                    size: 16,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text('下载图片'),
+                                                ],
+                                              ),
+                                            ),
+                                          ];
+                                        },
+                                        onSelected: (value) {
+                                          if (value == 'copy') {
+                                            Clipboard.setData(
+                                              ClipboardData(text: image),
+                                            );
+                                          } else if (value == 'download') {
+                                            controller.saveImageTo(image);
+                                          }
+                                        },
+                                      ),
+                                    ],
                                   );
                                 },
                               ),

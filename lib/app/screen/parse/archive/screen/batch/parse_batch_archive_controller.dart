@@ -27,15 +27,7 @@ class ParseBatchArchiveController extends GetxController {
   @override
   void onInit() async {
     super.onInit();
-    saveAllBooksState.listenEvent(
-      onIdle: () {
-        Get.back();
-        final homeController = Get.find<HomeController>();
-        homeController.selectedIndex.value = 1;
-        final taskController = Get.find<TaskController>();
-        taskController.tabController.animateTo(1);
-      },
-    );
+    saveAllBooksState.listenEvent();
     appDir.value = (await getApplicationDocumentsDirectory()).path;
     unawaited(_scanAndExtractArchives());
   }
@@ -144,7 +136,13 @@ class ParseBatchArchiveController extends GetxController {
 
   /// 保存所有书籍
   Future<void> saveAllBooks() async {
+    Get.back();
+    final homeController = Get.find<HomeController>();
+    homeController.selectedIndex.value = 1;
+    final taskController = Get.find<TaskController>();
+    taskController.tabController.animateTo(1);
     saveAllBooksState.triggerEvent(
+
       event: () async {
         if (archiveFolders.isEmpty) throw Exception('没有可保存的书籍');
 

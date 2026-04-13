@@ -29,19 +29,25 @@ class ParseSingleArchiveScreen extends GetView<ParseSingleArchiveController> {
       body: controller.extractArchiveState.displaySuccess(
         successBuilder: (data) {
           return ListView.builder(
+            padding: EdgeInsets.all(12),
             itemBuilder: (context, index) {
               final archive = controller.archives[index];
-              return Row(
+              return Column(
                 children: [
-                  CustomImageLoader(localUrl: archive.path),
-                  Expanded(
-                    child: ListTile(
-                      title: Text(archive.path.split('/').last),
-                      subtitle: Text(
-                        '大小: ${(archive.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                  Row(
+                    children: [
+                      CustomImageLoader(localUrl: archive.path),
+                      Expanded(
+                        child: ListTile(
+                          title: Text(archive.path.split('/').last),
+                          subtitle: Text(
+                            '大小: ${(archive.lengthSync() / 1024).toStringAsFixed(2)} KB',
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
+                  SizedBox(height: 12),
                 ],
               );
             },

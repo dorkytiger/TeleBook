@@ -60,33 +60,74 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
   @override
   Widget build(BuildContext context) {
     if (widget.localUrl != null) {
-      return SizedBox(height: 100, width: 80, child: Image.file(File(_url)));
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          height: 80,
+          width: 80,
+          child: Image.file(File(_url), fit: BoxFit.cover),
+        ),
+      );
     }
-    return SizedBox(
-      height: 100,
-      width: 80,
-      child: Image.network(
-        _url,
-        loadingBuilder: (context, widget, loadingProgress) {
-          if (loadingProgress == null) {
-            return widget;
-          }
-          return const Center(
-            child: SizedBox(
-              height: 50,
-              width: 50,
-              child: CircularProgressIndicator(),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stackTrace) {
-          return Center(
-            child: CustomError(
-              title: error.toString(),
-              description: stackTrace.toString(),
-            ),
-          );
-        },
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: SizedBox(
+        height: 80,
+        width: 80,
+        child: Image.network(
+          _url,
+          fit: BoxFit.cover,
+          frameBuilder: (context, child, frame, _) {
+            if (frame == null) {
+              return Container(
+                height: 80,
+                width: 80,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: 20, // 明确指定正方形尺寸
+                    child: CircularProgressIndicator.adaptive(
+                      strokeWidth: 2, // 更细的线条适合小尺寸
+                    ),
+                  ),
+                ),
+              );
+            }
+            return child;
+          },
+          loadingBuilder: (context, widget, loadingProgress) {
+            if (loadingProgress == null) {
+              return widget;
+            }
+            return Container(
+              height: 80,
+              width: 80,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: SizedBox.square(
+                  dimension: 20, // 明确指定正方形尺寸
+                  child: CircularProgressIndicator.adaptive(
+                    strokeWidth: 2, // 更细的线条适合小尺寸
+                  ),
+                ),
+              ),
+            );
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: CustomError(
+                title: error.toString(),
+                description: stackTrace.toString(),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

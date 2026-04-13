@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
   const ParseBatchArchiveScreen({super.key});
@@ -11,15 +12,16 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("批量导入压缩包"),
-      actions: [
-        IconButton(
-          onPressed: () {
-            controller.saveAllBooks();
-          },
-          icon: Icon(Icons.save),
-        ),
-      ],
+      appBar: AppBar(
+        title: Text("批量导入压缩包"),
+        actions: [
+          IconButton(
+            onPressed: () {
+              controller.saveAllBooks();
+            },
+            icon: Icon(Icons.save),
+          ),
+        ],
       ),
       body: controller.extractArchivesState.displaySuccess(
         successBuilder: (data) {
@@ -33,13 +35,14 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
                   children: [
                     Text(
                       '共找到 ${controller.archiveFolders.length} 个压缩包',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.builder(
+                  padding: EdgeInsets.all( 12),
                   itemCount: controller.archiveFolders.length,
                   itemBuilder: (context, index) {
                     final archiveFolder = controller.archiveFolders[index];
@@ -59,21 +62,24 @@ class ParseBatchArchiveScreen extends GetView<ParseBatchArchiveController> {
     ArchiveFolder archiveFolder,
     int index,
   ) {
-    return ListTile(
-      title: Text(archiveFolder.title),
-      leading: AspectRatio(
-        aspectRatio: 9 / 10,
-        child: Image.file(
-          File(
-            archiveFolder.files.firstOrNull?.path ??
-                '${controller.appDir}/${archiveFolder.files.first.path}',
+    return Row(
+      children: [
+        CustomImageLoader(
+          localUrl:
+              archiveFolder.files.firstOrNull?.path ??
+              '${controller.appDir}/${archiveFolder.files.first.path}',
+        ),
+        Expanded(
+          child: ListTile(
+            title: Text(archiveFolder.title),
+
+            onTap: () {
+              controller.editArchiveFolder(index);
+            },
+            subtitle: Text('${archiveFolder.files.length} 个文件'),
           ),
         ),
-      ),
-      onTap: () {
-        controller.editArchiveFolder(index);
-      },
-      subtitle: Text('${archiveFolder.files.length} 个文件'),
+      ],
     );
   }
 }
