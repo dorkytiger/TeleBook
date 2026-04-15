@@ -150,7 +150,7 @@ class BookController extends GetxController {
               .map((mb) => marks.firstWhere((m) => m.id == mb.markId))
               .toList();
           final bookCollection = collectionBooks
-              .where((cb) => cb.bookId == book.id)
+              .where((cb) => cb.d == book.id)
               .map(
                 (cb) => collections.firstWhere((c) => c.id == cb.collectionId),
               )

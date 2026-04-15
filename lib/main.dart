@@ -3,61 +3,55 @@ import 'dart:io';
 import 'package:dk_util/config/dk_config.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/event/event_bus.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/screen/home/home_bind.dart';
-import 'package:tele_book/app/screen/home/home_screen.dart';
 import 'package:tele_book/app/service/book_service.dart';
-import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/download_service.dart';
-import 'package:tele_book/app/service/export_service.dart';
-import 'package:tele_book/app/service/import_service.dart';
-import 'package:tele_book/app/service/mark_service.dart';
-import 'package:tele_book/app/service/navigator_service.dart';
-import 'package:tele_book/app/service/path_service.dart';
+import 'package:tele_book/app/store/book_store.dart';
+import 'package:tele_book/app/store/download_store.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await _init();
 
-  runApp(
-    GetMaterialApp(
-      title: "TeleBook",
-      initialBinding: HomeBind(),
-      home: HomeScreen(),
-      getPages: [...AppRoute.pages],
-      debugShowCheckedModeBanner: false,
-      navigatorKey: NavigatorService.navigatorKey,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
-    ),
-  );
+  runApp(appProviders);
 }
+
+/// 全局 providers，在 runApp 中使用
+late Widget appProviders;
 
 Future<void> _init() async {
   await DKLog.initFileLog();
   DkConfig.setShowStateLog(true);
 
-  Get.put(AppDatabase());
-  await Get.putAsync<SharedPreferences>(() => SharedPreferences.getInstance());
+  final db = AppDatabase();
+  final bookService = BookService(db);
+  final downloadService = DownloadService();
+  final downloadStore = DownloadStore(downloadService);
+  await downloadStore.init();
 
-  // 初始化路径服务（需要最先初始化，其他服务可能依赖它）
-  await Get.putAsync(() => PathService().init(), permanent: true);
-
-  // 初始化服务
-  Get.put(EventBus(), permanent: true);
-  Get.put(DownloadService(), permanent: true);
-  Get.put(ExportService(), permanent: true);
-  Get.put(ImportService(), permanent: true);
-  Get.put(BookService(), permanent: true);
-  Get.put(CollectionService(), permanent: true);
-  Get.put(MarkService(), permanent: true);
+  appProviders = MultiProvider(
+    providers: [
+      Provider<AppDatabase>.value(value: db),
+      Provider<BookService>.value(value: bookService),
+      Provider<DownloadService>.value(value: downloadService),
+      ChangeNotifierProvider<BookStore>(
+        create: (_) => BookStore(bookService)..refresh(),
+      ),
+      ChangeNotifierProvider<DownloadStore>.value(value: downloadStore),
+    ],
+    child: MaterialApp.router(
+      title: 'TeleBook',
+      routerConfig: AppRoute.router,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+    ),
+  );
 
   // 清理临时目录
   await _cleanupTempDirectory();

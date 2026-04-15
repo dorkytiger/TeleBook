@@ -1,24 +1,30 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:tele_book/app/db/dao/book/book_table.dart';
-import 'package:tele_book/app/db/dao/collection/book_collection_table.dart';
-import 'package:tele_book/app/db/dao/collection/collection_table.dart';
-import 'package:tele_book/app/db/dao/mark/mark_book_table.dart';
-import 'package:tele_book/app/db/dao/mark/mark_table.dart';
+import 'package:tele_book/app/db/dao/book/book_dao.dart';
+import 'package:tele_book/app/db/dao/collection/collection_book_dao.dart';
+import 'package:tele_book/app/db/dao/collection/collection_dao.dart';
+import 'package:tele_book/app/db/table/book/book_table.dart';
+import 'package:tele_book/app/db/table/collection/collection_book_table.dart';
+import 'package:tele_book/app/db/table/collection/collection_table.dart';
+import 'package:tele_book/app/db/table/mark/mark_book_table.dart';
+import 'package:tele_book/app/db/table/mark/mark_table.dart';
 
 import 'converter/string_list_converter.dart';
 import 'package:path/path.dart' as p;
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [
-  BookTable,
-  CollectionTable,
-  CollectionBookTable,
-  MarkTable,
-  MarkBookTable,
-])
+@DriftDatabase(
+  tables: [
+    BookTable,
+    CollectionTable,
+    CollectionBookTable,
+    MarkTable,
+    MarkBookTable,
+  ],
+  daos: [BookDao, CollectionDao, CollectionBookDao],
+)
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
@@ -36,9 +42,7 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
-
   static QueryExecutor _openConnection() {
-
     return driftDatabase(
       name: 'tele_book',
       native: DriftNativeOptions(

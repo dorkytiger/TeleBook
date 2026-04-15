@@ -760,6 +760,19 @@ class $CollectionBookTableTable extends CollectionBookTable
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
   $CollectionBookTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
   static const VerificationMeta _bookIdMeta = const VerificationMeta('bookId');
   @override
   late final GeneratedColumn<int> bookId = GeneratedColumn<int>(
@@ -799,7 +812,7 @@ class $CollectionBookTableTable extends CollectionBookTable
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [bookId, collectionId, addedAt];
+  List<GeneratedColumn> get $columns => [id, bookId, collectionId, addedAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -812,6 +825,9 @@ class $CollectionBookTableTable extends CollectionBookTable
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
     if (data.containsKey('book_id')) {
       context.handle(
         _bookIdMeta,
@@ -841,7 +857,7 @@ class $CollectionBookTableTable extends CollectionBookTable
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {bookId, collectionId};
+  Set<GeneratedColumn> get $primaryKey => {id};
   @override
   CollectionBookTableData map(
     Map<String, dynamic> data, {
@@ -849,6 +865,10 @@ class $CollectionBookTableTable extends CollectionBookTable
   }) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
     return CollectionBookTableData(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
       bookId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}book_id'],
@@ -872,10 +892,12 @@ class $CollectionBookTableTable extends CollectionBookTable
 
 class CollectionBookTableData extends DataClass
     implements Insertable<CollectionBookTableData> {
+  final int id;
   final int bookId;
   final int collectionId;
   final DateTime addedAt;
   const CollectionBookTableData({
+    required this.id,
     required this.bookId,
     required this.collectionId,
     required this.addedAt,
@@ -883,6 +905,7 @@ class CollectionBookTableData extends DataClass
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
     map['book_id'] = Variable<int>(bookId);
     map['collection_id'] = Variable<int>(collectionId);
     map['added_at'] = Variable<DateTime>(addedAt);
@@ -891,6 +914,7 @@ class CollectionBookTableData extends DataClass
 
   CollectionBookTableCompanion toCompanion(bool nullToAbsent) {
     return CollectionBookTableCompanion(
+      id: Value(id),
       bookId: Value(bookId),
       collectionId: Value(collectionId),
       addedAt: Value(addedAt),
@@ -903,6 +927,7 @@ class CollectionBookTableData extends DataClass
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return CollectionBookTableData(
+      id: serializer.fromJson<int>(json['id']),
       bookId: serializer.fromJson<int>(json['bookId']),
       collectionId: serializer.fromJson<int>(json['collectionId']),
       addedAt: serializer.fromJson<DateTime>(json['addedAt']),
@@ -912,6 +937,7 @@ class CollectionBookTableData extends DataClass
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
       'bookId': serializer.toJson<int>(bookId),
       'collectionId': serializer.toJson<int>(collectionId),
       'addedAt': serializer.toJson<DateTime>(addedAt),
@@ -919,16 +945,19 @@ class CollectionBookTableData extends DataClass
   }
 
   CollectionBookTableData copyWith({
+    int? id,
     int? bookId,
     int? collectionId,
     DateTime? addedAt,
   }) => CollectionBookTableData(
+    id: id ?? this.id,
     bookId: bookId ?? this.bookId,
     collectionId: collectionId ?? this.collectionId,
     addedAt: addedAt ?? this.addedAt,
   );
   CollectionBookTableData copyWithCompanion(CollectionBookTableCompanion data) {
     return CollectionBookTableData(
+      id: data.id.present ? data.id.value : this.id,
       bookId: data.bookId.present ? data.bookId.value : this.bookId,
       collectionId: data.collectionId.present
           ? data.collectionId.value
@@ -940,6 +969,7 @@ class CollectionBookTableData extends DataClass
   @override
   String toString() {
     return (StringBuffer('CollectionBookTableData(')
+          ..write('id: $id, ')
           ..write('bookId: $bookId, ')
           ..write('collectionId: $collectionId, ')
           ..write('addedAt: $addedAt')
@@ -948,11 +978,12 @@ class CollectionBookTableData extends DataClass
   }
 
   @override
-  int get hashCode => Object.hash(bookId, collectionId, addedAt);
+  int get hashCode => Object.hash(id, bookId, collectionId, addedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CollectionBookTableData &&
+          other.id == this.id &&
           other.bookId == this.bookId &&
           other.collectionId == this.collectionId &&
           other.addedAt == this.addedAt);
@@ -960,54 +991,57 @@ class CollectionBookTableData extends DataClass
 
 class CollectionBookTableCompanion
     extends UpdateCompanion<CollectionBookTableData> {
+  final Value<int> id;
   final Value<int> bookId;
   final Value<int> collectionId;
   final Value<DateTime> addedAt;
-  final Value<int> rowid;
   const CollectionBookTableCompanion({
+    this.id = const Value.absent(),
     this.bookId = const Value.absent(),
     this.collectionId = const Value.absent(),
     this.addedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   });
   CollectionBookTableCompanion.insert({
+    this.id = const Value.absent(),
     required int bookId,
     required int collectionId,
     this.addedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
   }) : bookId = Value(bookId),
        collectionId = Value(collectionId);
   static Insertable<CollectionBookTableData> custom({
+    Expression<int>? id,
     Expression<int>? bookId,
     Expression<int>? collectionId,
     Expression<DateTime>? addedAt,
-    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
+      if (id != null) 'id': id,
       if (bookId != null) 'book_id': bookId,
       if (collectionId != null) 'collection_id': collectionId,
       if (addedAt != null) 'added_at': addedAt,
-      if (rowid != null) 'rowid': rowid,
     });
   }
 
   CollectionBookTableCompanion copyWith({
+    Value<int>? id,
     Value<int>? bookId,
     Value<int>? collectionId,
     Value<DateTime>? addedAt,
-    Value<int>? rowid,
   }) {
     return CollectionBookTableCompanion(
+      id: id ?? this.id,
       bookId: bookId ?? this.bookId,
       collectionId: collectionId ?? this.collectionId,
       addedAt: addedAt ?? this.addedAt,
-      rowid: rowid ?? this.rowid,
     );
   }
 
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
     if (bookId.present) {
       map['book_id'] = Variable<int>(bookId.value);
     }
@@ -1017,19 +1051,16 @@ class CollectionBookTableCompanion
     if (addedAt.present) {
       map['added_at'] = Variable<DateTime>(addedAt.value);
     }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
     return map;
   }
 
   @override
   String toString() {
     return (StringBuffer('CollectionBookTableCompanion(')
+          ..write('id: $id, ')
           ..write('bookId: $bookId, ')
           ..write('collectionId: $collectionId, ')
-          ..write('addedAt: $addedAt, ')
-          ..write('rowid: $rowid')
+          ..write('addedAt: $addedAt')
           ..write(')'))
         .toString();
   }
@@ -1329,7 +1360,7 @@ class $MarkBookTableTable extends MarkBookTable
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES mark_table (id)',
+      'REFERENCES book_table (id)',
     ),
   );
   @override
@@ -1554,6 +1585,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $CollectionBookTableTable(this);
   late final $MarkTableTable markTable = $MarkTableTable(this);
   late final $MarkBookTableTable markBookTable = $MarkBookTableTable(this);
+  late final BookDao bookDao = BookDao(this as AppDatabase);
+  late final CollectionDao collectionDao = CollectionDao(this as AppDatabase);
+  late final CollectionBookDao collectionBookDao = CollectionBookDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1616,6 +1652,24 @@ final class $$BookTableTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$MarkBookTableTable, List<MarkBookTableData>>
+  _markBookTableRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.markBookTable,
+    aliasName: $_aliasNameGenerator(db.bookTable.id, db.markBookTable.bookId),
+  );
+
+  $$MarkBookTableTableProcessedTableManager get markBookTableRefs {
+    final manager = $$MarkBookTableTableTableManager(
+      $_db,
+      $_db.markBookTable,
+    ).filter((f) => f.bookId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_markBookTableRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$BookTableTableFilterComposer
@@ -1674,6 +1728,31 @@ class $$BookTableTableFilterComposer
           }) => $$CollectionBookTableTableFilterComposer(
             $db: $db,
             $table: $db.collectionBookTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> markBookTableRefs(
+    Expression<bool> Function($$MarkBookTableTableFilterComposer f) f,
+  ) {
+    final $$MarkBookTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markBookTable,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkBookTableTableFilterComposer(
+            $db: $db,
+            $table: $db.markBookTable,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1781,6 +1860,31 @@ class $$BookTableTableAnnotationComposer
         );
     return f(composer);
   }
+
+  Expression<T> markBookTableRefs<T extends Object>(
+    Expression<T> Function($$MarkBookTableTableAnnotationComposer a) f,
+  ) {
+    final $$MarkBookTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markBookTable,
+      getReferencedColumn: (t) => t.bookId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkBookTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.markBookTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$BookTableTableTableManager
@@ -1796,7 +1900,10 @@ class $$BookTableTableTableManager
           $$BookTableTableUpdateCompanionBuilder,
           (BookTableData, $$BookTableTableReferences),
           BookTableData,
-          PrefetchHooks Function({bool collectionBookTableRefs})
+          PrefetchHooks Function({
+            bool collectionBookTableRefs,
+            bool markBookTableRefs,
+          })
         > {
   $$BookTableTableTableManager(_$AppDatabase db, $BookTableTable table)
     : super(
@@ -1849,38 +1956,63 @@ class $$BookTableTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({collectionBookTableRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [
-                if (collectionBookTableRefs) db.collectionBookTable,
-              ],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (collectionBookTableRefs)
-                    await $_getPrefetchedData<
-                      BookTableData,
-                      $BookTableTable,
-                      CollectionBookTableData
-                    >(
-                      currentTable: table,
-                      referencedTable: $$BookTableTableReferences
-                          ._collectionBookTableRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$BookTableTableReferences(
-                            db,
-                            table,
-                            p0,
-                          ).collectionBookTableRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.bookId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({collectionBookTableRefs = false, markBookTableRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (collectionBookTableRefs) db.collectionBookTable,
+                    if (markBookTableRefs) db.markBookTable,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (collectionBookTableRefs)
+                        await $_getPrefetchedData<
+                          BookTableData,
+                          $BookTableTable,
+                          CollectionBookTableData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$BookTableTableReferences
+                              ._collectionBookTableRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$BookTableTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).collectionBookTableRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (markBookTableRefs)
+                        await $_getPrefetchedData<
+                          BookTableData,
+                          $BookTableTable,
+                          MarkBookTableData
+                        >(
+                          currentTable: table,
+                          referencedTable: $$BookTableTableReferences
+                              ._markBookTableRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$BookTableTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).markBookTableRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.bookId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1897,7 +2029,10 @@ typedef $$BookTableTableProcessedTableManager =
       $$BookTableTableUpdateCompanionBuilder,
       (BookTableData, $$BookTableTableReferences),
       BookTableData,
-      PrefetchHooks Function({bool collectionBookTableRefs})
+      PrefetchHooks Function({
+        bool collectionBookTableRefs,
+        bool markBookTableRefs,
+      })
     >;
 typedef $$CollectionTableTableCreateCompanionBuilder =
     CollectionTableCompanion Function({
@@ -2223,17 +2358,17 @@ typedef $$CollectionTableTableProcessedTableManager =
     >;
 typedef $$CollectionBookTableTableCreateCompanionBuilder =
     CollectionBookTableCompanion Function({
+      Value<int> id,
       required int bookId,
       required int collectionId,
       Value<DateTime> addedAt,
-      Value<int> rowid,
     });
 typedef $$CollectionBookTableTableUpdateCompanionBuilder =
     CollectionBookTableCompanion Function({
+      Value<int> id,
       Value<int> bookId,
       Value<int> collectionId,
       Value<DateTime> addedAt,
-      Value<int> rowid,
     });
 
 final class $$CollectionBookTableTableReferences
@@ -2300,6 +2435,11 @@ class $$CollectionBookTableTableFilterComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnFilters(column),
@@ -2361,6 +2501,11 @@ class $$CollectionBookTableTableOrderingComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get addedAt => $composableBuilder(
     column: $table.addedAt,
     builder: (column) => ColumnOrderings(column),
@@ -2422,6 +2567,9 @@ class $$CollectionBookTableTableAnnotationComposer
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
   GeneratedColumn<DateTime> get addedAt =>
       $composableBuilder(column: $table.addedAt, builder: (column) => column);
 
@@ -2508,27 +2656,27 @@ class $$CollectionBookTableTableTableManager
               ),
           updateCompanionCallback:
               ({
+                Value<int> id = const Value.absent(),
                 Value<int> bookId = const Value.absent(),
                 Value<int> collectionId = const Value.absent(),
                 Value<DateTime> addedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
               }) => CollectionBookTableCompanion(
+                id: id,
                 bookId: bookId,
                 collectionId: collectionId,
                 addedAt: addedAt,
-                rowid: rowid,
               ),
           createCompanionCallback:
               ({
+                Value<int> id = const Value.absent(),
                 required int bookId,
                 required int collectionId,
                 Value<DateTime> addedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
               }) => CollectionBookTableCompanion.insert(
+                id: id,
                 bookId: bookId,
                 collectionId: collectionId,
                 addedAt: addedAt,
-                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -2627,6 +2775,29 @@ typedef $$MarkTableTableUpdateCompanionBuilder =
       Value<String?> description,
     });
 
+final class $$MarkTableTableReferences
+    extends BaseReferences<_$AppDatabase, $MarkTableTable, MarkTableData> {
+  $$MarkTableTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$MarkBookTableTable, List<MarkBookTableData>>
+  _markBookTableRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.markBookTable,
+    aliasName: $_aliasNameGenerator(db.markTable.id, db.markBookTable.markId),
+  );
+
+  $$MarkBookTableTableProcessedTableManager get markBookTableRefs {
+    final manager = $$MarkBookTableTableTableManager(
+      $_db,
+      $_db.markBookTable,
+    ).filter((f) => f.markId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_markBookTableRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
 class $$MarkTableTableFilterComposer
     extends Composer<_$AppDatabase, $MarkTableTable> {
   $$MarkTableTableFilterComposer({
@@ -2650,6 +2821,31 @@ class $$MarkTableTableFilterComposer
     column: $table.description,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> markBookTableRefs(
+    Expression<bool> Function($$MarkBookTableTableFilterComposer f) f,
+  ) {
+    final $$MarkBookTableTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markBookTable,
+      getReferencedColumn: (t) => t.markId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkBookTableTableFilterComposer(
+            $db: $db,
+            $table: $db.markBookTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$MarkTableTableOrderingComposer
@@ -2696,6 +2892,31 @@ class $$MarkTableTableAnnotationComposer
     column: $table.description,
     builder: (column) => column,
   );
+
+  Expression<T> markBookTableRefs<T extends Object>(
+    Expression<T> Function($$MarkBookTableTableAnnotationComposer a) f,
+  ) {
+    final $$MarkBookTableTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.markBookTable,
+      getReferencedColumn: (t) => t.markId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$MarkBookTableTableAnnotationComposer(
+            $db: $db,
+            $table: $db.markBookTable,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$MarkTableTableTableManager
@@ -2709,12 +2930,9 @@ class $$MarkTableTableTableManager
           $$MarkTableTableAnnotationComposer,
           $$MarkTableTableCreateCompanionBuilder,
           $$MarkTableTableUpdateCompanionBuilder,
-          (
-            MarkTableData,
-            BaseReferences<_$AppDatabase, $MarkTableTable, MarkTableData>,
-          ),
+          (MarkTableData, $$MarkTableTableReferences),
           MarkTableData,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool markBookTableRefs})
         > {
   $$MarkTableTableTableManager(_$AppDatabase db, $MarkTableTable table)
     : super(
@@ -2748,9 +2966,45 @@ class $$MarkTableTableTableManager
                 description: description,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$MarkTableTableReferences(db, table, e),
+                ),
+              )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({markBookTableRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (markBookTableRefs) db.markBookTable,
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (markBookTableRefs)
+                    await $_getPrefetchedData<
+                      MarkTableData,
+                      $MarkTableTable,
+                      MarkBookTableData
+                    >(
+                      currentTable: table,
+                      referencedTable: $$MarkTableTableReferences
+                          ._markBookTableRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$MarkTableTableReferences(
+                            db,
+                            table,
+                            p0,
+                          ).markBookTableRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.markId == item.id),
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
         ),
       );
 }
@@ -2765,12 +3019,9 @@ typedef $$MarkTableTableProcessedTableManager =
       $$MarkTableTableAnnotationComposer,
       $$MarkTableTableCreateCompanionBuilder,
       $$MarkTableTableUpdateCompanionBuilder,
-      (
-        MarkTableData,
-        BaseReferences<_$AppDatabase, $MarkTableTable, MarkTableData>,
-      ),
+      (MarkTableData, $$MarkTableTableReferences),
       MarkTableData,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool markBookTableRefs})
     >;
 typedef $$MarkBookTableTableCreateCompanionBuilder =
     MarkBookTableCompanion Function({
@@ -2813,17 +3064,17 @@ final class $$MarkBookTableTableReferences
     );
   }
 
-  static $MarkTableTable _bookIdTable(_$AppDatabase db) =>
-      db.markTable.createAlias(
-        $_aliasNameGenerator(db.markBookTable.bookId, db.markTable.id),
+  static $BookTableTable _bookIdTable(_$AppDatabase db) =>
+      db.bookTable.createAlias(
+        $_aliasNameGenerator(db.markBookTable.bookId, db.bookTable.id),
       );
 
-  $$MarkTableTableProcessedTableManager get bookId {
+  $$BookTableTableProcessedTableManager get bookId {
     final $_column = $_itemColumn<int>('book_id')!;
 
-    final manager = $$MarkTableTableTableManager(
+    final manager = $$BookTableTableTableManager(
       $_db,
-      $_db.markTable,
+      $_db.bookTable,
     ).filter((f) => f.id.sqlEquals($_column));
     final item = $_typedResult.readTableOrNull(_bookIdTable($_db));
     if (item == null) return manager;
@@ -2870,20 +3121,20 @@ class $$MarkBookTableTableFilterComposer
     return composer;
   }
 
-  $$MarkTableTableFilterComposer get bookId {
-    final $$MarkTableTableFilterComposer composer = $composerBuilder(
+  $$BookTableTableFilterComposer get bookId {
+    final $$BookTableTableFilterComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.bookId,
-      referencedTable: $db.markTable,
+      referencedTable: $db.bookTable,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MarkTableTableFilterComposer(
+          }) => $$BookTableTableFilterComposer(
             $db: $db,
-            $table: $db.markTable,
+            $table: $db.bookTable,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2931,20 +3182,20 @@ class $$MarkBookTableTableOrderingComposer
     return composer;
   }
 
-  $$MarkTableTableOrderingComposer get bookId {
-    final $$MarkTableTableOrderingComposer composer = $composerBuilder(
+  $$BookTableTableOrderingComposer get bookId {
+    final $$BookTableTableOrderingComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.bookId,
-      referencedTable: $db.markTable,
+      referencedTable: $db.bookTable,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MarkTableTableOrderingComposer(
+          }) => $$BookTableTableOrderingComposer(
             $db: $db,
-            $table: $db.markTable,
+            $table: $db.bookTable,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2990,20 +3241,20 @@ class $$MarkBookTableTableAnnotationComposer
     return composer;
   }
 
-  $$MarkTableTableAnnotationComposer get bookId {
-    final $$MarkTableTableAnnotationComposer composer = $composerBuilder(
+  $$BookTableTableAnnotationComposer get bookId {
+    final $$BookTableTableAnnotationComposer composer = $composerBuilder(
       composer: this,
       getCurrentColumn: (t) => t.bookId,
-      referencedTable: $db.markTable,
+      referencedTable: $db.bookTable,
       getReferencedColumn: (t) => t.id,
       builder:
           (
             joinBuilder, {
             $addJoinBuilderToRootComposer,
             $removeJoinBuilderFromRootComposer,
-          }) => $$MarkTableTableAnnotationComposer(
+          }) => $$BookTableTableAnnotationComposer(
             $db: $db,
-            $table: $db.markTable,
+            $table: $db.bookTable,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:

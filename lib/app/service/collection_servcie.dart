@@ -1,58 +1,33 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:get/get.dart' hide Value;
 import 'package:tele_book/app/db/app_database.dart';
 
-class CollectionService extends GetxService {
-  final db = Get.find<AppDatabase>();
-  final collections = <CollectionTableData>[].obs;
-  final collectionBooks = <CollectionBookTableData>[].obs;
+class CollectionService {
+  final AppDatabase db;
 
-  StreamSubscription? _collectionSubscription;
-  StreamSubscription? _collectionBookSubscription;
+  CollectionService(this.db);
 
-  @override
-  void onInit() {
-    super.onInit();
-    getCollections();
-    _collectionSubscription = db.collectionTable.select().watch().listen((
-      event,
-    ) {
-      getCollections();
-      getCollectionBooks();
-    });
-    _collectionBookSubscription = db.collectionBookTable
-        .select()
-        .watch()
-        .listen((event) {
-          getCollections();
-          getCollectionBooks();
-        });
+  Stream<List<CollectionTableData>> getCollections(String? name) {
+    return db.collectionDao.getCollections(name);
   }
 
-  Future<void> getCollections() async {
-    final data = await db.collectionTable.select().get();
-    collections.assignAll(data);
-  }
-
-  Future<void> getCollectionBooks() async {
-    final data = await db.collectionBookTable.select().get();
-    collectionBooks.assignAll(data);
+  Stream<List<CollectionBookTableData>> getCollectionBooks(int collectionId) {
+    return db.collectionBookDao.getBooksInCollection(collectionId);
   }
 
   Future<void> updateBookCollection(int collectionId, int bookId) async {
     await db.transaction(() async {
-      await (db.collectionBookTable.delete()
-            ..where((tbl) => tbl.bookId.equals(bookId)))
-          .go();
-      if (collectionId != 0) {
-        await db.collectionBookTable.insertOnConflictUpdate(
-          CollectionBookTableCompanion(
-            bookId: Value(bookId),
-            collectionId: Value(collectionId),
-          ),
-        );
+      final existing = await db.collectionBookDao.getCollectionBook(
+        collectionId,
+        bookId,
+      );
+      if (existing != null) {
+        // 已存在则删除（取消收藏）
+        await db.collectionBookDao.deleteCollectionBook(existing.id);
+      } else {
+        // 不存在则添加
+        await db.collectionBookDao.insertCollectionBook(collectionId, bookId);
       }
     });
   }
@@ -62,13 +37,26 @@ class CollectionService extends GetxService {
     required String name,
     String? description,
   }) async {
-    await db.collectionTable.insertOnConflictUpdate(
-      CollectionTableCompanion(
-        id: id != null ? Value(id) : Value.absent(),
-        name: Value(name),
-        description: Value(description),
-      ),
-    );
+    await db.transaction(() async {
+      if (id == null) {
+        // 新建
+        await db.collectionDao.insertCollection(
+          CollectionTableCompanion(
+            name: Value(name),
+            description: Value(description),
+          ),
+        );
+      } else {
+        // 更新
+        await db.collectionDao.updateCollection(
+          CollectionTableCompanion(
+            id: Value(id),
+            name: Value(name),
+            description: Value(description),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> deleteCollection(int collectionId) async {
@@ -80,12 +68,5 @@ class CollectionService extends GetxService {
             ..where((tbl) => tbl.collectionId.equals(collectionId)))
           .go();
     });
-  }
-
-  @override
-  void onClose() {
-    _collectionSubscription?.cancel();
-    _collectionBookSubscription?.cancel();
-    super.onClose();
   }
 }

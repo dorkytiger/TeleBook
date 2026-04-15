@@ -5,7 +5,6 @@ import 'package:archive/archive_io.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
