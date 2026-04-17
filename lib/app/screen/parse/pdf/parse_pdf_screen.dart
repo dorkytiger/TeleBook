@@ -1,54 +1,79 @@
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:get/get.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/screen/parse/pdf/parse_pdf_controller.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/widget/custom_loading.dart';
+
+import 'parse_pdf_controller.dart';
 
 /// 离屏超过此页数时释放内存
 const _kReleaseThreshold = 5;
 
-class ParsePdfScreen extends GetView<ParsePdfController> {
-  const ParsePdfScreen({super.key});
+class ParsePdfScreen extends StatelessWidget {
+  final String pdfPath;
+
+  const ParsePdfScreen({super.key, required this.pdfPath});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("PDF解析"), leading: const BackButton()),
-      body: controller.initState.displaySuccess(
-        loadingBuilder: () => const Center(child: CustomLoading()),
-        successBuilder: (totalPages) {
-          return Column(
-            children: [
-              // 页数提示
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text(
-                  '共 $totalPages 页，滚动时按需加载',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+    return ChangeNotifierProvider(
+      create: (_) => ParsePdfController(
+        path: pdfPath,
+        importStore: context.read(),
+      ),
+      child: const _ParsePdfContent(),
+    );
+  }
+}
+
+class _ParsePdfContent extends StatelessWidget {
+  const _ParsePdfContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ParsePdfController>(
+      builder: (context, controller, _) {
+        return Scaffold(
+          appBar: AppBar(title: Text('PDF解析'), leading: BackButton()),
+          body: DKStateQueryDisplay(
+            state: controller.initState,
+            loadingBuilder: () => const Center(child: CustomLoading()),
+            successBuilder: (totalPages) => Column(
+              children: [
+                // 页数提示
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(
+                    '共 $totalPages 页，滚动时按需加载',
+                    style: Theme.of(context).textTheme.bodySmall
+                        ?.copyWith(color: Colors.grey),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: totalPages,
-                  cacheExtent: 800,
-                  itemBuilder: (context, index) {
-                    return _PageTile(index: index);
-                  },
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: totalPages,
+                    cacheExtent: 800,
+                    itemBuilder: (context, index) =>
+                        _PageTile(index: index),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Obx(
-                    () => FilledButton.icon(
-                      onPressed: controller.importState.value.isLoading
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: controller.isImporting
                           ? null
-                          : () => controller.importPDF(),
-                      icon: controller.importState.value.isLoading
+                          : () async {
+                              await controller.importPDF();
+                              if (context.mounted) {
+                                context.go(
+                                    '${AppRoute.home}?tab=1&taskTab=1');
+                              }
+                            },
+                      icon: controller.isImporting
                           ? const SizedBox(
                               width: 18,
                               height: 18,
@@ -59,30 +84,27 @@ class ParsePdfScreen extends GetView<ParsePdfController> {
                             )
                           : const Icon(Icons.save),
                       label: Text(
-                        controller.importState.value.isLoading
-                            ? "导入中…"
-                            : "导入PDF",
-                      ),
+                          controller.isImporting ? '导入中…' : '导入PDF'),
                     ),
                   ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 /// 单页 tile，进入可见区域时触发渲染，离屏时释放
-class _PageTile extends GetView<ParsePdfController> {
+class _PageTile extends StatelessWidget {
   const _PageTile({required this.index});
-
   final int index;
 
   @override
   Widget build(BuildContext context) {
+    final controller = context.read<ParsePdfController>();
     return VisibilityDetectorTile(
       index: index,
       onVisible: () => controller.renderPage(index),
@@ -97,44 +119,37 @@ class _PageTile extends GetView<ParsePdfController> {
           controller.releasePage(index);
         }
       },
-      child: Obx(() {
-        final image = controller.pageImages.length > index
-            ? controller.pageImages[index]
-            : null;
-        final loading = controller.pageLoading.length > index
-            ? controller.pageLoading[index]
-            : false;
-
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 8,
-          ),
-          title: Text("第 ${index + 1} 页"),
-          leading: SizedBox(
-            width: 60,
-            height: 80,
-            child: image != null
-                ? Image.memory(image, fit: BoxFit.cover)
+      child: Consumer<ParsePdfController>(
+        builder: (_, c, __) {
+          final image = c.pageImages.length > index ? c.pageImages[index] : null;
+          final loading = c.pageLoading.length > index ? c.pageLoading[index] : false;
+          return ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            title: Text('第 ${index + 1} 页'),
+            leading: SizedBox(
+              width: 60,
+              height: 80,
+              child: image != null
+                  ? Image.memory(image, fit: BoxFit.cover)
+                  : loading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : const Icon(Icons.image_outlined, size: 36),
+            ),
+            subtitle: image != null
+                ? Text('大小: ${(image.lengthInBytes / 1024).toStringAsFixed(1)} KB')
                 : loading
-                ? const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : const Icon(Icons.image_outlined, size: 36),
-          ),
-          subtitle: image != null
-              ? Text(
-                  "大小: ${(image.lengthInBytes / 1024).toStringAsFixed(1)} KB",
-                )
-              : loading
-              ? const Text("渲染中…")
-              : const Text("待渲染"),
-        );
-      }),
+                ? const Text('渲染中…')
+                : const Text('待渲染'),
+          );
+        },
+      ),
     );
   }
 }
@@ -144,7 +159,6 @@ class _PageTile extends GetView<ParsePdfController> {
 /// 全局追踪当前可见的 index 集合（用于释放判断）
 class _VisibilityTracker {
   _VisibilityTracker._();
-
   static final instance = _VisibilityTracker._();
   final visibleIndices = <int>{};
 }
@@ -165,7 +179,8 @@ class VisibilityDetectorTile extends StatefulWidget {
   final Widget child;
 
   @override
-  State<VisibilityDetectorTile> createState() => _VisibilityDetectorTileState();
+  State<VisibilityDetectorTile> createState() =>
+      _VisibilityDetectorTileState();
 }
 
 class _VisibilityDetectorTileState extends State<VisibilityDetectorTile> {
@@ -175,7 +190,8 @@ class _VisibilityDetectorTileState extends State<VisibilityDetectorTile> {
   void initState() {
     super.initState();
     // 首次 build 后触发渲染
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibility());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkVisibility());
   }
 
   @override
@@ -224,7 +240,8 @@ class _VisibilityDetectorTileState extends State<VisibilityDetectorTile> {
   @override
   Widget build(BuildContext context) {
     // 每次 build 后重新检测（应对滚动触发的重建）
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibility());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkVisibility());
     return widget.child;
   }
 }

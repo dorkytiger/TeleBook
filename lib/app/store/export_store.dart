@@ -94,6 +94,11 @@ class ExportStore extends ChangeNotifier {
     }
   }
 
+  /// 触发重新导出（委托给 Service）
+  Future<void> exportBookById(int bookId) {
+    return _exportService.exportBookById(bookId);
+  }
+
   /// 清空所有记录
   void clearRecords() {
     for (final record in _records) {

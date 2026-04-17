@@ -1,45 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:tele_book/app/screen/book/screen/form/book_form_controller.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:tele_book/app/screen/parse/form/parse_form_controller.dart';
 
-class BookFormScreen extends GetView<BookFormController> {
-  const BookFormScreen({super.key});
+class ParseFormScreen extends StatelessWidget {
+  const ParseFormScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('添加数据'),
-        leading: BackButton(
-          onPressed: () {
-            Get.back();
-          },
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              controller.submitForm();
-            },
-            icon: Icon(Icons.check),
+    return ChangeNotifierProvider(
+      create: (_) => ParseFormController(),
+      child: _ParseFormContent(),
+    );
+  }
+}
+
+class _ParseFormContent extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<ParseFormController>(
+      builder: (context, controller, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('添加数据'),
+            leading: BackButton(
+              onPressed: () {
+                context.pop();
+              },
+            ),
+            actions: [
+              IconButton(
+                onPressed: () {
+                  controller.submitForm(context);
+                },
+                icon: Icon(Icons.check),
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Obx(
-        () => Container(
-          padding: EdgeInsets.all(16),
-          child: SingleChildScrollView(
-            child: Column(
-              spacing: 16,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [_buildSourceDialog(context), _buildForm(context)],
+          body: Container(
+            padding: EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Column(
+                spacing: 16,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSourceDialog(context, controller),
+                  _buildForm(context, controller),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildSourceDialog(BuildContext context) {
+  Widget _buildSourceDialog(
+    BuildContext context,
+    ParseFormController controller,
+  ) {
     return TextField(
       controller: controller.sourceController,
       decoration: InputDecoration(
@@ -61,7 +80,7 @@ class BookFormScreen extends GetView<BookFormController> {
                   builder: (context, scrollController) {
                     return SingleChildScrollView(
                       controller: scrollController,
-                      child: _buildSourceSelection(context),
+                      child: _buildSourceSelection(context, controller),
                     );
                   },
                 );
@@ -75,7 +94,10 @@ class BookFormScreen extends GetView<BookFormController> {
     );
   }
 
-  Widget _buildSourceSelection(BuildContext context) {
+  Widget _buildSourceSelection(
+    BuildContext context,
+    ParseFormController controller,
+  ) {
     return Column(
       children: [
         Row(
@@ -98,65 +120,59 @@ class BookFormScreen extends GetView<BookFormController> {
             ),
           ],
         ),
-        Obx(
-          () => RadioGroup<BookFormSources>(
-            onChanged: (value) {
-              controller.source.value = value!;
-              controller.sourceController.text = value.desc;
-            },
-            groupValue: controller.source.value,
-            child: Column(
-              children: [
-                RadioListTile(
-                  value: BookFormSources.web,
-                  selected: controller.source.value == BookFormSources.web,
-                  title: Text("来自网页"),
-                  subtitle: Text("从网页解析后,下载书籍到本地"),
-                ),
-                RadioListTile(
-                  value: BookFormSources.archive,
-                  selected: controller.source.value == BookFormSources.archive,
-                  title: Text("来自压缩包"),
-                  subtitle: Text("从压缩包中提取书籍到本地"),
-                ),
-                RadioListTile(
-                  value: BookFormSources.batchArchive,
-                  selected:
-                      controller.source.value == BookFormSources.batchArchive,
-                  title: Text("来自批量压缩包"),
-                  subtitle: Text("选择文件夹,从文件夹里面多个压缩包中提取书籍到本地"),
-                ),
-                RadioListTile(
-                  value: BookFormSources.pdf,
-                  selected: controller.source.value == BookFormSources.pdf,
-                  title: Text("来自PDF文件"),
-                  subtitle: Text("从PDF文件中提取书籍到本地"),
-                ),
-                RadioListTile(
-                  value: BookFormSources.imageFolder,
-                  selected:
-                      controller.source.value == BookFormSources.imageFolder,
-                  title: Text("来自图片文件夹"),
-                  subtitle: Text("从图片文件夹中提取书籍到本地"),
-                ),
-                RadioListTile(
-                  value: BookFormSources.batchImageFolder,
-                  selected:
-                      controller.source.value ==
-                      BookFormSources.batchImageFolder,
-                  title: Text("来自批量图片文件夹"),
-                  subtitle: Text("选择文件夹,从文件夹里面多个图片文件夹中提取书籍到本地"),
-                ),
-              ],
-            ),
+        RadioGroup<BookFormSources>(
+          onChanged: (value) {
+            controller.source = value!;
+            controller.sourceController.text = value.desc;
+          },
+          groupValue: controller.source,
+          child: Column(
+            children: [
+              RadioListTile(
+                value: BookFormSources.web,
+                selected: controller.source == BookFormSources.web,
+                title: Text("来自网页"),
+                subtitle: Text("从网页解析后,下载书籍到本地"),
+              ),
+              RadioListTile(
+                value: BookFormSources.archive,
+                selected: controller.source == BookFormSources.archive,
+                title: Text("来自压缩包"),
+                subtitle: Text("从压缩包中提取书籍到本地"),
+              ),
+              RadioListTile(
+                value: BookFormSources.batchArchive,
+                selected: controller.source == BookFormSources.batchArchive,
+                title: Text("来自批量压缩包"),
+                subtitle: Text("选择文件夹,从文件夹里面多个压缩包中提取书籍到本地"),
+              ),
+              RadioListTile(
+                value: BookFormSources.pdf,
+                selected: controller.source == BookFormSources.pdf,
+                title: Text("来自PDF文件"),
+                subtitle: Text("从PDF文件中提取书籍到本地"),
+              ),
+              RadioListTile(
+                value: BookFormSources.imageFolder,
+                selected: controller.source == BookFormSources.imageFolder,
+                title: Text("来自图片文件夹"),
+                subtitle: Text("从图片文件夹中提取书籍到本地"),
+              ),
+              RadioListTile(
+                value: BookFormSources.batchImageFolder,
+                selected: controller.source == BookFormSources.batchImageFolder,
+                title: Text("来自批量图片文件夹"),
+                subtitle: Text("选择文件夹,从文件夹里面多个图片文件夹中提取书籍到本地"),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildForm(BuildContext context) {
-    switch (controller.source.value) {
+  Widget _buildForm(BuildContext context, ParseFormController controller) {
+    switch (controller.source) {
       case BookFormSources.web:
         return TextField(
           controller: controller.webUrlController,
@@ -265,8 +281,6 @@ class BookFormScreen extends GetView<BookFormController> {
           ),
           readOnly: true,
         );
-      default:
-        return SizedBox.shrink();
     }
   }
 }

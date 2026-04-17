@@ -1,145 +1,90 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/screen/collection/widget/collection_form_widget.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 
 import 'collection_controller.dart';
 
-class CollectionScreen extends GetView<CollectionController> {
+class CollectionScreen extends StatelessWidget {
   const CollectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => Scaffold(
-        appBar: AppBar(
-          title: Text('收藏夹管理'),
-          actions: [
-            IconButton(
-              icon: Icon(controller.isEditMode.value ? Icons.done : Icons.edit),
-              onPressed: controller.toggleEditMode,
-            ),
-            if (!controller.isEditMode.value)
+    return ChangeNotifierProvider(
+      create: (_) => CollectionController(collectionStore: context.read()),
+      child: _CollectionContent(),
+    );
+  }
+}
+
+class _CollectionContent extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CollectionController>(
+      builder: (context, controller, child) {
+        final collections = controller.collections;
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('我的收藏夹'),
+            actions: [
               IconButton(
+                onPressed: () => _saveCollection(context, controller),
                 icon: Icon(Icons.add),
-                onPressed: () => _saveCollection(context),
+                tooltip: '新建收藏夹',
               ),
-          ],
-        ),
-        body: Obx(() {
-          if (controller.collectionService.collections.isEmpty) {
-            return Center(child: CustomEmpty(message: "暂无收藏夹，点击右上角添加"));
-          }
-          return ListView.separated(
-            padding: EdgeInsets.all(16),
-            separatorBuilder: (context, index) => Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8),
-              child: Divider(
-                height: 16,
-                thickness: 0.5,
-                color: Theme.of(context).dividerColor,
-              ),
-            ),
-
-            itemCount: controller.collectionService.collections.length,
-            itemBuilder: (context, index) {
-              final collection =
-                  controller.collectionService.collections[index];
-              final bookCount = controller.collectionService.collectionBooks
-                  .where((cb) => cb.collectionId == collection.id)
-                  .length;
-              final isEditMode = controller.isEditMode.value;
-
-              return ListTile(
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                onTap: isEditMode
-                    ? null
-                    : () => _showCollectionBooks(context, collection),
-                title: Text(
-                  collection.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(top: 4),
-                      child: Text(
-                        '$bookCount 本书籍',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ),
-                    if (collection.description != null &&
-                        collection.description!.isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: Text(
-                          collection.description!,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.color
-                                    ?.withValues(alpha: 0.6),
-                                fontStyle: FontStyle.italic,
-                              ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
-                trailing: isEditMode
-                    ? Row(
+            ],
+          ),
+          body: collections.isEmpty
+              ? CustomEmpty(message: "暂无收藏夹，点击右上角创建一个吧！")
+              : ListView.builder(
+                  itemCount: collections.length,
+                  itemBuilder: (context, index) {
+                    final collection = collections[index];
+                    return ListTile(
+                      title: Text(collection.name),
+                      subtitle: Text(collection.description ?? ""),
+                      onTap: () =>
+                          controller.showCollectionBooks(collection, context),
+                      trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
-                            icon: Icon(Icons.edit),
                             onPressed: () => _saveCollection(
                               context,
+                              controller,
                               initData: CollectionFormData(
                                 id: collection.id,
                                 name: collection.name,
                                 description: collection.description,
                               ),
                             ),
+                            icon: Icon(Icons.edit),
+                            tooltip: '编辑',
                           ),
                           IconButton(
-                            icon: Icon(
-                              Icons.delete,
-                              color: Theme.of(context).colorScheme.error,
-                            ),
                             onPressed: () =>
-                                _confirmDelete(context, collection),
+                                _confirmDelete(context, controller, collection),
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            tooltip: '删除',
                           ),
                         ],
-                      )
-                    : Icon(Icons.arrow_forward_ios, size: 16),
-              );
-            },
-          );
-        }),
-      ),
+                      ),
+                    );
+                  },
+                ),
+        );
+      },
     );
   }
 
-  // 显示收藏夹中的书籍网格
-  void _showCollectionBooks(BuildContext context, collection) {
-    controller.showCollectionBooks(collection);
-  }
-
   // 确认删除
-  void _confirmDelete(BuildContext context, collection) {
+  void _confirmDelete(
+    BuildContext context,
+    CollectionController controller,
+    CollectionTableData collection,
+  ) {
     showDialog(
       context: context,
       builder: (context) {
@@ -147,11 +92,11 @@ class CollectionScreen extends GetView<CollectionController> {
           title: Text('确认删除'),
           content: Text('确定要删除收藏夹"${collection.name}"吗？'),
           actions: [
-            TextButton(onPressed: () => Get.back(), child: Text('取消')),
+            TextButton(onPressed: () => context.pop(), child: Text('取消')),
             TextButton(
               onPressed: () {
-                controller.collectionService.deleteCollection(collection.id);
-                Get.back();
+                controller.deleteCollection(context, collection.id);
+                context.pop();
               },
               child: Text('删除', style: TextStyle(color: Colors.red)),
             ),
@@ -162,7 +107,8 @@ class CollectionScreen extends GetView<CollectionController> {
   }
 
   Future<void> _saveCollection(
-    BuildContext context, {
+    BuildContext context,
+    CollectionController controller, {
     CollectionFormData? initData,
   }) async {
     await showModalBottomSheet(
@@ -179,10 +125,11 @@ class CollectionScreen extends GetView<CollectionController> {
           child: CollectionFormWidget(
             initialData: initData,
             onConfirm: (data) {
-              controller.collectionService.saveCollection(
-                id: initData?.id,
-                name: data.name,
-                description: data.description,
+              controller.saveCollection(
+                context,
+                initData?.id,
+                data.name,
+                data.description,
               );
               Navigator.of(context).pop();
             },

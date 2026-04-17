@@ -1,128 +1,67 @@
 import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_event_get.dart';
-import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:drift/drift.dart' as drift hide Column;
+import 'package:dk_util/state/dk_state_query_helper.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
+import 'package:tele_book/app/store/book_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
-class BookEditController extends GetxController {
-  final int bookId = Get.arguments as int;
-  final appDatabase = Get.find<AppDatabase>();
+class BookEditController extends ChangeNotifier {
+  final int bookId;
+  final BookStore bookStore;
 
-  late final String appDirectory;
   final bookName = TextEditingController();
-  final imageList = <String>[].obs;
-  final getBookState = Rx<DKStateQuery<BookTableData>>(DkStateQueryIdle());
-  final addImageState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final saveState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+  List<String> imageList = <String>[];
+  List<String> tempImageList = <String>[];
+  DKStateQuery<BookTableData> getBookState = DkStateQueryIdle();
+  DKStateEvent<void> addImageState = DKStateEventIdle();
+  DKStateEvent<void> saveState = DKStateEventIdle();
 
-  @override
-  void onInit() async {
-    super.onInit();
-    appDirectory = (await getApplicationDocumentsDirectory()).path;
-    saveState.listenEventToast(
-      onSuccess: (data) {
-        final bookController = Get.find<BookController>();
-        bookController.fetchBooks();
-        Get.back(result: true);
-      },
-    );
-    await loadBook();
-  }
-
-  @override
-  void onClose() {
-    bookName.dispose();
-    super.onClose();
+  BookEditController({required this.bookId, required this.bookStore}) {
+    loadBook();
   }
 
   /// 加载书籍数据
   Future<void> loadBook() async {
-    getBookState.triggerQuery(
+    DKStateQueryHelper.triggerQuery(
+      onStateChange: (value) {
+        getBookState = value;
+        notifyListeners();
+      },
       query: () async {
-        final book =
-            await (appDatabase.bookTable.select()
-                  ..where((tbl) => tbl.id.equals(bookId)))
-                .getSingle();
-
+        final book = await bookStore.getBookById(bookId);
+        if (book == null) {
+          throw Exception('书籍未找到');
+        }
         bookName.text = book.name;
-        imageList.value = List.from(book.localPaths);
+        imageList = await FileUtil.getBookImageFullPaths(book.localPaths);
         return book;
       },
     );
   }
 
   /// 添加图片
-  Future<void> addImages() async {
-    await addImageState.triggerEvent(
-      event: () async {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.image,
-          allowMultiple: true,
-        );
-
-        if (result == null || result.files.isEmpty) return;
-
-        // 创建保存目录
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final saveDir = p.join(appDirectory, 'book_${bookId}_$timestamp');
-        await Directory(saveDir).create(recursive: true);
-
-        final newPaths = <String>[];
-
-        for (final file in result.files) {
-          if (file.path == null) continue;
-
-          // 生成文件名
-          final extension = p.extension(file.path!);
-          final fileName = '${DateTime.now().microsecondsSinceEpoch}$extension';
-          final savePath = p.join(saveDir, fileName);
-
-          // 复制文件
-          await File(file.path!).copy(savePath);
-
-          // 保存相对路径
-          final relativePath = p.relative(savePath, from: appDirectory);
-          newPaths.add(relativePath);
-        }
-
-        imageList.addAll(newPaths);
-      },
+  Future<void> addImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: true,
     );
-  }
-
-  /// 重命名 书籍
-  Future<void> renameBook() async {
-    if (bookName.text.trim().isEmpty) {
+    if (result == null) {
+      DKLog.i('用户取消了图片选择');
       return;
     }
-
-    try {
-      // 清理名称中的非法字符
-      final sanitizedName = bookName.text.trim().replaceAll(
-        RegExp(r'[<>:"/\\|?*]'),
-        '_',
-      );
-
-      // 立即更新数据库中的书籍名称
-      await (appDatabase.update(appDatabase.bookTable)
-            ..where((tbl) => tbl.id.equals(bookId)))
-          .write(BookTableCompanion(name: drift.Value(sanitizedName)));
-
-      // 更新书籍列表
-      final bookController = Get.find<BookController>();
-      await bookController.fetchBooks();
-
-      DKLog.i('书籍重命名成功: $sanitizedName');
-    } catch (e) {
-      DKLog.e('重命名书籍失败: $e');
+    // 先拷贝文件到临时路径，避免直接操作原文件
+    final tempPaths = <String>[];
+    for (final path in result.paths.whereType<String>()) {
+      final tempPath = await FileUtil.copyFileToTempDir(path);
+      tempPaths.add(tempPath);
     }
+    tempImageList.addAll(tempPaths);
+    imageList.addAll(tempPaths);
+    DKLog.i('已添加 ${result.paths.length} 张图片，等待保存');
+    notifyListeners();
   }
 
   /// 删除图片
@@ -136,6 +75,7 @@ class BookEditController extends GetxController {
       // 只从列表中移除，不删除物理文件，也不更新数据库
       // 物理文件的删除和数据库更新将在保存时进行
       imageList.removeAt(index);
+      notifyListeners();
       DKLog.i('图片已从列表中移除，等待保存');
     } catch (e) {
       DKLog.e('删除图片失败: $e');
@@ -149,22 +89,31 @@ class BookEditController extends GetxController {
     }
     final item = imageList.removeAt(oldIndex);
     imageList.insert(newIndex, item);
+    notifyListeners();
     DKLog.i('图片顺序已调整，等待保存');
   }
 
   /// 保存修改
-  Future<void> saveChanges() async {
+  Future<void> saveChanges(BuildContext context) async {
     if (bookName.text.trim().isEmpty) {
-      Get.snackbar('错误', '书籍名称不能为空');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('书籍名称不能为空')));
       return;
     }
 
     if (imageList.isEmpty) {
-      Get.snackbar('错误', '至少需要一张图片');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('至少需要保留一张图片')));
       return;
     }
 
-    await saveState.triggerEvent(
+    await DKStateEventHelper.triggerEvent(
+      onStateChange: (value) {
+        saveState = value;
+        notifyListeners();
+      },
       event: () async {
         // 清理名称中的非法字符
         final sanitizedName = bookName.text.trim().replaceAll(
@@ -172,18 +121,59 @@ class BookEditController extends GetxController {
           '_',
         );
 
-        // 更新数据库
-        await (appDatabase.update(
-          appDatabase.bookTable,
-        )..where((tbl) => tbl.id.equals(bookId))).write(
-          BookTableCompanion(
-            name: drift.Value(sanitizedName),
-            localPaths: drift.Value(imageList.toList()),
-          ),
+        final book = await bookStore.getBookById(bookId);
+        if (book == null) {
+          throw Exception('书籍未找到');
+        }
+
+        final tempLocalPaths = <String>[];
+        for (final imagePath in imageList) {
+          //先拷贝全部图片到临时路径，避免直接操作原文件
+          final tempPath = await FileUtil.copyFileToTempDir(imagePath);
+          tempLocalPaths.add(tempPath);
+        }
+        // 新建新的保存地址
+        final localRelativePaths = <String>[];
+        for (int i = 0; i < tempLocalPaths.length; i++) {
+          final tempLocalPath = tempLocalPaths[i];
+          final file = File(tempLocalPath);
+          final saveImageResult = await FileUtil.saveBookImage(
+            book.name,
+            file.readAsBytesSync(),
+            i,
+          );
+          localRelativePaths.add(saveImageResult.relativePath);
+        }
+
+        // 更新数据库记录
+        await bookStore.updateBook(
+          book.copyWith(name: sanitizedName, localPaths: localRelativePaths),
         );
 
         DKLog.i('书籍已保存: $sanitizedName');
       },
     );
+  }
+
+  Future<void> clearTempFiles() async {
+    for (final tempPath in tempImageList) {
+      try {
+        final file = File(tempPath);
+        if (await file.exists()) {
+          await file.delete();
+          DKLog.i('已删除临时文件: $tempPath');
+        }
+      } catch (e) {
+        DKLog.e('删除临时文件失败: $e');
+      }
+    }
+    tempImageList.clear();
+  }
+
+  @override
+  void dispose() {
+    bookName.dispose();
+    clearTempFiles();
+    super.dispose();
   }
 }

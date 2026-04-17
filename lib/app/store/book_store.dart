@@ -65,6 +65,10 @@ class BookStore extends ChangeNotifier {
     return newId;
   }
 
+  Future<void> updateBook(BookTableData data) async {
+    await _service.update(data);
+  }
+
   Future<void> saveReadProgress(int bookId, int progress) async {
     await _service.updateReadProgress(bookId, progress);
     // 更新本地数据

@@ -30,7 +30,7 @@ class BookPageController extends ChangeNotifier {
   bool showProgress = true;
   BookTableData? _bookData;
 
-  BookTableData? get b => _bookData;
+  BookTableData? get bookData => _bookData;
 
   // 阅读方向设置
   ReadingDirection readingDirection = ReadingDirection.leftToRight;
@@ -41,8 +41,18 @@ class BookPageController extends ChangeNotifier {
     required this.pathService,
     required this.sharedPreferences,
   }) {
+    //监听书籍数据变化，自动刷新页面
+    bookStore.addListener(_onBookDataChanged);
+
     _loadReadingSettings();
     _loadBookData();
+  }
+
+  void _onBookDataChanged() {
+    final book = bookStore.items.firstWhere((b) => b.id == bookId);
+    _bookData = book;
+    totalPages = book.localPaths.length;
+    notifyListeners();
   }
 
   /// 加载阅读设置

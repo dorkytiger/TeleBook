@@ -3,12 +3,10 @@ import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:dk_util/dk_util.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/service/book_service.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 /// 进度事件
 typedef DownloadProgressEvent = ({String taskId, double progress});
@@ -165,8 +163,7 @@ class DownloadService {
 
   /// 相对路径 → 完整绝对路径
   Future<String> getFullPath(String relativePath) async {
-    final appDocDir = await getApplicationDocumentsDirectory();
-    return '${appDocDir.path}/$relativePath';
+    return FileUtil.getFullPath(relativePath);
   }
 
   // ── 通知配置 ─────────────────────────────────────────────────────────────
@@ -247,21 +244,12 @@ class DownloadService {
   Future<(List<String>, int)> validateDownloadedFiles({
     required List<String> relativePaths,
   }) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final validPaths = <String>[];
-    int notFoundCount = 0;
+    final (validPaths, notFoundCount) = await FileUtil.validateFiles(
+      relativePaths,
+    );
 
-    for (final relativePath in relativePaths) {
-      final fullPath = '${appDir.path}/$relativePath';
-      final file = File(fullPath);
-      final exists = await file.exists();
-
-      if (exists) {
-        validPaths.add(relativePath);
-      } else {
-        notFoundCount++;
-        DKLog.w('⚠️ 下载文件不存在: $fullPath');
-      }
+    if (notFoundCount > 0) {
+      DKLog.w('⚠️ 有 $notFoundCount 个下载文件不存在');
     }
 
     DKLog.d(
@@ -274,11 +262,6 @@ class DownloadService {
     required String bookName,
     required List<String> downloadedPaths,
   }) async {
-    if (_db == null) {
-      throw Exception('Database not provided to DownloadService');
-    }
-
-    // 1. 验证文件
     final (validPaths, notFoundCount) = await validateDownloadedFiles(
       relativePaths: downloadedPaths,
     );
@@ -294,7 +277,7 @@ class DownloadService {
 
     // 3. 直接调用 DAO 保存书籍（不调用 BookService，避免 Service 间依赖）
     DKLog.d('💾 保存书籍: $bookName (${validPaths.length} 个文件)');
-    await _db!.bookDao.insertBook(
+    await _db.bookDao.insertBook(
       BookTableCompanion.insert(name: bookName, localPaths: validPaths),
     );
 

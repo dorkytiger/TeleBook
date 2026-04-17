@@ -1,21 +1,17 @@
 import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_event_get.dart';
-import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:get/get.dart' hide Value;
+import 'package:dk_util/state/dk_state_query_helper.dart';
+import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/service/import_service.dart';
+import 'package:tele_book/app/store/import_store.dart';
 
-class ParseImageFolderController extends GetxController {
-  final folderPath = Get.arguments as String;
-  final images = <File>[].obs;
-  final scanImageState = Rx<DKStateQuery<List<File>>>(DkStateQueryIdle());
-  final saveToLocalState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+class ParseImageFolderController extends ChangeNotifier {
+  final String folderPath;
+  final ImportStore importStore;
 
-  final importService = Get.find<ImportService>();
+  List<File> images = [];
+  DKStateQuery<List<File>> scanImageState = DkStateQueryIdle();
 
   // 支持的图片格式
   static const imageExtensions = [
@@ -27,21 +23,19 @@ class ParseImageFolderController extends GetxController {
     '.webp',
   ];
 
-  @override
-  void onInit() {
-    super.onInit();
+  ParseImageFolderController({
+    required this.folderPath,
+    required this.importStore,
+  }) {
     scanImages();
-    saveToLocalState.listenEventToast(
-      onSuccess: (_) {
-        final booksController = Get.find<BookController>();
-        booksController.fetchBooks();
-        Get.back();
-      },
-    );
   }
 
   Future<void> scanImages() async {
-    scanImageState.triggerQuery(
+    await DKStateQueryHelper.triggerQuery(
+      onStateChange: (value) {
+        scanImageState = value;
+        notifyListeners();
+      },
       query: () async {
         final folder = Directory(folderPath);
         if (!await folder.exists()) {
@@ -64,35 +58,27 @@ class ParseImageFolderController extends GetxController {
 
         // 按文件名排序
         files.sort((a, b) => p.basename(a.path).compareTo(p.basename(b.path)));
-        images.value = files;
+        images = files;
         return files;
       },
     );
   }
 
   Future<void> saveImagesToLocal() async {
-    await saveToLocalState.triggerEvent(
-      event: () async {
-        if (images.isEmpty) {
-          throw Exception("没有可保存的图片");
-        }
-
-        final title = p.basename(folderPath);
-
-        // 构建 ImportGroup，直接用原始 File 列表
-        final group = await importService.buildImportGroup(
-          name: title,
-          type: ImportType.folder,
-          files: images,
-        );
-
-        importService.addImportGroup(group);
-        await importService.startImport(group.id);
-
-        if (group.status.value == ImportStatus.failed) {
-          throw Exception("导入失败");
-        }
-      },
+    if (images.isEmpty) {
+      throw Exception("没有可保存的图片");
+    }
+    final title = p.basename(folderPath);
+    final group = await importStore.buildImportGroup(
+      name: title,
+      type: ImportType.folder,
+      files: images,
     );
+    importStore.addImportGroup(group);
+    await importStore.startImport(group);
+
+    if (group.status.value == ImportStatus.failed) {
+      throw Exception("导入失败");
+    }
   }
 }

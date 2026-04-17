@@ -37,6 +37,10 @@ class BookService {
     return await db.bookDao.insertBook(companion);
   }
 
+  Future<void> update(BookTableData data) async {
+    await db.bookDao.updateBook(data);
+  }
+
   Future<void> updateReadProgress(int id, int progress) async {
     final book = await db.bookDao.getById(id);
     if (book == null) return;

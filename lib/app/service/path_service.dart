@@ -2,20 +2,25 @@ import 'package:path_provider/path_provider.dart';
 
 /// 路径服务，管理应用的各种路径
 class PathService {
-  late final String appDocumentsDirectory;
-  late final String appSupportDirectory;
-  late final String appCacheDirectory;
+  late final String _appDocumentsDirectory;
+  late final String _appSupportDirectory;
+  late final String _appCacheDirectory;
+
+  String get appDocumentsDirectory => _appDocumentsDirectory;
+
+  String get appSupportDirectory => _appSupportDirectory;
+
+  String get appCacheDirectory => _appCacheDirectory;
 
   Future<PathService> init() async {
-    appDocumentsDirectory = (await getApplicationDocumentsDirectory()).path;
-    appSupportDirectory = (await getApplicationSupportDirectory()).path;
-    appCacheDirectory = (await getTemporaryDirectory()).path;
+    _appDocumentsDirectory = (await getApplicationDocumentsDirectory()).path;
+    _appSupportDirectory = (await getApplicationSupportDirectory()).path;
+    _appCacheDirectory = (await getTemporaryDirectory()).path;
     return this;
   }
 
   /// 获取书籍文件的完整路径
   String getBookFilePath(String relativePath) {
-    return '$appDocumentsDirectory/$relativePath';
+    return '$_appDocumentsDirectory/$relativePath';
   }
 }
-

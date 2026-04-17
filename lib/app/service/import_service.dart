@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dk_util/log/dk_log.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/store/import_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 /// 导入组创建事件
 typedef ImportGroupEvent = ImportGroup;
@@ -130,28 +130,20 @@ class ImportService {
       ));
 
       try {
-        // 拷贝文件到应用目录
+        // 使用 FileUtil 拷贝文件到应用目录
         DKLog.d("开始导入文件: ${task.filePath}");
         final sourceFile = File(task.filePath);
         if (!await sourceFile.exists()) {
           throw Exception("文件不存在: ${task.filePath}");
         }
 
-        final appDir = await getApplicationDocumentsDirectory();
-        final distDir = Directory("${appDir.path}/${group.id}");
-        if (!await distDir.exists()) {
-          await distDir.create(recursive: true);
-        }
+        // 复制文件到应用目录的 group.id 子目录
+        final relativePath = await FileUtil.copyFileToDir(
+          sourceFile,
+          group.id,
+        );
 
-        final fileName = sourceFile.uri.pathSegments.last;
-        final distFile = File("${distDir.path}/$fileName");
-
-        DKLog.d("准备复制: ${sourceFile.path} -> ${distFile.path}");
-        await sourceFile.copy(distFile.path);
-
-        // 设置相对路径
-        final subPath = "${group.id}/$fileName";
-        DKLog.d("任务 ${task.id} distSubPath 已设置: '$subPath'");
+        DKLog.d("任务 ${task.id} distSubPath 已设置: '$relativePath'");
 
         // 广播任务状态：成功
         _taskStatusCtrl.add((
@@ -159,10 +151,10 @@ class ImportService {
           taskId: task.id,
           status: ImportStatus.success,
           error: null,
-          distSubPath: subPath,
+          distSubPath: relativePath,
         ));
 
-        DKLog.d("文件复制成功: ${distFile.path}");
+        DKLog.d("文件复制成功: $relativePath");
       } catch (e, stack) {
         DKLog.e("导入失败", error: e, stackTrace: stack);
 

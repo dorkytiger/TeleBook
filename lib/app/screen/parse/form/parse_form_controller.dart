@@ -2,13 +2,14 @@ import 'package:dk_util/dk_util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 
-class BookFormController extends GetxController {
-  final source = Rxn<BookFormSources>(null);
-  final submitFormState = Rx<DKStateEvent<void>>(DKStateEventIdle());
+class ParseFormController extends ChangeNotifier {
+  BookFormSources source = BookFormSources.web;
+  DKStateEvent<void> submitFormState = DKStateEventIdle();
   final sourceController = TextEditingController();
   final webUrlController = TextEditingController();
   final filePathController = TextEditingController();
@@ -17,30 +18,28 @@ class BookFormController extends GetxController {
   final imageFolderPathController = TextEditingController();
   final batchImageFolderPathController = TextEditingController();
 
-  Future<void> submitForm() async {
-    final sourceValue = source.value;
-    if (sourceValue?.value == null) {
-
-      return;
-    }
+  Future<void> submitForm(BuildContext context) async {
+    final sourceValue = source;
 
     if (sourceValue == BookFormSources.web) {
       final url = webUrlController.text;
       if (url.toString().trim().isEmpty) {
-
         return;
       }
       // 然后打开解析页面
-      Get.offAndToNamed(AppRoute.parseWeb, arguments: url.toString());
+      context.pushNamed(
+        AppRoute.parseWeb,
+        pathParameters: {"url": url.toString()},
+      );
     }
     if (sourceValue == BookFormSources.archive) {
       final file = filePathController.text;
       if (file.toString().trim().isEmpty) {
         return;
       }
-      Get.offAndToNamed(
+      context.pushNamed(
         AppRoute.parseArchiveSingle,
-        arguments: file.toString(),
+        pathParameters: {"file": file.toString()},
       );
     }
     if (sourceValue == BookFormSources.batchArchive) {
@@ -48,9 +47,9 @@ class BookFormController extends GetxController {
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      Get.offAndToNamed(
+      context.pushNamed(
         AppRoute.parseArchiveBatch,
-        arguments: folder.toString(),
+        pathParameters: {"folder": folder.toString()},
       );
     }
     if (sourceValue == BookFormSources.pdf) {
@@ -58,16 +57,19 @@ class BookFormController extends GetxController {
       if (pdf.toString().trim().isEmpty) {
         return;
       }
-      Get.offAndToNamed(AppRoute.parsePdf, arguments: {'path': pdf.toString()});
+      context.pushNamed(
+        AppRoute.parsePdf,
+        pathParameters: {"path": pdf.toString()},
+      );
     }
     if (sourceValue == BookFormSources.imageFolder) {
       final folder = imageFolderPathController.text;
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      Get.offAndToNamed(
+      context.pushNamed(
         AppRoute.parseImageFolder,
-        arguments: folder.toString(),
+        pathParameters: {"folder": folder.toString()},
       );
     }
     if (sourceValue == BookFormSources.batchImageFolder) {
@@ -75,21 +77,23 @@ class BookFormController extends GetxController {
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      Get.offAndToNamed(
+      context.pushNamed(
         AppRoute.parseBatchImageFolder,
-        arguments: folder.toString(),
+        pathParameters: {"folder": folder.toString()},
       );
     }
   }
 
-  Future<void> pasteFromClipboard(BuildContext context) async{
-    final clipboardData = await  Clipboard.getData(Clipboard.kTextPlain);
-    if (clipboardData != null && clipboardData.text != null && clipboardData.text!.trim().isNotEmpty) {
+  Future<void> pasteFromClipboard(BuildContext context) async {
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    if (clipboardData != null &&
+        clipboardData.text != null &&
+        clipboardData.text!.trim().isNotEmpty) {
       webUrlController.text = clipboardData.text!.trim();
     } else {
-     ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("剪贴板中没有有效的文本")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("剪贴板中没有有效的文本")));
     }
   }
 

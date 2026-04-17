@@ -1,97 +1,103 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:tele_book/app/screen/parse/archive/screen/batch/parse_batch_archive_controller.dart';
-import 'package:tele_book/app/screen/parse/archive/screen/batch/screen/edit/edit_archive_files_controller.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
-class EditArchiveFilesScreen extends GetView<EditArchiveFilesController> {
-  const EditArchiveFilesScreen({super.key});
+import 'edit_archive_files_controller.dart';
+
+class EditArchiveFilesScreen extends StatelessWidget {
+  final ArchiveFolder archiveFolder;
+
+  const EditArchiveFilesScreen({super.key, required this.archiveFolder});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(controller.archiveFolder.title),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: () {
-              controller.saveChanges();
-            },
-          ),
-        ],
-      ),
-      body: Obx(() {
-        if (controller.files.isEmpty) {
-          return const Center(child: CustomEmpty(message: "没有找到文件"));
-        }
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '共 ${controller.files.length} 个文件',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Text(
-                    '长按拖动排序',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ReorderableListView.builder(
-                padding: EdgeInsets.all(12),
-                itemCount: controller.files.length,
-                onReorder: (oldIndex, newIndex) {
-                  if (newIndex > oldIndex) {
-                    newIndex -= 1;
-                  }
-                  final file = controller.files.removeAt(oldIndex);
-                  controller.files.insert(newIndex, file);
-                },
-                itemBuilder: (context, index) {
-                  final file = controller.files[index];
-                  return _buildFileItem(context, file, index);
-                },
-              ),
-            ),
-          ],
-        );
-      }),
+    return ChangeNotifierProvider(
+      create: (_) => EditArchiveFilesController(archiveFolder: archiveFolder),
+      child: const _EditArchiveFilesContent(),
     );
   }
+}
 
-  Widget _buildFileItem(BuildContext context, ArchiveFile file, int index) {
-    return KeyedSubtree(
-      key: ValueKey(file.path),
-      child: Row(
-        children: [
-          CustomImageLoader(localUrl: file.path),
-          Expanded(
-            child: ListTile(
-              title: Text(file.path.split(Platform.pathSeparator).last),
-              subtitle: Text(file.path.split(Platform.pathSeparator).last),
-            ),
+class _EditArchiveFilesContent extends StatelessWidget {
+  const _EditArchiveFilesContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<EditArchiveFilesController>(
+      builder: (context, controller, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(controller.archiveFolder.title),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: () => context.pop(controller.buildUpdated()),
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: () {
-              controller.removeFile(index);
-            },
-            icon: Icon(Icons.delete),
-          ),
-        ],
-      ),
+          body: controller.files.isEmpty
+              ? const Center(child: CustomEmpty(message: '没有找到文件'))
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '共 ${controller.files.length} 个文件',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          Text(
+                            '长按拖动排序',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ReorderableListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: controller.files.length,
+                        onReorder: controller.reorder,
+                        itemBuilder: (context, index) {
+                          final file = controller.files[index];
+                          return KeyedSubtree(
+                            key: ValueKey(file.path),
+                            child: Row(
+                              children: [
+                                CustomImageLoader(localUrl: file.path),
+                                Expanded(
+                                  child: ListTile(
+                                    title: Text(file.path
+                                        .split(Platform.pathSeparator)
+                                        .last),
+                                    subtitle: Text(file.path
+                                        .split(Platform.pathSeparator)
+                                        .last),
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () =>
+                                      controller.removeFile(index),
+                                  icon: const Icon(Icons.delete),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 }

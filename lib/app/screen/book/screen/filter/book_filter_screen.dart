@@ -1,53 +1,78 @@
 import 'dart:io';
 
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/route/app_route.dart';
+import 'package:tele_book/app/util/file_util.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 import 'book_filter_controller.dart';
 
-class BookFilterScreen extends GetView<BookFilterController> {
-  const BookFilterScreen({super.key});
+class BookFilterScreen extends StatelessWidget {
+  final int? collectionId;
+
+  const BookFilterScreen({super.key, this.collectionId});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Obx(() => Text(controller.getTitle())),
-        actions: [
-          IconButton(
-            icon: Obx(() => Icon(
-              controller.bookLayout.value == BookLayoutSetting.grid
-                  ? Icons.list
-                  : Icons.grid_view,
-            )),
-            onPressed: () {
-              controller.bookLayout.value =
-                  controller.bookLayout.value == BookLayoutSetting.grid
+    return ChangeNotifierProvider(
+      create: (_) => BookFilterController(
+        collectionId: collectionId,
+        bookStore: context.read(),
+        collectionStore: context.read(),
+        markStore: context.read(),
+      ),
+      child: const BookFilterContent(),
+    );
+  }
+}
+
+class BookFilterContent extends StatelessWidget {
+  const BookFilterContent({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<BookFilterController>(
+      builder: (context, controller, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(controller.getTitle()),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  controller.bookLayout == BookLayoutSetting.grid
+                      ? Icons.list
+                      : Icons.grid_view,
+                ),
+                onPressed: () {
+                  controller.bookLayout =
+                      controller.bookLayout == BookLayoutSetting.grid
                       ? BookLayoutSetting.list
                       : BookLayoutSetting.grid;
-            },
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Obx(() {
-        return RefreshIndicator(
-          onRefresh: () async {
-            await controller.fetchBooks();
-          },
-          child: controller.bookLayout.value == BookLayoutSetting.list
-              ? _buildBookList()
-              : _buildBookGrid(),
+          body: RefreshIndicator(
+            onRefresh: () async {
+              await controller.fetchBooks();
+            },
+            child: controller.bookLayout == BookLayoutSetting.list
+                ? _buildBookList(controller)
+                : _buildBookGrid(controller),
+          ),
         );
-      }),
+      },
     );
   }
 
-  Widget _buildBookList() {
-    return controller.getBookState.displaySuccess(
+  Widget _buildBookList(BookFilterController controller) {
+    return DKStateQueryDisplay(
+      state: controller.getBookState,
       successBuilder: (data) {
         return ListView.builder(
           padding: EdgeInsets.all(16),
@@ -58,7 +83,7 @@ class BookFilterScreen extends GetView<BookFilterController> {
               margin: EdgeInsets.only(bottom: 12),
               child: InkWell(
                 onTap: () {
-                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+                  context.push("${AppRoute.bookPage}?id=${bookData.book.id}");
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
@@ -67,27 +92,13 @@ class BookFilterScreen extends GetView<BookFilterController> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 封面
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: SizedBox(
-                          width: 60,
-                          height: 90,
-                          child: Image.file(
-                            File(
-                              controller.pathService.getBookFilePath(
-                                bookData.book.localPaths.first,
-                              ),
-                            ),
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                Container(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
-                              child: const Icon(Icons.broken_image, size: 40),
-                            ),
-                          ),
+                      FutureBuilder<String>(
+                        future: FileUtil.getBookImageFullPath(
+                          bookData.book.localPaths.first,
                         ),
+                        builder: (context, snapshot) {
+                          return CustomImageLoader(localUrl: snapshot.data);
+                        },
                       ),
                       SizedBox(width: 12),
                       // 信息区域
@@ -98,9 +109,7 @@ class BookFilterScreen extends GetView<BookFilterController> {
                             // 标题
                             Text(
                               bookData.book.name,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w600),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -109,9 +118,7 @@ class BookFilterScreen extends GetView<BookFilterController> {
                             // 创建时间
                             Text(
                               '创建于: ${bookData.book.createdAt.year}-${bookData.book.createdAt.month.toString().padLeft(2, '0')}-${bookData.book.createdAt.day.toString().padLeft(2, '0')}',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
                                     color: Theme.of(context)
                                         .textTheme
@@ -131,8 +138,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                     Icon(
                                       Icons.folder,
                                       size: 14,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                     ),
                                     SizedBox(width: 4),
                                     Flexible(
@@ -142,9 +150,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                             .textTheme
                                             .bodySmall
                                             ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .primary,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
                                               fontWeight: FontWeight.w500,
                                             ),
                                         maxLines: 1,
@@ -166,9 +174,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondaryContainer,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondaryContainer,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
@@ -177,9 +185,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                           .textTheme
                                           .labelSmall
                                           ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSecondaryContainer,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSecondaryContainer,
                                             fontWeight: FontWeight.w500,
                                           ),
                                     ),
@@ -199,15 +207,14 @@ class BookFilterScreen extends GetView<BookFilterController> {
         );
       },
       emptyBuilder: () {
-        return Center(
-          child: CustomEmpty(message: "暂无书籍"),
-        );
+        return Center(child: CustomEmpty(message: "暂无书籍"));
       },
     );
   }
 
-  Widget _buildBookGrid() {
-    return controller.getBookState.displaySuccess(
+  Widget _buildBookGrid(BookFilterController controller) {
+    return DKStateQueryDisplay(
+      state: controller.getBookState,
       successBuilder: (data) {
         return GridView.builder(
           padding: EdgeInsets.all(16),
@@ -223,7 +230,7 @@ class BookFilterScreen extends GetView<BookFilterController> {
               clipBehavior: Clip.antiAlias,
               child: InkWell(
                 onTap: () {
-                  Get.toNamed(AppRoute.bookPage, arguments: bookData.book.id);
+                  context.push("${AppRoute.bookPage}?id=${bookData.book.id}");
                 },
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,28 +243,15 @@ class BookFilterScreen extends GetView<BookFilterController> {
                           SizedBox(
                             width: double.infinity,
                             height: double.infinity,
-                            child: Image.file(
-                              File(
-                                controller.pathService.getBookFilePath(
-                                  bookData.book.localPaths.first,
-                                ),
+                            child: FutureBuilder(
+                              future: FileUtil.getBookImageFullPath(
+                                bookData.book.localPaths.first,
                               ),
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                  alignment: Alignment.center,
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    size: 40,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                              builder: (context, snapshot) {
+                                return CustomImageLoader(
+                                  localUrl: snapshot.data,
                                 );
                               },
-                              fit: BoxFit.cover,
                             ),
                           ),
                           // 右上角显示收藏夹和标签
@@ -275,9 +269,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                     Container(
                                       padding: EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer,
                                         borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
@@ -292,9 +286,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                       child: Icon(
                                         Icons.folder,
                                         size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimaryContainer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
                                       ),
                                     ),
                                   // 标签指示器（显示数量）
@@ -305,9 +299,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .secondaryContainer,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.secondaryContainer,
                                         borderRadius: BorderRadius.circular(8),
                                         boxShadow: [
                                           BoxShadow(
@@ -325,9 +319,9 @@ class BookFilterScreen extends GetView<BookFilterController> {
                                           Icon(
                                             Icons.bookmark,
                                             size: 12,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSecondaryContainer,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSecondaryContainer,
                                           ),
                                           SizedBox(width: 2),
                                           Text(
@@ -364,9 +358,7 @@ class BookFilterScreen extends GetView<BookFilterController> {
                               bookData.book.name,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
+                              style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -382,11 +374,8 @@ class BookFilterScreen extends GetView<BookFilterController> {
         );
       },
       emptyBuilder: () {
-        return Center(
-          child: CustomEmpty(message: "暂无书籍"),
-        );
+        return Center(child: CustomEmpty(message: "暂无书籍"));
       },
     );
   }
 }
-

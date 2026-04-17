@@ -1,35 +1,21 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:tele_book/app/store/export_store.dart';
 
-class ExportController extends GetxController {
-  late final ExportStore _exportStore;
+class ExportController extends ChangeNotifier {
+  final ExportStore exportStore;
 
-  @override
-  void onInit() {
-    super.onInit();
-    _exportStore = Get.context!.read<ExportStore>();
-    // 监听 store 的变化来更新 UI
-    _exportStore.addListener(_onStoreChanged);
+  List<ExportRecord> get records => exportStore.records;
+
+  ExportController({required this.exportStore}) {
+    exportStore.addListener(_onStoreChanged);
   }
 
-  void _onStoreChanged() {
-    update();
-  }
-
-  List<ExportRecord> get records => _exportStore.records;
-
-  @override
-  void onClose() {
-    _exportStore.removeListener(_onStoreChanged);
-    super.onClose();
-  }
+  void _onStoreChanged() => notifyListeners();
 
   /// Open the exported file or reveal it in the system file manager when supported.
   Future<void> openExport(ExportRecord record) async {
@@ -111,35 +97,9 @@ class ExportController extends GetxController {
       if (status.isGranted) {
         return true;
       } else if (status.isPermanentlyDenied) {
-        // Guide user to app settings
-        final shouldOpenSettings =
-            await Get.dialog<bool>(
-              AlertDialog(
-                title: Text('需要存储权限'),
-                content: Text(
-                  '为了打开导出的文件，需要授予存储权限。\n\n您可以：\n1. 在设置中授予权限后重试\n2. 使用"分享"功能打开文件',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Get.back(result: false),
-                    child: Text('取消'),
-                  ),
-                  TextButton(
-                    onPressed: () => Get.back(result: true),
-                    child: Text('去设置'),
-                  ),
-                ],
-              ),
-              barrierDismissible: false,
-            ) ??
-            false;
-
-        if (shouldOpenSettings) {
-          await openAppSettings();
-          // Wait a bit and check again
-          await Future.delayed(Duration(seconds: 1));
-          return await Permission.manageExternalStorage.isGranted;
-        }
+        await openAppSettings();
+        await Future.delayed(const Duration(seconds: 1));
+        return await Permission.manageExternalStorage.isGranted;
       }
 
       // Fallback to basic storage permission for older Android versions
@@ -156,29 +116,25 @@ class ExportController extends GetxController {
   }
 
   /// Share the exported file using the system share sheet
-  Future<void> _shareFile(String path) async {
-    try {
-      final result = await SharePlus.instance.share(
-        ShareParams(files: [XFile(path)], text: '分享自 TeleBook'),
-      );
-
-      if (result.status == ShareResultStatus.success) {
-
-      } else if (result.status == ShareResultStatus.dismissed) {
-
-      }
-    } catch (e) {
-
-    }
-  }
-
-  /// Directly share the exported file (can be called from UI)
   Future<void> shareExport(ExportRecord record) async {
     final path = record.outputPath;
-    if (path == null) {
-      return;
-    }
+    if (path == null) return;
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], text: '分享自 TeleBook'),
+      );
+    } catch (_) {}
+  }
 
-    await _shareFile(path);
+  /// Retry exporting the book associated with the record
+  Future<void> retryExport(ExportRecord record) async {
+    if (record.bookId == null) return;
+    await exportStore.exportBookById(record.bookId!);
+  }
+
+  @override
+  void dispose() {
+    exportStore.removeListener(_onStoreChanged);
+    super.dispose();
   }
 }

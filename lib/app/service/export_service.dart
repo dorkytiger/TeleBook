@@ -5,11 +5,10 @@ import 'package:archive/archive_io.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 /// 导出进度事件
 typedef ExportProgressEvent = ({
@@ -148,7 +147,7 @@ class ExportService {
         error: null,
       ));
 
-      final appDir = await getApplicationDocumentsDirectory();
+      final appDirPath = await FileUtil.getAppDocumentsPath();
 
       // Collect existing files
       final List<MapEntry<String, Uint8List>> fileContents = [];
@@ -157,12 +156,12 @@ class ExportService {
       final totalFiles = data.localPaths.length;
 
       for (final path in data.localPaths) {
-        final fullPath = "${appDir.path}/$path";
-        final file = File(fullPath);
-        final exists = await file.exists();
-        if (exists) {
-          final fileName = "${index.toString().padLeft(8, '0')}.jpg";
-          final fileBytes = await file.readAsBytes();
+        final fullPath = "$appDirPath/$path";
+        final fileExists = await FileUtil.fileExistsAbsolute(fullPath);
+
+        if (fileExists) {
+          final fileName = "${FileUtil.formatExportIndex(index)}.jpg";
+          final fileBytes = await File(fullPath).readAsBytes();
           fileContents.add(MapEntry(fileName, fileBytes));
           index++;
         } else {
@@ -190,17 +189,14 @@ class ExportService {
         return;
       }
 
-      final sanitizedName = data.name.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final sanitizedName = FileUtil.sanitizeFileName(data.name);
 
       // 无后缀优先，冲突时加 (1)(2)...
       String zipFileName = '$sanitizedName.zip';
-      String zipPath = p.join(exportDir, zipFileName);
-      int suffix = 1;
-      while (await File(zipPath).exists()) {
-        zipFileName = '$sanitizedName($suffix).zip';
-        zipPath = p.join(exportDir, zipFileName);
-        suffix++;
-      }
+      final zipPath = await FileUtil.generateNonConflictingPath(
+        exportDir,
+        zipFileName,
+      );
 
       // compress in isolate
       final zipBytes = await compute(_compressFiles, fileContents);

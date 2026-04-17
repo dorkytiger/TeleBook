@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:tele_book/app/service/import_service.dart';
 
@@ -142,6 +143,25 @@ class ImportStore extends ChangeNotifier {
     } catch (_) {
       return null;
     }
+  }
+
+  /// 构建导入组（委托给 Service）
+  Future<ImportGroup> buildImportGroup({
+    required String name,
+    required ImportType type,
+    required List<File> files,
+  }) {
+    return _importService.buildImportGroup(name: name, type: type, files: files);
+  }
+
+  /// 添加导入组（委托给 Service，触发广播事件 → Store 自动更新）
+  void addImportGroup(ImportGroup group) {
+    _importService.addImportGroup(group);
+  }
+
+  /// 开始导入（委托给 Service）
+  Future<void> startImport(ImportGroup group) {
+    return _importService.startImport(group);
   }
 
   /// 删除指定导入组
