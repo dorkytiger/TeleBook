@@ -1,8 +1,7 @@
-import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// 路径服务，管理应用的各种路径
-class PathService extends GetxService {
+class PathService {
   late final String appDocumentsDirectory;
   late final String appSupportDirectory;
   late final String appCacheDirectory;

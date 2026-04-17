@@ -4,18 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:tele_book/app/service/export_service.dart';
+import 'package:tele_book/app/store/export_store.dart';
 
 class ExportController extends GetxController {
-  final exportService = Get.find<ExportService>();
-
-  List<ExportRecord> get records => exportService.records;
+  late final ExportStore _exportStore;
 
   @override
-  void refresh() {
-    // nothing for now; records is observable
+  void onInit() {
+    super.onInit();
+    _exportStore = Get.context!.read<ExportStore>();
+    // 监听 store 的变化来更新 UI
+    _exportStore.addListener(_onStoreChanged);
+  }
+
+  void _onStoreChanged() {
     update();
+  }
+
+  List<ExportRecord> get records => _exportStore.records;
+
+  @override
+  void onClose() {
+    _exportStore.removeListener(_onStoreChanged);
+    super.onClose();
   }
 
   /// Open the exported file or reveal it in the system file manager when supported.

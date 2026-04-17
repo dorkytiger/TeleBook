@@ -1590,6 +1590,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final CollectionBookDao collectionBookDao = CollectionBookDao(
     this as AppDatabase,
   );
+  late final MarkDao markDao = MarkDao(this as AppDatabase);
+  late final MarkBookDao markBookDao = MarkBookDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();

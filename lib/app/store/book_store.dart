@@ -55,6 +55,26 @@ class BookStore extends ChangeNotifier {
     }
   }
 
+  Future<BookTableData?> getBookById(int id) async {
+    return await _service.fetchById(id);
+  }
+
+  Future<int> addBook(BookTableCompanion companion) async {
+    int newId = await _service.insert(companion);
+    notifyListeners();
+    return newId;
+  }
+
+  Future<void> saveReadProgress(int bookId, int progress) async {
+    await _service.updateReadProgress(bookId, progress);
+    // 更新本地数据
+    final index = items.indexWhere((item) => item.id == bookId);
+    if (index != -1) {
+      items[index] = items[index].copyWith(readCount: progress);
+      notifyListeners();
+    }
+  }
+
   Future<void> deleteBook(int id) async {
     await _service.delete(id);
     items.removeWhere((item) => item.id == id);

@@ -1,49 +1,30 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart';
-import 'package:get/get.dart' hide Value;
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/event/event_bus.dart';
 
-class MarkService extends GetxService {
-  final _eventBus = Get.find<EventBus>();
-  final db = Get.find<AppDatabase>();
-  final marks = <MarkTableData>[].obs;
-  final markBooks = <MarkBookTableData>[].obs;
-  StreamSubscription? _markSubscription;
-  StreamSubscription? _markBookSubscription;
+class MarkService {
+  final AppDatabase db;
 
-  @override
-  void onInit() {
-    super.onInit();
-    _markSubscription = db.markTable.select().watch().listen((_) {
-      getAllMarks();
-      getAllMarkBooks();
-    });
-    _markBookSubscription = db.markBookTable.select().watch().listen((_) {
-      getAllMarks();
-      getAllMarkBooks();
-    });
+  MarkService(this.db);
+
+  Stream<List<MarkTableData>> getMarks(String? name) {
+    return db.markDao.getMarks(name);
   }
 
-  Future<void> getAllMarks() async {
-    final markList = await db.markTable.select().get();
-    marks.value = markList;
-  }
-
-  Future<void> getAllMarkBooks() async {
-    final markBookList = await db.markBookTable.select().get();
-    markBooks.value = markBookList;
+  Stream<List<MarkBookTableData>> getBooksInMark(int markId) {
+    return db.markBookDao.getBooksInMark(markId);
   }
 
   Future<void> updateBookMarks(int bookId, List<int> markIds) async {
     await db.transaction(() async {
-      await (db.markBookTable.delete()
-            ..where((tbl) => tbl.bookId.equals(bookId)))
-          .go();
+      // 删除旧关联
+      await db.markBookDao.deleteByBookId(bookId);
+
+      // 添加新关联
       for (final markId in markIds) {
-        await db.markBookTable.insertOnConflictUpdate(
-          MarkBookTableCompanion(bookId: Value(bookId), markId: Value(markId)),
+        await db.markBookDao.insertMarkBook(
+          MarkBookTableCompanion(markId: Value(markId), bookId: Value(bookId)),
         );
       }
     });
@@ -55,33 +36,34 @@ class MarkService extends GetxService {
     String? description,
   }) async {
     await db.transaction(() async {
-      if (id != null) {
-        // 删除旧关联
-        await (db.markBookTable.delete()..where((tbl) => tbl.markId.equals(id)))
-            .go();
+      if (id == null) {
+        // 新建
+        await db.markDao.insertMark(
+          MarkTableCompanion(
+            name: Value(name),
+            description: Value(description),
+          ),
+        );
+      } else {
+        // 更新
+        await db.markDao.updateMark(
+          MarkTableCompanion(
+            id: Value(id),
+            name: Value(name),
+            description: Value(description),
+          ),
+        );
       }
-
-      final markCompanion = MarkTableCompanion(
-        id: id != null ? Value(id) : Value.absent(),
-        name: Value(name),
-        description: Value(description),
-      );
-      await db.markTable.insertOnConflictUpdate(markCompanion);
     });
   }
 
   Future<void> deleteMark(int id) async {
     await db.transaction(() async {
-      await (db.markBookTable.delete()..where((tbl) => tbl.markId.equals(id)))
-          .go();
-      await (db.markTable.delete()..where((tbl) => tbl.id.equals(id))).go();
-    });
-  }
+      // 删除关联的书籍
+      await db.markBookDao.deleteByMarkId(id);
 
-  @override
-  void onClose() {
-    _markSubscription?.cancel();
-    _markBookSubscription?.cancel();
-    super.onClose();
+      // 删除标签
+      await db.markDao.deleteById(id);
+    });
   }
 }

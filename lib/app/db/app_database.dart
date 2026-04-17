@@ -4,6 +4,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/dao/book/book_dao.dart';
 import 'package:tele_book/app/db/dao/collection/collection_book_dao.dart';
 import 'package:tele_book/app/db/dao/collection/collection_dao.dart';
+import 'package:tele_book/app/db/dao/mark/mark_book_dao.dart';
+import 'package:tele_book/app/db/dao/mark/mark_dao.dart';
 import 'package:tele_book/app/db/table/book/book_table.dart';
 import 'package:tele_book/app/db/table/collection/collection_book_table.dart';
 import 'package:tele_book/app/db/table/collection/collection_table.dart';
@@ -23,7 +25,7 @@ part 'app_database.g.dart';
     MarkTable,
     MarkBookTable,
   ],
-  daos: [BookDao, CollectionDao, CollectionBookDao],
+  daos: [BookDao, CollectionDao, CollectionBookDao, MarkDao, MarkBookDao],
 )
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.

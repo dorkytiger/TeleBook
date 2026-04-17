@@ -2,7 +2,6 @@ import 'package:dk_util/dk_util.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:pdf_to_image_converter/pdf_to_image_converter.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';

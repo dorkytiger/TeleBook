@@ -8,10 +8,20 @@ import 'package:provider/provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/service/book_service.dart';
+import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/download_service.dart';
+import 'package:tele_book/app/service/export_service.dart';
+import 'package:tele_book/app/service/import_service.dart';
+import 'package:tele_book/app/service/mark_service.dart';
+import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
+import 'package:tele_book/app/store/collection_store.dart';
 import 'package:tele_book/app/store/download_store.dart';
+import 'package:tele_book/app/store/export_store.dart';
+import 'package:tele_book/app/store/import_store.dart';
+import 'package:tele_book/app/store/mark_store.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,19 +39,52 @@ Future<void> _init() async {
 
   final db = AppDatabase();
   final bookService = BookService(db);
-  final downloadService = DownloadService();
+  final markService = MarkService(db);
+  final collectionService = CollectionService(db);
+  final downloadService = DownloadService(db); // 传入 db 支持保存书籍功能
   final downloadStore = DownloadStore(downloadService);
-  await downloadStore.init();
+
+  // 路径服务
+  final pathService = PathService();
+  await pathService.init();
+
+  // SharedPreferences
+  final sharedPreferences = await SharedPreferences.getInstance();
+
+  // 导出服务与状态管理
+  final exportService = ExportService(db);
+  final exportStore = ExportStore(exportService);
+
+  // 导入服务与状态管理
+  final importService = ImportService(db);
+  final importStore = ImportStore(importService);
+
+  // 标签和收藏夹状态管理
+  final markStore = MarkStore(markService);
+  final collectionStore = CollectionStore(collectionService);
 
   appProviders = MultiProvider(
     providers: [
+      // Services
       Provider<AppDatabase>.value(value: db),
       Provider<BookService>.value(value: bookService),
+      Provider<MarkService>.value(value: markService),
+      Provider<CollectionService>.value(value: collectionService),
       Provider<DownloadService>.value(value: downloadService),
+      Provider<ExportService>.value(value: exportService),
+      Provider<ImportService>.value(value: importService),
+      Provider<PathService>.value(value: pathService),
+      Provider<SharedPreferences>.value(value: sharedPreferences),
+
+      // Stores
       ChangeNotifierProvider<BookStore>(
         create: (_) => BookStore(bookService)..refresh(),
       ),
+      ChangeNotifierProvider<MarkStore>.value(value: markStore),
+      ChangeNotifierProvider<CollectionStore>.value(value: collectionStore),
       ChangeNotifierProvider<DownloadStore>.value(value: downloadStore),
+      ChangeNotifierProvider<ExportStore>.value(value: exportStore),
+      ChangeNotifierProvider<ImportStore>.value(value: importStore),
     ],
     child: MaterialApp.router(
       title: 'TeleBook',

@@ -6,11 +6,9 @@ import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:drift/drift.dart' as drift hide Column;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/app_database.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
 
 class BookEditController extends GetxController {

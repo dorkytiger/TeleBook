@@ -29,12 +29,22 @@ class BookService {
     );
   }
 
-  Future<void> insert(BookTableCompanion companion) async {
-    await db.bookDao.insertBook(companion);
+  Future<BookTableData?> fetchById(int id) async {
+    return await db.bookDao.getById(id);
   }
 
-  Future<void> delete(int id) async {
-    await db.bookDao.deleteById(id);
+  Future<int> insert(BookTableCompanion companion) async {
+    return await db.bookDao.insertBook(companion);
+  }
+
+  Future<void> updateReadProgress(int id, int progress) async {
+    final book = await db.bookDao.getById(id);
+    if (book == null) return;
+    await db.bookDao.updateBook(book.copyWith(readCount: progress));
+  }
+
+  Future<int> delete(int id) async {
+    return await db.bookDao.deleteById(id);
   }
 
   Future<void> deleteBatch(List<int> ids) async {

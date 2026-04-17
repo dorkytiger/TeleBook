@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:tele_book/app/screen/book/screen/edit/book_edit_controller.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 

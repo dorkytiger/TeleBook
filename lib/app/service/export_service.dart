@@ -7,53 +7,67 @@ import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/db/app_database.dart';
 
-enum ExportStatus {
-  pending('待处理'),
-  running('导出中'),
-  success('导出成功'),
-  failed('导出失败');
+/// 导出进度事件
+typedef ExportProgressEvent = ({
+  String recordId,
+  int progress, // 已处理文件数
+  int total, // 总文件数
+});
 
-  final String displayName;
-  const ExportStatus(this.displayName);
-}
+/// 导出状态变化事件
+typedef ExportStatusEvent = ({
+  String recordId,
+  ExportStatus status,
+  String? error, // 仅在失败时有值
+});
 
-class ExportRecord {
-  final String id;
-  final int? bookId;
-  final String name;
-  final DateTime createdAt;
+/// 导出记录创建事件
+typedef ExportRecordEvent = ExportRecord;
 
-  final status = ExportStatus.pending.obs;
-  final progress = 0.obs; // 已导出的文件数
-  int total = 0; // 总文件数
-  String? outputPath;
-  String? error;
+/// 导出服务 - 纯业务逻辑层
+/// 通过广播流发送事件，不依赖任何 Store
+/// Store 可以监听这些流来管理状态
+class ExportService {
+  final AppDatabase db;
 
-  ExportRecord({
-    required this.id,
-    this.bookId,
-    required this.name,
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
-}
+  ExportService(this.db);
 
-class ExportService extends GetxService {
-  final appDatabase = Get.find<AppDatabase>();
-  final records = <ExportRecord>[].obs;
+  // 广播流控制器 - 用于向多个订阅者发送事件
+  final _recordCtrl = StreamController<ExportRecordEvent>.broadcast();
+  final _progressCtrl = StreamController<ExportProgressEvent>.broadcast();
+  final _statusCtrl = StreamController<ExportStatusEvent>.broadcast();
+
+  /// 记录创建事件流（Store 可以监听此流来添加记录）
+  Stream<ExportRecordEvent> get recordStream => _recordCtrl.stream;
+
+  /// 进度更新事件流
+  Stream<ExportProgressEvent> get progressStream => _progressCtrl.stream;
+
+  /// 状态变化事件流
+  Stream<ExportStatusEvent> get statusStream => _statusCtrl.stream;
+
+  /// 释放资源
+  void dispose() {
+    _recordCtrl.close();
+    _progressCtrl.close();
+    _statusCtrl.close();
+  }
 
   /// Start export for a single book. If [exportDir] is null, will prompt user to pick.
   Future<ExportRecord?> exportBookById(int bookId, {String? exportDir}) async {
-    final book = await (appDatabase.bookTable.select()
-          ..where((t) => t.id.equals(bookId)))
-        .getSingleOrNull();
+    final book = await db.bookDao.getById(bookId);
     if (book == null) return null;
     return exportBook(book, exportDir: exportDir);
   }
 
-  Future<ExportRecord?> exportBook(BookTableData data, {String? exportDir}) async {
+  Future<ExportRecord?> exportBook(
+    BookTableData data, {
+    String? exportDir,
+  }) async {
     if (data.localPaths.isEmpty) return null;
 
     final dir = exportDir ?? await PickFileUtil.pickDirectory();
@@ -65,7 +79,15 @@ class ExportService extends GetxService {
       name: data.name,
     );
 
-    records.insert(0, record);
+    // 广播记录创建事件
+    _recordCtrl.add(record);
+
+    // 广播初始进度
+    _progressCtrl.add((
+      recordId: record.id,
+      progress: 0,
+      total: data.localPaths.length,
+    ));
 
     // Run export asynchronously
     unawaited(_runExport(record, data, dir));
@@ -74,7 +96,10 @@ class ExportService extends GetxService {
   }
 
   /// Export multiple books. First add all to queue, then run exports asynchronously.
-  Future<List<ExportRecord>> exportMultiple(List<BookTableData> books, {String? exportDir}) async {
+  Future<List<ExportRecord>> exportMultiple(
+    List<BookTableData> books, {
+    String? exportDir,
+  }) async {
     if (books.isEmpty) return [];
 
     final dir = exportDir ?? await PickFileUtil.pickDirectory();
@@ -82,15 +107,24 @@ class ExportService extends GetxService {
 
     final result = <ExportRecord>[];
 
-    // First, add all books to the export queue
+    // First, create all records and broadcast events
     for (final book in books) {
       final r = ExportRecord(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         bookId: book.id,
         name: book.name,
       );
-      records.insert(0, r);
       result.add(r);
+
+      // 广播每个记录创建事件
+      _recordCtrl.add(r);
+
+      // 广播初始进度
+      _progressCtrl.add((
+        recordId: r.id,
+        progress: 0,
+        total: book.localPaths.length,
+      ));
     }
 
     // Then run all exports asynchronously (non-blocking)
@@ -101,19 +135,26 @@ class ExportService extends GetxService {
     return result;
   }
 
-  Future<void> _runExport(ExportRecord record, BookTableData data, String exportDir) async {
+  Future<void> _runExport(
+    ExportRecord record,
+    BookTableData data,
+    String exportDir,
+  ) async {
     try {
-      record.status.value = ExportStatus.running;
+      // 广播状态变化：运行中
+      _statusCtrl.add((
+        recordId: record.id,
+        status: ExportStatus.running,
+        error: null,
+      ));
+
       final appDir = await getApplicationDocumentsDirectory();
 
       // Collect existing files
       final List<MapEntry<String, Uint8List>> fileContents = [];
       int index = 1;
       int notFoundCount = 0;
-
-      // 提前设置 total，让进度条有分母可用
-      record.total = data.localPaths.length;
-      record.progress.value = 0;
+      final totalFiles = data.localPaths.length;
 
       for (final path in data.localPaths) {
         final fullPath = "${appDir.path}/$path";
@@ -127,16 +168,25 @@ class ExportService extends GetxService {
         } else {
           notFoundCount++;
         }
-        // 每处理一个文件就更新进度（包括缺失的）
-        record.progress.value++;
+
+        // 广播进度更新
+        _progressCtrl.add((
+          recordId: record.id,
+          progress: index + notFoundCount - 1,
+          total: totalFiles,
+        ));
       }
 
       // debug info
       DKLog.s('📊 导出统计: 成功 ${fileContents.length} 个，缺失 $notFoundCount 个');
 
       if (fileContents.isEmpty) {
-        record.status.value = ExportStatus.failed;
-        record.error = '没有可导出的文件';
+        // 广播失败状态
+        _statusCtrl.add((
+          recordId: record.id,
+          status: ExportStatus.failed,
+          error: '没有可导出的文件',
+        ));
         return;
       }
 
@@ -158,11 +208,22 @@ class ExportService extends GetxService {
       final zipFile = File(zipPath);
       await zipFile.writeAsBytes(zipBytes);
 
+      // 保存输出路径到 record（这个可以保留，因为是最终结果）
       record.outputPath = zipPath;
-      record.status.value = ExportStatus.success;
+
+      // 广播成功状态
+      _statusCtrl.add((
+        recordId: record.id,
+        status: ExportStatus.success,
+        error: null,
+      ));
     } catch (e) {
-      record.status.value = ExportStatus.failed;
-      record.error = e.toString();
+      // 广播失败状态
+      _statusCtrl.add((
+        recordId: record.id,
+        status: ExportStatus.failed,
+        error: e.toString(),
+      ));
     }
   }
 }
@@ -172,11 +233,7 @@ Uint8List _compressFiles(List<MapEntry<String, Uint8List>> files) {
   final archive = Archive();
 
   for (final entry in files) {
-    final archiveFile = ArchiveFile(
-      entry.key,
-      entry.value.length,
-      entry.value,
-    );
+    final archiveFile = ArchiveFile(entry.key, entry.value.length, entry.value);
     archive.addFile(archiveFile);
   }
 

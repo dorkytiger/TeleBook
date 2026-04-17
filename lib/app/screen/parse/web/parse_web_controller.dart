@@ -1,38 +1,31 @@
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_event_get.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/util/html_util.dart';
 import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/widget/cross_platform_webview.dart';
 
-class ParseWebController extends GetxController {
-  final parseUrl = Get.arguments as String;
-  final selectBar = 0.obs;
-  late final CrossPlatformWebViewController webViewController;
-  late final RxList<String> images = <String>[].obs;
-  late final Rx<String> title = ''.obs;
-  final parseState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final saveImageState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final downloadService = Get.find<DownloadService>();
-  final parseProgress = 0.obs;
+class ParseWebController extends ChangeNotifier {
+  final String parseUrl;
 
-  @override
-  void onInit() {
-    saveImageState.listenEventToast();
-    super.onInit();
+  late final CrossPlatformWebViewController webViewController;
+  int selectBar = 0;
+  int parseProgress = 0;
+  List<String> images = <String>[];
+  String title = '';
+  DKStateEvent<void> parseState = DKStateEventIdle();
+  DKStateEvent<void> saveImageState = DKStateEventIdle();
+
+  ParseWebController({required this.parseUrl}) {
     _initWebView();
   }
 
   void _initWebView() {
     webViewController = CrossPlatformWebViewController(initialUrl: parseUrl);
-
     webViewController.setNavigationDelegate(
       onProgress: (int progress) {
-        parseProgress.value = progress;
+        parseProgress = progress;
+        notifyListeners();
       },
       onPageStarted: (String url) {},
       onPageFinished: (String url) {
@@ -48,7 +41,11 @@ class ParseWebController extends GetxController {
   }
 
   Future<void> _handlePageFinished(String url) async {
-    await parseState.triggerEvent(
+    await DKStateEventHelper.triggerEvent<void>(
+      onStateChange: (value) {
+        parseState = value;
+        notifyListeners();
+      },
       event: () async {
         final parseTitle = await HtmlUtil.extractTitleFromWebView(
           webViewController,
@@ -56,21 +53,26 @@ class ParseWebController extends GetxController {
         final parseImages = await HtmlUtil.extractImagesFromWebView(
           webViewController,
         );
-        title.value = parseTitle;
-        images.assignAll(parseImages);
+        title = parseTitle;
+        images = parseImages;
+        notifyListeners();
       },
     );
   }
 
-  Future<void> copyImageUrl(String url) async {
+  Future<void> copyImageUrl(String url, BuildContext context) async {
     Clipboard.setData(ClipboardData(text: url));
     ScaffoldMessenger.of(
-      Get.context!,
+      context,
     ).showSnackBar(const SnackBar(content: Text('图片链接已复制到剪贴板')));
   }
 
   Future<void> saveImageTo(String url) async {
-    await saveImageState.triggerEvent(
+    await DKStateEventHelper.triggerEvent(
+      onStateChange: (value) {
+        saveImageState = value;
+        notifyListeners();
+      },
       event: () async {
         final saveDirectory = await PickFileUtil.pickDirectory();
         if (saveDirectory == null) {

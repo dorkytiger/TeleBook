@@ -1,296 +1,314 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_event_get.dart';
-import 'package:dk_util/state/dk_state_query_get.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
-import 'package:tele_book/app/extend/rx_extend.dart';
-import 'package:tele_book/app/screen/home/home_controller.dart';
-import 'package:tele_book/app/screen/task/task_controller.dart';
-import 'package:tele_book/app/service/book_service.dart';
-import 'package:tele_book/app/service/collection_servcie.dart';
 import 'package:tele_book/app/service/export_service.dart';
-import 'package:tele_book/app/service/mark_service.dart';
 import 'package:tele_book/app/service/path_service.dart';
+import 'package:tele_book/app/store/book_store.dart';
+import 'package:tele_book/app/store/collection_store.dart';
+import 'package:tele_book/app/store/export_store.dart';
+import 'package:tele_book/app/store/mark_store.dart';
 
-class BookController extends GetxController {
-  final appDatabase = Get.find<AppDatabase>();
-  final exportService = Get.find<ExportService>();
-  final bookService = Get.find<BookService>();
-  final collectionService = Get.find<CollectionService>();
-  final markService = Get.find<MarkService>();
-  final pathService = Get.find<PathService>();
+/// 书籍页面控制器
+/// 整合 BookStore、MarkStore、CollectionStore 和 ExportStore
+class BookController extends ChangeNotifier {
+  final BookStore bookStore;
+  final MarkStore markStore;
+  final CollectionStore collectionStore;
+  final ExportStore exportStore;
+  final ExportService exportService;
+  final PathService pathService;
+  final SharedPreferences sharedPreferences;
+  final BuildContext context;
 
-  final multiEditMode = false.obs;
-  final selectedBookIds = <int>[].obs;
-  final bookLayout = Rx<BookLayoutSetting>(BookLayoutSetting.list);
-  final sortBy = Rx<BookSort>(
-    BookSort(type: BookSortType.title, order: BookSortOrder.asc),
+  // 多选模式状态
+  bool multiEditMode = false;
+  List<int> selectedBookIds = <int>[];
+
+  // 布局和排序设置
+  BookLayoutSetting bookLayout = BookLayoutSetting.list;
+  BookSort sortBy = BookSort(
+    type: BookSortType.title,
+    order: BookSortOrder.asc,
   );
-  final getBookState = Rx<DKStateQuery<List<BookVo>>>(DkStateQueryIdle());
 
-  final addBookToCollectionState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final addMultipleBooksToCollectionState = Rx<DKStateEvent<void>>(
-    DKStateEventIdle(),
-  );
-  final deleteBookState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final deleteMultipleBookState = Rx<DKStateEvent<void>>(DKStateEventIdle());
-  final sharedPreferences = Get.find<SharedPreferences>();
-  StreamSubscription? booksSubscription;
-  StreamSubscription? collectionsSubscription;
-  StreamSubscription? collectionBooksSubscription;
-  StreamSubscription? marksSubscription;
-  StreamSubscription? markBooksSubscription;
+  // 书籍列表（组合了标签和收藏夹信息）
+  List<BookVo> books = [];
+  bool isLoading = false;
 
-  @override
-  void onInit() async {
-    super.onInit();
-    _initListen();
-
-    sortBy.listen((_) => fetchBooks());
-
-    deleteBookState.listenEventToast();
-    deleteMultipleBookState.listenEventToast(
-      onSuccess: (_) {
-        selectedBookIds.clear();
-        multiEditMode.value = false;
-      },
-    );
-    addBookToCollectionState.listenEventToast();
-    addMultipleBooksToCollectionState.listenEventToast(
-      onSuccess: (_) {
-        selectedBookIds.clear();
-        multiEditMode.value = false;
-      },
-    );
-    await fetchBooks();
+  BookController({
+    required this.bookStore,
+    required this.markStore,
+    required this.collectionStore,
+    required this.exportStore,
+    required this.exportService,
+    required this.pathService,
+    required this.sharedPreferences,
+    required this.context,
+  }) {
+    _init();
   }
 
-  void _initListen() {
-    booksSubscription = bookService.books.listen((_) => fetchBooks());
-    collectionsSubscription = collectionService.collections.listen(
-      (_) => fetchBooks(),
-    );
-    collectionBooksSubscription = collectionService.collectionBooks.listen(
-      (_) => fetchBooks(),
-    );
-    marksSubscription = markService.marks.listen((_) => fetchBooks());
-    markBooksSubscription = markService.markBooks.listen((_) => fetchBooks());
+  void _init() {
+    // 监听各个 Store 的变化，自动刷新书籍列表
+    bookStore.addListener(_onStoreChanged);
+    markStore.addListener(_onStoreChanged);
+    collectionStore.addListener(_onStoreChanged);
+
+    // 初始加载
+    fetchBooks();
   }
 
+  void _onStoreChanged() {
+    // 当任何 Store 变化时，重新构建 BookVo 列表
+    fetchBooks();
+  }
+
+  /// 切换选择书籍
   void toggleSelectBook(int bookId) {
     if (selectedBookIds.contains(bookId)) {
       selectedBookIds.remove(bookId);
     } else {
       selectedBookIds.add(bookId);
     }
+    notifyListeners();
   }
 
+  /// 全选
   void toggleSelectAllBooks() {
-    if (!getBookState.value.isSuccess) {
-      return;
-    }
-    final currentBooks = getBookState.value.data;
-    final allBookIds = currentBooks.map((bookUI) => bookUI.book.id).toList();
     selectedBookIds.clear();
-    selectedBookIds.addAll(allBookIds);
+    selectedBookIds.addAll(books.map((b) => b.book.id));
+    notifyListeners();
   }
 
+  /// 取消全选
   void toggleDeselectAllBooks() {
     selectedBookIds.clear();
+    notifyListeners();
   }
 
+  /// 是否全选
   bool get isAllBooksSelected {
-    if (!getBookState.value.isSuccess) {
-      return false;
-    }
-
-    final currentBooks = getBookState.value.data;
-    if (currentBooks.isEmpty) {
-      return false;
-    }
-    final allBookIds = currentBooks.map((bookUI) => bookUI.book.id).toSet();
+    if (books.isEmpty) return false;
+    final allBookIds = books.map((b) => b.book.id).toSet();
     final selectedIds = selectedBookIds.toSet();
     return selectedIds.length == allBookIds.length &&
         allBookIds.every((id) => selectedIds.contains(id));
   }
 
+  /// 切换多选模式
   void triggerMultiEditMode(bool enable) {
-    multiEditMode.value = enable;
-    if (!multiEditMode.value) {
+    multiEditMode = enable;
+    if (!multiEditMode) {
       selectedBookIds.clear();
     }
+    notifyListeners();
   }
 
+  /// 改变排序方式
   void changeSortBy(BookSortType type, BookSortOrder order) {
-    sortBy.value = BookSort(type: type, order: order);
+    sortBy = BookSort(type: type, order: order);
     fetchBooks();
   }
 
+  /// 加载书籍列表
   Future<void> fetchBooks() async {
-    await getBookState.triggerQuery(
-      query: () async {
-        final books = bookService.books;
-        final collections = collectionService.collections;
-        final collectionBooks = collectionService.collectionBooks;
-        final marks = markService.marks;
-        final markBooks = markService.markBooks;
+    isLoading = true;
+    notifyListeners();
 
-        List<BookVo> bookVos = [];
+    try {
+      final bookList = bookStore.items;
+      final collections = collectionStore.collections;
+      final collectionBooks = collectionStore.collectionBooks;
+      final marks = markStore.marks;
+      final markBooks = markStore.markBooks;
 
-        for (var book in books) {
-          final bookMarks = markBooks
-              .where((mb) => mb.bookId == book.id)
-              .map((mb) => marks.firstWhere((m) => m.id == mb.markId))
-              .toList();
-          final bookCollection = collectionBooks
-              .where((cb) => cb.d == book.id)
-              .map(
-                (cb) => collections.firstWhere((c) => c.id == cb.collectionId),
-              )
-              .firstOrNull;
+      List<BookVo> bookVos = [];
 
-          bookVos.add(
-            BookVo(book: book, marks: bookMarks, collection: bookCollection),
-          );
+      for (var book in bookList) {
+        // 获取书籍的标签
+        final bookMarks = markBooks
+            .where((mb) => mb.bookId == book.id)
+            .map((mb) {
+          try {
+            return marks.firstWhere((m) => m.id == mb.markId);
+          } catch (_) {
+            return null;
+          }
+        })
+            .whereType<MarkTableData>()
+            .toList();
+
+        // 获取书籍的收藏夹
+        CollectionTableData? bookCollection;
+        try {
+          final cb = collectionBooks.firstWhere((cb) => cb.bookId == book.id);
+          bookCollection = collections.firstWhere((c) => c.id == cb.collectionId);
+        } catch (_) {
+          bookCollection = null;
         }
 
-        // 进行排序
-        bookVos.sort((a, b) {
-          int compareResult = 0;
+        bookVos.add(
+          BookVo(book: book, marks: bookMarks, collection: bookCollection),
+        );
+      }
 
-          // 根据排序类型进行比较
-          switch (sortBy.value.type) {
-            case BookSortType.title:
-              compareResult = a.book.name.compareTo(b.book.name);
-              break;
-            case BookSortType.addTime:
-              compareResult = a.book.createdAt.compareTo(b.book.createdAt);
-              break;
-          }
+      // 进行排序
+      bookVos.sort((a, b) {
+        int compareResult = 0;
 
-          // 根据排序顺序调整结果
-          return sortBy.value.order == BookSortOrder.asc
-              ? compareResult
-              : -compareResult;
-        });
+        // 根据排序类型进行比较
+        switch (sortBy.type) {
+          case BookSortType.title:
+            compareResult = a.book.name.compareTo(b.book.name);
+            break;
+          case BookSortType.addTime:
+            compareResult = a.book.createdAt.compareTo(b.book.createdAt);
+            break;
+        }
 
-        return bookVos;
-      },
-      isEmpty: (data) => data.isEmpty,
-    );
+        // 根据排序顺序调整结果
+        return sortBy.order == BookSortOrder.asc ? compareResult : -compareResult;
+      });
+
+      books = bookVos;
+    } catch (e) {
+      debugPrint('Error fetching books: $e');
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
-  Future<List<Widget>> fetchSearchBook(String searchText) async {
-    if (!getBookState.value.isSuccess) {
-      return [];
-    }
-    final currentBooks = getBookState.value.data;
-    if (searchText.isEmpty) {
-      return [];
-    }
-    final matchedBooks = currentBooks
-        .where((bookUI) => bookUI.book.name.contains(searchText))
-        .toList();
-    return matchedBooks
-        .map(
-          (bookUI) => Row(
-            children: [
-              Image.file(
-                File(pathService.getBookFilePath(bookUI.book.localPaths.first)),
-              ),
-              Expanded(
-                child: ListTile(
-                  title: Text(bookUI.book.name),
-                  subtitle: Text(
-                    '创建于 ${bookUI.book.createdAt.toIso8601String()}',
-                  ),
-                ),
-              ),
-            ],
-          ),
-        )
+  /// 搜索书籍
+  List<BookVo> searchBooks(String searchText) {
+    if (searchText.isEmpty) return books;
+    return books
+        .where((bookVo) => bookVo.book.name.contains(searchText))
         .toList();
   }
 
+  /// 导出单本书籍
   Future<void> exportBook(BookTableData data) async {
-    // 添加到导出队列并立即跳转到导出页面查看进度
-    final record = await exportService.exportBook(data);
-    if (record != null) {
-      final homeController = Get.find<HomeController>();
-      homeController.selectedIndex.value = 1;
-      final taskController = Get.find<TaskController>();
-      taskController.tabController.animateTo(2);
+    await exportService.exportBook(data);
+
+    // 导航到任务页面的导出 tab
+    if (context.mounted) {
+      context.go('/home?tab=1&taskTab=2'); // tab=1任务, taskTab=2导出
     }
   }
 
+  /// 批量导出书籍
   Future<void> exportMultipleBooks() async {
     final ids = selectedBookIds.toList();
-    final books =
-        await (appDatabase.bookTable.select()..where((tbl) => tbl.id.isIn(ids)))
-            .get();
+    final booksToExport = books
+        .where((b) => ids.contains(b.book.id))
+        .map((b) => b.book)
+        .toList();
 
     // 添加所有书籍到导出队列
-    final records = await exportService.exportMultiple(books);
+    await exportService.exportMultiple(booksToExport);
 
     // 清除选择状态
     selectedBookIds.clear();
-    multiEditMode.value = false;
+    multiEditMode = false;
+    notifyListeners();
 
-    // 立即跳转到导出页面查看进度
-    if (records.isNotEmpty) {
-      final homeController = Get.find<HomeController>();
-      homeController.selectedIndex.value = 1;
-      final taskController = Get.find<TaskController>();
-      taskController.tabController.animateTo(2);
+    // 导航到任务页面的导出 tab
+    if (context.mounted) {
+      context.go('/home?tab=1&taskTab=2');
     }
   }
 
+  /// 删除单本书籍
   Future<void> deleteBook(int id) async {
-    await deleteBookState.triggerEvent(
-      event: () async {
-        await bookService.deleteBook(id);
-      },
-    );
+    try {
+      await bookStore.deleteBook(id);
+      await fetchBooks();
+    } catch (e) {
+      debugPrint('Error deleting book: $e');
+      rethrow;
+    }
   }
 
+  /// 批量删除书籍
   Future<void> deleteMultipleBooks() async {
-    deleteMultipleBookState.triggerEvent(
-      event: () async {
-        final ids = selectedBookIds.toList();
-        await bookService.deleteBooks(ids);
-        await fetchBooks();
-        selectedBookIds.clear();
-        multiEditMode.value = false;
-      },
-    );
+    try {
+      final ids = selectedBookIds.toList();
+      await bookStore.deleteBooks(ids);
+      selectedBookIds.clear();
+      multiEditMode = false;
+      await fetchBooks();
+    } catch (e) {
+      debugPrint('Error deleting books: $e');
+      rethrow;
+    }
+  }
+
+  /// 添加书籍到收藏夹
+  Future<void> addBookToCollection(int bookId, int collectionId) async {
+    try {
+      await collectionStore.updateBookCollection(collectionId, bookId);
+      // Store 会自动刷新
+    } catch (e) {
+      debugPrint('Error adding book to collection: $e');
+      rethrow;
+    }
+  }
+
+  /// 批量添加书籍到收藏夹
+  Future<void> addMultipleBooksToCollection(int collectionId) async {
+    try {
+      for (final bookId in selectedBookIds) {
+        await collectionStore.updateBookCollection(collectionId, bookId);
+      }
+      selectedBookIds.clear();
+      multiEditMode = false;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error adding books to collection: $e');
+      rethrow;
+    }
+  }
+
+  /// 更新书籍的标签
+  Future<void> updateBookMarks(int bookId, List<int> markIds) async {
+    try {
+      await markStore.updateBookMarks(bookId, markIds);
+      // Store 会自动刷新
+    } catch (e) {
+      debugPrint('Error updating book marks: $e');
+      rethrow;
+    }
   }
 
   @override
-  void onClose() {
-    booksSubscription?.cancel();
-    collectionsSubscription?.cancel();
-    collectionBooksSubscription?.cancel();
-    marksSubscription?.cancel();
-    markBooksSubscription?.cancel();
-    super.onClose();
+  void dispose() {
+    bookStore.removeListener(_onStoreChanged);
+    markStore.removeListener(_onStoreChanged);
+    collectionStore.removeListener(_onStoreChanged);
+    super.dispose();
   }
 }
 
+/// 书籍视图对象（包含书籍、标签、收藏夹信息）
 class BookVo {
   final BookTableData book;
   final List<MarkTableData> marks;
   final CollectionTableData? collection;
 
-  BookVo({required this.book, required this.marks, required this.collection});
+  BookVo({
+    required this.book,
+    required this.marks,
+    required this.collection,
+  });
 }
 
+/// 书籍排序
 class BookSort {
   final BookSortType type;
   final BookSortOrder order;
@@ -301,3 +319,4 @@ class BookSort {
 enum BookSortOrder { asc, desc }
 
 enum BookSortType { title, addTime }
+

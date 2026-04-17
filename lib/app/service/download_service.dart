@@ -2,9 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
+import 'package:dk_util/dk_util.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:tele_book/app/db/app_database.dart';
+import 'package:tele_book/app/service/book_service.dart';
 
 /// 进度事件
 typedef DownloadProgressEvent = ({String taskId, double progress});
@@ -15,17 +19,21 @@ typedef DownloadStatusEvent = ({String taskId, TaskStatus status});
 /// 纯下载操作服务，不持有任何业务状态。
 /// 通过 Stream 广播进度和状态变化，支持多个订阅者。
 class DownloadService {
+  final AppDatabase _db;
+
   // ── Stream（broadcast：支持多订阅者） ────────────────────────────────────
-  final _progressCtrl =
-      StreamController<DownloadProgressEvent>.broadcast();
-  final _statusCtrl =
-      StreamController<DownloadStatusEvent>.broadcast();
+  final _progressCtrl = StreamController<DownloadProgressEvent>.broadcast();
+  final _statusCtrl = StreamController<DownloadStatusEvent>.broadcast();
 
   /// 订阅下载进度（可多处 listen）
   Stream<DownloadProgressEvent> get onProgress => _progressCtrl.stream;
 
   /// 订阅状态变化（可多处 listen）
   Stream<DownloadStatusEvent> get onStatusChanged => _statusCtrl.stream;
+
+  DownloadService(this._db) {
+    init();
+  }
 
   void dispose() {
     _progressCtrl.close();
@@ -84,10 +92,7 @@ class DownloadService {
       }
       if (update is TaskStatusUpdate) {
         debugPrint('Task ${update.task.taskId} status: ${update.status}');
-        _statusCtrl.add((
-          taskId: update.task.taskId,
-          status: update.status,
-        ));
+        _statusCtrl.add((taskId: update.task.taskId, status: update.status));
       }
     });
   }
@@ -179,7 +184,10 @@ class DownloadService {
         '$groupName - 完成',
         '成功: {numSucceeded} | 失败: {numFailed}',
       ),
-      paused: TaskNotification('$groupName - 已暂停', '已下载: {numFinished}/{numTotal}'),
+      paused: TaskNotification(
+        '$groupName - 已暂停',
+        '已下载: {numFinished}/{numTotal}',
+      ),
       progressBar: true,
       groupNotificationId: groupId,
     );
@@ -228,5 +236,68 @@ class DownloadService {
     } catch (e) {
       debugPrint('⚠️ 检查通知权限时出错: $e');
     }
+  }
+
+  // ── 业务逻辑：保存下载组为书籍 ────────────────────────────────────────────
+
+  /// 验证下载组的文件并返回有效的路径列表
+  ///
+  /// 检查所有下载任务的文件是否真实存在于文件系统中
+  /// 返回：(有效路径列表, 缺失文件数量)
+  Future<(List<String>, int)> validateDownloadedFiles({
+    required List<String> relativePaths,
+  }) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final validPaths = <String>[];
+    int notFoundCount = 0;
+
+    for (final relativePath in relativePaths) {
+      final fullPath = '${appDir.path}/$relativePath';
+      final file = File(fullPath);
+      final exists = await file.exists();
+
+      if (exists) {
+        validPaths.add(relativePath);
+      } else {
+        notFoundCount++;
+        DKLog.w('⚠️ 下载文件不存在: $fullPath');
+      }
+    }
+
+    DKLog.d(
+      '📊 验证结果: 有效文件 ${validPaths.length}/${relativePaths.length}, 缺失 $notFoundCount',
+    );
+    return (validPaths, notFoundCount);
+  }
+
+  Future<void> saveDownloadAsBook({
+    required String bookName,
+    required List<String> downloadedPaths,
+  }) async {
+    if (_db == null) {
+      throw Exception('Database not provided to DownloadService');
+    }
+
+    // 1. 验证文件
+    final (validPaths, notFoundCount) = await validateDownloadedFiles(
+      relativePaths: downloadedPaths,
+    );
+
+    // 2. 检查是否有有效文件
+    if (validPaths.isEmpty) {
+      throw Exception('没有找到任何有效的下载文件，可能文件已被删除');
+    }
+
+    if (notFoundCount > 0) {
+      DKLog.w('⚠️ 有 $notFoundCount 个文件缺失，但仍将保存书籍');
+    }
+
+    // 3. 直接调用 DAO 保存书籍（不调用 BookService，避免 Service 间依赖）
+    DKLog.d('💾 保存书籍: $bookName (${validPaths.length} 个文件)');
+    await _db!.bookDao.insertBook(
+      BookTableCompanion.insert(name: bookName, localPaths: validPaths),
+    );
+
+    DKLog.s('✅ 书籍保存成功: $bookName');
   }
 }

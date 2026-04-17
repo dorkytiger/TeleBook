@@ -29,9 +29,9 @@ class DownloadTaskInfo {
     TaskStatus? initialStatus,
     double? initialProgress,
     String? initialSavePath,
-  })  : status = initialStatus ?? TaskStatus.enqueued,
-        progress = initialProgress ?? 0.0,
-        savePath = initialSavePath ?? '';
+  }) : status = initialStatus ?? TaskStatus.enqueued,
+       progress = initialProgress ?? 0.0,
+       savePath = initialSavePath ?? '';
 }
 
 /// 下载组信息（由 DownloadStore 持有和更新）
@@ -52,11 +52,11 @@ class DownloadGroupInfo {
     int? total,
     int? completed,
     int? failed,
-  })  : totalCount = total ?? 0,
-        completedCount = completed ?? 0,
-        failedCount = failed ?? 0,
-        groupProgress = 0.0,
-        createTime = DateTime.now();
+  }) : totalCount = total ?? 0,
+       completedCount = completed ?? 0,
+       failedCount = failed ?? 0,
+       groupProgress = 0.0,
+       createTime = DateTime.now();
 
   double get progressPercent =>
       totalCount > 0 ? completedCount / totalCount : 0.0;
@@ -80,7 +80,7 @@ class DownloadStore extends ChangeNotifier {
   /// 下载组全部完成时触发（供外部连接 ImportService 等）
   /// 参数：groupId, groupName, 按 order 排好序的相对路径列表
   void Function(String groupId, String name, List<String> sortedPaths)?
-      onGroupCompleted;
+  onGroupCompleted;
 
   // ── 构造 ──────────────────────────────────────────────────────────────────
 
@@ -100,9 +100,6 @@ class DownloadStore extends ChangeNotifier {
     _service.dispose();
     super.dispose();
   }
-
-  /// 初始化下载器（在 app 启动时调用）
-  Future<void> init() => _service.init();
 
   // ── 服务回调处理 ──────────────────────────────────────────────────────────
 
@@ -258,8 +255,10 @@ class DownloadStore extends ChangeNotifier {
     final taskInfo = tasks[taskId];
     if (taskInfo == null) return null;
 
-    _service.configureGroupNotification(taskInfo.groupId,
-        groups[taskInfo.groupId]?.name ?? taskInfo.groupId);
+    _service.configureGroupNotification(
+      taskInfo.groupId,
+      groups[taskInfo.groupId]?.name ?? taskInfo.groupId,
+    );
 
     final originalOrder = taskInfo.order;
     await _service.cancel(taskId);
@@ -313,7 +312,8 @@ class DownloadStore extends ChangeNotifier {
         if (existing != null) {
           success = await resume(t.taskId);
         } else {
-          success = await download(
+          success =
+              await download(
                 url: t.url,
                 filename: t.filename,
                 groupId: t.groupId,
@@ -384,7 +384,8 @@ class DownloadStore extends ChangeNotifier {
 
   List<DownloadTaskInfo> getAllTasks() => tasks.values.toList();
 
-  List<DownloadTaskInfo> getTasksByGroup(String groupId) => _tasksByGroup(groupId);
+  List<DownloadTaskInfo> getTasksByGroup(String groupId) =>
+      _tasksByGroup(groupId);
 
   List<DownloadGroupInfo> getAllGroups() => groups.values.toList();
 
@@ -430,12 +431,43 @@ class DownloadStore extends ChangeNotifier {
   Future<void> openNotificationSettings() =>
       _service.openNotificationSettings();
 
+
+  Future<void> saveToBook(String groupId) async {
+    final group = groups[groupId];
+    if (group == null) {
+      throw Exception("未找到下载组 $groupId");
+    }
+
+    if (group.completedCount != group.totalCount) {
+      throw Exception("下载未完成（${group.completedCount}/${group.totalCount}），无法保存到书架");
+    }
+
+    final groupTasks = _tasksByGroup(groupId);
+    final savePaths = groupTasks
+        .where((t) => t.status == TaskStatus.complete && t.savePath.isNotEmpty)
+        .map((t) => t.savePath)
+        .toList();
+
+    if (savePaths.isEmpty) {
+      throw Exception('没有找到任何已完成的下载文件');
+    }
+
+    // 调用 Service 层执行业务逻辑
+    await _service.saveDownloadAsBook(
+      bookName: group.name,
+      downloadedPaths: savePaths,
+    );
+
+    // Service 成功后，Store 可以做一些后续处理（如标记状态等）
+    debugPrint('✅ Store: 下载组 ${group.name} 已保存为书籍');
+    notifyListeners();
+  }
+
   // ── 私有辅助 ──────────────────────────────────────────────────────────────
 
   List<DownloadTaskInfo> _tasksByGroup(String groupId) {
-    final list =
-        tasks.values.where((t) => t.groupId == groupId).toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
+    final list = tasks.values.where((t) => t.groupId == groupId).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
     return list;
   }
 
@@ -463,7 +495,8 @@ class DownloadStore extends ChangeNotifier {
     _updateGroupProgress(groupId);
 
     // 判断组是否全部结束（完成 / 失败 / 取消）
-    final allDone = groupTasks.isNotEmpty &&
+    final allDone =
+        groupTasks.isNotEmpty &&
         groupTasks.every(
           (t) =>
               t.status == TaskStatus.complete ||
