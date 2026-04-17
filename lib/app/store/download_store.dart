@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
+import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/download_service.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 // ── 数据模型 ──────────────────────────────────────────────────────────────────
 
@@ -66,6 +68,7 @@ class DownloadGroupInfo {
 
 class DownloadStore extends ChangeNotifier {
   final DownloadService _service;
+  final BookService _bookService;
 
   // ── 状态 ──────────────────────────────────────────────────────────────────
   final tasks = <String, DownloadTaskInfo>{};
@@ -74,30 +77,27 @@ class DownloadStore extends ChangeNotifier {
   final _retryCount = <String, int>{};
   static const int maxRetryCount = 3;
 
-  StreamSubscription<DownloadProgressEvent>? _progressSub;
-  StreamSubscription<DownloadStatusEvent>? _statusSub;
+  StreamSubscription? _updatesSub;
 
-  /// 下载组全部完成时触发（供外部连接 ImportService 等）
-  /// 参数：groupId, groupName, 按 order 排好序的相对路径列表
   void Function(String groupId, String name, List<String> sortedPaths)?
   onGroupCompleted;
 
   // ── 构造 ──────────────────────────────────────────────────────────────────
 
-  DownloadStore(this._service) {
-    _progressSub = _service.onProgress.listen((e) {
-      _handleProgress(e.taskId, e.progress);
-    });
-    _statusSub = _service.onStatusChanged.listen((e) {
-      _handleStatusChanged(e.taskId, e.status);
+  DownloadStore(this._service, this._bookService) {
+    // 直接订阅 FileDownloader 更新流
+    _updatesSub = _service.updates.listen((update) {
+      if (update is TaskProgressUpdate) {
+        _handleProgress(update.task.taskId, update.progress);
+      } else if (update is TaskStatusUpdate) {
+        _handleStatusChanged(update.task.taskId, update.status);
+      }
     });
   }
 
   @override
   void dispose() {
-    _progressSub?.cancel();
-    _statusSub?.cancel();
-    _service.dispose();
+    _updatesSub?.cancel();
     super.dispose();
   }
 
@@ -434,31 +434,28 @@ class DownloadStore extends ChangeNotifier {
 
   Future<void> saveToBook(String groupId) async {
     final group = groups[groupId];
-    if (group == null) {
-      throw Exception("未找到下载组 $groupId");
-    }
-
+    if (group == null) throw Exception("未找到下载组 $groupId");
     if (group.completedCount != group.totalCount) {
       throw Exception("下载未完成（${group.completedCount}/${group.totalCount}），无法保存到书架");
     }
 
-    final groupTasks = _tasksByGroup(groupId);
-    final savePaths = groupTasks
+    final savePaths = _tasksByGroup(groupId)
         .where((t) => t.status == TaskStatus.complete && t.savePath.isNotEmpty)
         .map((t) => t.savePath)
         .toList();
+    if (savePaths.isEmpty) throw Exception('没有找到任何已完成的下载文件');
 
-    if (savePaths.isEmpty) {
-      throw Exception('没有找到任何已完成的下载文件');
-    }
+    // 验证文件是否真实存在
+    final (validPaths, notFoundCount) = await FileUtil.validateFiles(savePaths);
+    if (validPaths.isEmpty) throw Exception('没有找到任何有效的下载文件，可能文件已被删除');
+    if (notFoundCount > 0) debugPrint('⚠️ 有 $notFoundCount 个文件缺失，但仍将保存书籍');
 
-    // 调用 Service 层执行业务逻辑
-    await _service.saveDownloadAsBook(
-      bookName: group.name,
-      downloadedPaths: savePaths,
+    // 通过 BookService 保存（会触发 bookInsertedStream → BookStore 自动刷新）
+    await _bookService.insertWithPaths(
+      name: group.name,
+      localPaths: validPaths,
     );
 
-    // Service 成功后，Store 可以做一些后续处理（如标记状态等）
     debugPrint('✅ Store: 下载组 ${group.name} 已保存为书籍');
     notifyListeners();
   }

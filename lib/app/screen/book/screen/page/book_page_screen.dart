@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
 import 'package:tele_book/app/screen/book/screen/page/book_page_controller.dart';
+import 'package:tele_book/app/util/file_util.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 class BookPageScreen extends StatelessWidget {
   final int bookId;
@@ -17,7 +19,6 @@ class BookPageScreen extends StatelessWidget {
       create: (_) => BookPageController(
         bookId: bookId,
         bookStore: context.read(),
-        pathService: context.read(),
         sharedPreferences: context.read(),
       ),
       child: const _BookPageScreenContent(),
@@ -63,47 +64,20 @@ class _BookPageScreenContent extends StatelessWidget {
                               children: List.generate(controller.totalPages, (
                                 index,
                               ) {
-                                final imagePath = controller.pathService
-                                    .getBookFilePath(
-                                      controller.bookData!.localPaths[index],
-                                    );
                                 return GestureDetector(
                                   onTap: controller.toggleProgress,
                                   child: InteractiveViewer(
                                     minScale: 0.5,
                                     maxScale: 4.0,
-                                    child: Image.file(
-                                      File(imagePath),
-                                      fit: BoxFit.fitWidth,
-                                      width: double.infinity,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              height: 200,
-                                              color: Colors.grey[800],
-                                              child: const Center(
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.broken_image,
-                                                      size: 64,
-                                                      color: Colors.white54,
-                                                    ),
-                                                    SizedBox(height: 16),
-                                                    Text(
-                                                      '图片加载失败',
-                                                      style: TextStyle(
-                                                        color: Colors.white54,
-                                                        fontSize: 14,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          },
+                                    child: FutureBuilder(
+                                      future: FileUtil.getBookImageFullPath(
+                                        controller.bookData!.localPaths[index],
+                                      ),
+                                      builder: (context, snapData) {
+                                        return CustomImageLoader(
+                                          localUrl: snapData.data,
+                                        );
+                                      },
                                     ),
                                   ),
                                 );
@@ -118,51 +92,21 @@ class _BookPageScreenContent extends StatelessWidget {
                                 ReadingDirection.rightToLeft,
                             itemCount: controller.totalPages,
                             itemBuilder: (context, index) {
-                              final imagePath = controller.pathService
-                                  .getBookFilePath(
-                                    controller.bookData!.localPaths[index],
-                                  );
                               return GestureDetector(
                                 onTap: controller.toggleProgress,
                                 child: Center(
                                   child: InteractiveViewer(
                                     minScale: 0.5,
                                     maxScale: 4.0,
-                                    child: Image.file(
-                                      File(imagePath),
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Center(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                children: [
-                                                  const Icon(
-                                                    Icons.broken_image,
-                                                    size: 64,
-                                                    color: Colors.white54,
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  const Text(
-                                                    '图片加载失败',
-                                                    style: TextStyle(
-                                                      color: Colors.white54,
-                                                      fontSize: 14,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    imagePath,
-                                                    style: const TextStyle(
-                                                      color: Colors.white38,
-                                                      fontSize: 12,
-                                                    ),
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
+                                    child:  FutureBuilder(
+                                      future: FileUtil.getBookImageFullPath(
+                                        controller.bookData!.localPaths[index],
+                                      ),
+                                      builder: (context, snapData) {
+                                        return CustomImageLoader(
+                                          localUrl: snapData.data,
+                                        );
+                                      },
                                     ),
                                   ),
                                 ),

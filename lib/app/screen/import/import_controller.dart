@@ -5,14 +5,12 @@ import 'package:tele_book/app/store/import_store.dart';
 
 /// ImportController - 使用 ChangeNotifier 进行状态管理
 class ImportController extends ChangeNotifier {
-  final ImportService importService;
   final ImportStore importStore;
 
   String? _appDocPath;
   String? get appDocPath => _appDocPath;
 
   ImportController({
-    required this.importService,
     required this.importStore,
   }) {
     _init();
@@ -38,7 +36,7 @@ class ImportController extends ChangeNotifier {
       group.status.value = ImportStatus.pending;
 
       // 重新开始导入
-      await importService.startImport(group);
+      await importStore.startImport(group);
     }
   }
 }

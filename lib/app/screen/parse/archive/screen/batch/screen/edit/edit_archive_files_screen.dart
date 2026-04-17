@@ -63,31 +63,36 @@ class _EditArchiveFilesContent extends StatelessWidget {
                     ),
                     Expanded(
                       child: ReorderableListView.builder(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
                         itemCount: controller.files.length,
                         onReorder: controller.reorder,
                         itemBuilder: (context, index) {
                           final file = controller.files[index];
                           return KeyedSubtree(
                             key: ValueKey(file.path),
-                            child: Row(
+                            child: Column(
                               children: [
-                                CustomImageLoader(localUrl: file.path),
-                                Expanded(
-                                  child: ListTile(
-                                    title: Text(file.path
-                                        .split(Platform.pathSeparator)
-                                        .last),
-                                    subtitle: Text(file.path
-                                        .split(Platform.pathSeparator)
-                                        .last),
-                                  ),
+                                Row(
+                                  children: [
+                                    CustomImageLoader(localUrl: file.path),
+                                    Expanded(
+                                      child: ListTile(
+                                        title: Text(file.path
+                                            .split(Platform.pathSeparator)
+                                            .last),
+                                        subtitle: Text(file.path
+                                            .split(Platform.pathSeparator)
+                                            .last),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          controller.removeFile(index),
+                                      icon: const Icon(Icons.delete),
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  onPressed: () =>
-                                      controller.removeFile(index),
-                                  icon: const Icon(Icons.delete),
-                                ),
+                                SizedBox(height: 16,)
                               ],
                             ),
                           );

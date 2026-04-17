@@ -37,7 +37,7 @@ class _CollectionContent extends StatelessWidget {
             ],
           ),
           body: collections.isEmpty
-              ? CustomEmpty(message: "暂无收藏夹，点击右上角创建一个吧！")
+              ? Center(child: CustomEmpty(message: "暂无收藏夹，点击右上角创建一个吧！"))
               : ListView.builder(
                   itemCount: collections.length,
                   itemBuilder: (context, index) {

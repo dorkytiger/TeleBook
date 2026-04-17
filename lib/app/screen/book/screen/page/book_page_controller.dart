@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
-import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
 
 class BookPageController extends ChangeNotifier {
   final int bookId;
-  final PathService pathService;
   final SharedPreferences sharedPreferences;
   final BookStore bookStore;
 
@@ -38,7 +36,6 @@ class BookPageController extends ChangeNotifier {
   BookPageController({
     required this.bookId,
     required this.bookStore,
-    required this.pathService,
     required this.sharedPreferences,
   }) {
     //监听书籍数据变化，自动刷新页面

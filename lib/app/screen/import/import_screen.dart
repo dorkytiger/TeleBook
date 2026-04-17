@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tele_book/app/service/import_service.dart';
 import 'package:tele_book/app/store/import_store.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 
@@ -15,14 +14,10 @@ class ImportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 从 Provider 获取依赖
-    final importService = context.read<ImportService>();
     final importStore = context.read<ImportStore>();
 
     return ChangeNotifierProvider(
-      create: (_) => ImportController(
-        importService: importService,
-        importStore: importStore,
-      ),
+      create: (_) => ImportController(importStore: importStore),
       child: const _ImportScreenContent(),
     );
   }
@@ -46,10 +41,7 @@ class _ImportScreenContent extends StatelessWidget {
           itemCount: importStore.groups.length,
           itemBuilder: (context, index) {
             final group = importStore.groups[index];
-            return _ImportGroupItem(
-              group: group,
-              controller: controller,
-            );
+            return _ImportGroupItem(group: group, controller: controller);
           },
         );
       },
@@ -61,10 +53,7 @@ class _ImportGroupItem extends StatelessWidget {
   final ImportGroup group;
   final ImportController controller;
 
-  const _ImportGroupItem({
-    required this.group,
-    required this.controller,
-  });
+  const _ImportGroupItem({required this.group, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +72,7 @@ class _ImportGroupItem extends StatelessWidget {
                 _buildCover(context, firstTask, controller.appDocPath),
                 const SizedBox(width: 12),
                 // 信息区域
-                Expanded(
-                  child: _buildInfo(context, group),
-                ),
+                Expanded(child: _buildInfo(context, group)),
                 const SizedBox(width: 8),
                 // 重试按钮
                 IconButton(
@@ -101,7 +88,11 @@ class _ImportGroupItem extends StatelessWidget {
     );
   }
 
-  Widget _buildCover(BuildContext context, ImportTask? firstTask, String? appDocPath) {
+  Widget _buildCover(
+    BuildContext context,
+    ImportTask? firstTask,
+    String? appDocPath,
+  ) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
       child: SizedBox(
@@ -144,22 +135,19 @@ class _ImportGroupItem extends StatelessWidget {
       children: [
         Text(
           group.name,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
         Text(
           '总数: ${group.totalCount}  完成数: ${group.completedCount}  失败数: ${group.failedCount}',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.color
-                    ?.withValues(alpha: 0.7),
-              ),
+            color: Theme.of(
+              context,
+            ).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+          ),
         ),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),

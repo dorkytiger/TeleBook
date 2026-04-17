@@ -8,31 +8,9 @@ part 'book_dao.g.dart';
 class BookDao extends DatabaseAccessor<AppDatabase> with _$BookDaoMixin {
   BookDao(super.attachedDatabase);
 
-  Stream<List<BookTableData>> getBooks(String? name) {
+  Stream<List<BookTableData>> watchBooks() {
     final query = select(bookTable);
-    if (name != null && name.isNotEmpty) {
-      query.where((tbl) => tbl.name.like('%$name%'));
-    }
     return query.watch();
-  }
-
-  /// Fetch a single page using LIMIT/OFFSET. Useful for pagination UI.
-  Future<List<BookTableData>> getBooksPage({
-    required int limit,
-    required int offset,
-    String? name,
-  }) {
-    final q = (select(bookTable)
-      ..orderBy([
-        (t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc),
-      ])
-      ..limit(limit, offset: offset));
-
-    if (name != null && name.isNotEmpty) {
-      q.where((tbl) => tbl.name.like('%$name%'));
-    }
-
-    return q.get();
   }
 
   /// Keyset pagination: get next page after [lastCreatedAt] (createdAt descending).

@@ -37,7 +37,7 @@ class _ParseBatchArchiveContent extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () async {
-                  await controller.saveAllBooks();
+                  controller.saveAllBooks();
                   if (context.mounted) {
                     context.go('${AppRoute.home}?tab=1&taskTab=1');
                   }
@@ -59,13 +59,18 @@ class _ParseBatchArchiveContent extends StatelessWidget {
                   ),
                 ),
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(12),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    separatorBuilder: (context, index) => SizedBox(height: 16),
                     itemCount: controller.archiveFolders.length,
                     itemBuilder: (context, index) {
                       final archiveFolder = controller.archiveFolders[index];
                       return _buildArchiveItem(
-                          context, controller, archiveFolder, index);
+                        context,
+                        controller,
+                        archiveFolder,
+                        index,
+                      );
                     },
                   ),
                 ),
@@ -85,9 +90,7 @@ class _ParseBatchArchiveContent extends StatelessWidget {
   ) {
     return Row(
       children: [
-        CustomImageLoader(
-          localUrl: archiveFolder.files.firstOrNull?.path,
-        ),
+        CustomImageLoader(localUrl: archiveFolder.files.firstOrNull?.path),
         Expanded(
           child: ListTile(
             title: Text(archiveFolder.title),

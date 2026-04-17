@@ -1,155 +1,45 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
 import 'package:dk_util/dk_util.dart';
-import 'package:drift/drift.dart';
 import 'package:flutter/foundation.dart';
-import 'package:tele_book/app/store/export_store.dart';
-import 'package:tele_book/app/util/pick_file_util.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/util/file_util.dart';
+import 'package:tele_book/app/util/pick_file_util.dart';
 
-/// 导出进度事件
-typedef ExportProgressEvent = ({
-  String recordId,
-  int progress, // 已处理文件数
-  int total, // 总文件数
-});
+enum ExportStatus {
+  pending('待处理'),
+  running('导出中'),
+  success('导出成功'),
+  failed('导出失败');
 
-/// 导出状态变化事件
-typedef ExportStatusEvent = ({
-  String recordId,
-  ExportStatus status,
-  String? error, // 仅在失败时有值
-});
+  final String displayName;
+  const ExportStatus(this.displayName);
+}
 
-/// 导出记录创建事件
-typedef ExportRecordEvent = ExportRecord;
-
-/// 导出服务 - 纯业务逻辑层
-/// 通过广播流发送事件，不依赖任何 Store
-/// Store 可以监听这些流来管理状态
+/// 导出服务 - 纯业务逻辑层，无状态流
 class ExportService {
   final AppDatabase db;
 
   ExportService(this.db);
 
-  // 广播流控制器 - 用于向多个订阅者发送事件
-  final _recordCtrl = StreamController<ExportRecordEvent>.broadcast();
-  final _progressCtrl = StreamController<ExportProgressEvent>.broadcast();
-  final _statusCtrl = StreamController<ExportStatusEvent>.broadcast();
+  Future<BookTableData?> getBookById(int bookId) => db.bookDao.getById(bookId);
 
-  /// 记录创建事件流（Store 可以监听此流来添加记录）
-  Stream<ExportRecordEvent> get recordStream => _recordCtrl.stream;
+  /// 让调用方选择目录
+  Future<String?> pickExportDir() => PickFileUtil.pickDirectory();
 
-  /// 进度更新事件流
-  Stream<ExportProgressEvent> get progressStream => _progressCtrl.stream;
-
-  /// 状态变化事件流
-  Stream<ExportStatusEvent> get statusStream => _statusCtrl.stream;
-
-  /// 释放资源
-  void dispose() {
-    _recordCtrl.close();
-    _progressCtrl.close();
-    _statusCtrl.close();
-  }
-
-  /// Start export for a single book. If [exportDir] is null, will prompt user to pick.
-  Future<ExportRecord?> exportBookById(int bookId, {String? exportDir}) async {
-    final book = await db.bookDao.getById(bookId);
-    if (book == null) return null;
-    return exportBook(book, exportDir: exportDir);
-  }
-
-  Future<ExportRecord?> exportBook(
-    BookTableData data, {
-    String? exportDir,
-  }) async {
-    if (data.localPaths.isEmpty) return null;
-
-    final dir = exportDir ?? await PickFileUtil.pickDirectory();
-    if (dir == null) return null;
-
-    final record = ExportRecord(
-      id: DateTime.now().microsecondsSinceEpoch.toString(),
-      bookId: data.id,
-      name: data.name,
-    );
-
-    // 广播记录创建事件
-    _recordCtrl.add(record);
-
-    // 广播初始进度
-    _progressCtrl.add((
-      recordId: record.id,
-      progress: 0,
-      total: data.localPaths.length,
-    ));
-
-    // Run export asynchronously
-    unawaited(_runExport(record, data, dir));
-
-    return record;
-  }
-
-  /// Export multiple books. First add all to queue, then run exports asynchronously.
-  Future<List<ExportRecord>> exportMultiple(
-    List<BookTableData> books, {
-    String? exportDir,
-  }) async {
-    if (books.isEmpty) return [];
-
-    final dir = exportDir ?? await PickFileUtil.pickDirectory();
-    if (dir == null) return [];
-
-    final result = <ExportRecord>[];
-
-    // First, create all records and broadcast events
-    for (final book in books) {
-      final r = ExportRecord(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        bookId: book.id,
-        name: book.name,
-      );
-      result.add(r);
-
-      // 广播每个记录创建事件
-      _recordCtrl.add(r);
-
-      // 广播初始进度
-      _progressCtrl.add((
-        recordId: r.id,
-        progress: 0,
-        total: book.localPaths.length,
-      ));
-    }
-
-    // Then run all exports asynchronously (non-blocking)
-    for (int i = 0; i < books.length; i++) {
-      unawaited(_runExport(result[i], books[i], dir));
-    }
-
-    return result;
-  }
-
-  Future<void> _runExport(
-    ExportRecord record,
+  /// 运行导出，通过回调通知 Store 更新进度和状态
+  Future<void> runExport(
     BookTableData data,
-    String exportDir,
-  ) async {
+    String exportDir, {
+    void Function(int progress, int total)? onProgress,
+    void Function(ExportStatus status, String? error, String? outputPath)?
+    onStatus,
+  }) async {
     try {
-      // 广播状态变化：运行中
-      _statusCtrl.add((
-        recordId: record.id,
-        status: ExportStatus.running,
-        error: null,
-      ));
+      onStatus?.call(ExportStatus.running, null, null);
 
       final appDirPath = await FileUtil.getAppDocumentsPath();
-
-      // Collect existing files
       final List<MapEntry<String, Uint8List>> fileContents = [];
       int index = 1;
       int notFoundCount = 0;
@@ -157,9 +47,7 @@ class ExportService {
 
       for (final path in data.localPaths) {
         final fullPath = "$appDirPath/$path";
-        final fileExists = await FileUtil.fileExistsAbsolute(fullPath);
-
-        if (fileExists) {
+        if (await FileUtil.fileExistsAbsolute(fullPath)) {
           final fileName = "${FileUtil.formatExportIndex(index)}.jpg";
           final fileBytes = await File(fullPath).readAsBytes();
           fileContents.add(MapEntry(fileName, fileBytes));
@@ -167,72 +55,35 @@ class ExportService {
         } else {
           notFoundCount++;
         }
-
-        // 广播进度更新
-        _progressCtrl.add((
-          recordId: record.id,
-          progress: index + notFoundCount - 1,
-          total: totalFiles,
-        ));
+        onProgress?.call(index + notFoundCount - 1, totalFiles);
       }
 
-      // debug info
       DKLog.s('📊 导出统计: 成功 ${fileContents.length} 个，缺失 $notFoundCount 个');
 
       if (fileContents.isEmpty) {
-        // 广播失败状态
-        _statusCtrl.add((
-          recordId: record.id,
-          status: ExportStatus.failed,
-          error: '没有可导出的文件',
-        ));
+        onStatus?.call(ExportStatus.failed, '没有可导出的文件', null);
         return;
       }
 
-      final sanitizedName = FileUtil.sanitizeFileName(data.name);
-
-      // 无后缀优先，冲突时加 (1)(2)...
-      String zipFileName = '$sanitizedName.zip';
       final zipPath = await FileUtil.generateNonConflictingPath(
         exportDir,
-        zipFileName,
+        '${FileUtil.sanitizeFileName(data.name)}.zip',
       );
 
-      // compress in isolate
       final zipBytes = await compute(_compressFiles, fileContents);
+      await File(zipPath).writeAsBytes(zipBytes);
 
-      final zipFile = File(zipPath);
-      await zipFile.writeAsBytes(zipBytes);
-
-      // 保存输出路径到 record（这个可以保留，因为是最终结果）
-      record.outputPath = zipPath;
-
-      // 广播成功状态
-      _statusCtrl.add((
-        recordId: record.id,
-        status: ExportStatus.success,
-        error: null,
-      ));
+      onStatus?.call(ExportStatus.success, null, zipPath);
     } catch (e) {
-      // 广播失败状态
-      _statusCtrl.add((
-        recordId: record.id,
-        status: ExportStatus.failed,
-        error: e.toString(),
-      ));
+      onStatus?.call(ExportStatus.failed, e.toString(), null);
     }
   }
 }
 
-// top-level function to be run in an isolate
 Uint8List _compressFiles(List<MapEntry<String, Uint8List>> files) {
   final archive = Archive();
-
   for (final entry in files) {
-    final archiveFile = ArchiveFile(entry.key, entry.value.length, entry.value);
-    archive.addFile(archiveFile);
+    archive.addFile(ArchiveFile(entry.key, entry.value.length, entry.value));
   }
-
-  final zipEncoder = ZipEncoder();
-  return Uint8List.fromList(zipEncoder.encode(archive));
+  return Uint8List.fromList(ZipEncoder().encode(archive));
 }

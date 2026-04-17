@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/app/screen/parse/form/parse_form_controller.dart';
 
@@ -23,11 +22,7 @@ class _ParseFormContent extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: Text('添加数据'),
-            leading: BackButton(
-              onPressed: () {
-                context.pop();
-              },
-            ),
+            leading: const BackButton(),
             actions: [
               IconButton(
                 onPressed: () {
@@ -72,17 +67,22 @@ class _ParseFormContent extends StatelessWidget {
             showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              builder: (context) {
-                return DraggableScrollableSheet(
-                  expand: false,
-                  maxChildSize: 0.9,
-                  initialChildSize: 0.7,
-                  builder: (context, scrollController) {
-                    return SingleChildScrollView(
-                      controller: scrollController,
-                      child: _buildSourceSelection(context, controller),
-                    );
-                  },
+              builder: (sheetContext) {
+                return ChangeNotifierProvider.value(
+                  value: controller,
+                  child: DraggableScrollableSheet(
+                    expand: false,
+                    maxChildSize: 0.9,
+                    initialChildSize: 0.7,
+                    builder: (innerContext, scrollController) {
+                      return Consumer<ParseFormController>(
+                        builder: (context, ctrl, _) => SingleChildScrollView(
+                          controller: scrollController,
+                          child: _buildSourceSelection(context, ctrl),
+                        ),
+                      );
+                    },
+                  ),
                 );
               },
             );
@@ -122,8 +122,7 @@ class _ParseFormContent extends StatelessWidget {
         ),
         RadioGroup<BookFormSources>(
           onChanged: (value) {
-            controller.source = value!;
-            controller.sourceController.text = value.desc;
+            controller.setSource(value);
           },
           groupValue: controller.source,
           child: Column(

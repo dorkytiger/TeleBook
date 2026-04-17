@@ -13,7 +13,6 @@ import 'package:tele_book/app/service/download_service.dart';
 import 'package:tele_book/app/service/export_service.dart';
 import 'package:tele_book/app/service/import_service.dart';
 import 'package:tele_book/app/service/mark_service.dart';
-import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
 import 'package:tele_book/app/store/collection_store.dart';
 import 'package:tele_book/app/store/download_store.dart';
@@ -41,12 +40,8 @@ Future<void> _init() async {
   final bookService = BookService(db);
   final markService = MarkService(db);
   final collectionService = CollectionService(db);
-  final downloadService = DownloadService(db); // 传入 db 支持保存书籍功能
-  final downloadStore = DownloadStore(downloadService);
-
-  // 路径服务
-  final pathService = PathService();
-  await pathService.init();
+  final downloadService = DownloadService();
+  final downloadStore = DownloadStore(downloadService, bookService);
 
   // SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
@@ -56,12 +51,16 @@ Future<void> _init() async {
   final exportStore = ExportStore(exportService);
 
   // 导入服务与状态管理
-  final importService = ImportService(db);
-  final importStore = ImportStore(importService);
+  final importService = ImportService();
+  final importStore = ImportStore(importService, bookService);
 
   // 标签和收藏夹状态管理
   final markStore = MarkStore(markService);
   final collectionStore = CollectionStore(collectionService);
+
+  // 书籍状态管理（提前创建，BookStore 内部监听 BookService 自动响应新增）
+  final bookStore = BookStore(bookService);
+
 
   appProviders = MultiProvider(
     providers: [
@@ -73,13 +72,10 @@ Future<void> _init() async {
       Provider<DownloadService>.value(value: downloadService),
       Provider<ExportService>.value(value: exportService),
       Provider<ImportService>.value(value: importService),
-      Provider<PathService>.value(value: pathService),
       Provider<SharedPreferences>.value(value: sharedPreferences),
 
       // Stores
-      ChangeNotifierProvider<BookStore>(
-        create: (_) => BookStore(bookService)..refresh(),
-      ),
+      ChangeNotifierProvider<BookStore>.value(value: bookStore),
       ChangeNotifierProvider<MarkStore>.value(value: markStore),
       ChangeNotifierProvider<CollectionStore>.value(value: collectionStore),
       ChangeNotifierProvider<DownloadStore>.value(value: downloadStore),

@@ -1,16 +1,6 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/service/export_service.dart';
-
-enum ExportStatus {
-  pending('待处理'),
-  running('导出中'),
-  success('导出成功'),
-  failed('导出失败');
-
-  final String displayName;
-  const ExportStatus(this.displayName);
-}
 
 /// 导出记录，使用 ValueNotifier 实现响应式更新
 class ExportRecord {
@@ -19,10 +9,11 @@ class ExportRecord {
   final String name;
   final DateTime createdAt;
 
-  // 响应式字段
-  final ValueNotifier<ExportStatus> status = ValueNotifier(ExportStatus.pending);
-  final ValueNotifier<int> progress = ValueNotifier(0); // 已导出的文件数
-  int total = 0; // 总文件数
+  final ValueNotifier<ExportStatus> status = ValueNotifier(
+    ExportStatus.pending,
+  );
+  final ValueNotifier<int> progress = ValueNotifier(0);
+  int total = 0;
   String? outputPath;
   String? error;
 
@@ -33,7 +24,6 @@ class ExportRecord {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  /// 清理资源
   void dispose() {
     status.dispose();
     progress.dispose();
@@ -41,51 +31,14 @@ class ExportRecord {
 }
 
 /// 导出状态管理中心
-/// 监听 ExportService 的事件流，管理所有导出记录
 class ExportStore extends ChangeNotifier {
   final ExportService _exportService;
   final List<ExportRecord> _records = [];
-  StreamSubscription? _recordSub;
-  StreamSubscription? _progressSub;
-  StreamSubscription? _statusSub;
 
-  ExportStore(this._exportService) {
-    _listenToService();
-  }
+  ExportStore(this._exportService);
 
-  /// 获取所有导出记录
   List<ExportRecord> get records => List.unmodifiable(_records);
 
-  /// 监听 Service 的事件流
-  void _listenToService() {
-    // 监听新记录创建
-    _recordSub = _exportService.recordStream.listen((record) {
-      _records.insert(0, record); // 新记录插入到顶部
-      notifyListeners();
-    });
-
-    // 监听进度更新
-    _progressSub = _exportService.progressStream.listen((event) {
-      final record = getRecordById(event.recordId);
-      if (record != null) {
-        record.progress.value = event.progress;
-        record.total = event.total;
-        // 不需要 notifyListeners，因为是 ValueNotifier
-      }
-    });
-
-    // 监听状态变化
-    _statusSub = _exportService.statusStream.listen((event) {
-      final record = getRecordById(event.recordId);
-      if (record != null) {
-        record.status.value = event.status;
-        record.error = event.error;
-        // 不需要 notifyListeners，因为是 ValueNotifier
-      }
-    });
-  }
-
-  /// 根据ID查找记录
   ExportRecord? getRecordById(String id) {
     try {
       return _records.firstWhere((r) => r.id == id);
@@ -94,21 +47,69 @@ class ExportStore extends ChangeNotifier {
     }
   }
 
-  /// 触发重新导出（委托给 Service）
-  Future<void> exportBookById(int bookId) {
-    return _exportService.exportBookById(bookId);
+  /// 根据书籍 ID 导出（先查书籍再导出）
+  Future<ExportRecord?> exportBookById(int bookId, {String? exportDir}) async {
+    final book = await _exportService.getBookById(bookId);
+    if (book == null) return null;
+    return exportBook(book, exportDir: exportDir);
   }
 
-  /// 清空所有记录
-  void clearRecords() {
-    for (final record in _records) {
-      record.dispose();
+  /// 导出单本书籍
+  Future<ExportRecord?> exportBook(
+    BookTableData data, {
+    String? exportDir,
+  }) async {
+    if (data.localPaths.isEmpty) return null;
+    final dir = exportDir ?? await _exportService.pickExportDir();
+    if (dir == null) return null;
+
+    final record = ExportRecord(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      bookId: data.id,
+      name: data.name,
+    );
+    record.total = data.localPaths.length;
+    _records.insert(0, record);
+    notifyListeners();
+
+    // 异步执行，回调直接更新 record 的 ValueNotifier
+    _exportService.runExport(
+      data,
+      dir,
+      onProgress: (p, t) {
+        record.progress.value = p;
+        record.total = t;
+      },
+      onStatus: (s, e, path) {
+        record.status.value = s;
+        record.error = e;
+        record.outputPath = path;
+      },
+    );
+
+    return record;
+  }
+
+  /// 批量导出
+  Future<void> exportMultiple(
+    List<BookTableData> books, {
+    String? exportDir,
+  }) async {
+    if (books.isEmpty) return;
+    final dir = exportDir ?? await _exportService.pickExportDir();
+    if (dir == null) return;
+
+    for (final book in books) {
+      await exportBook(book, exportDir: dir);
     }
+  }
+
+  void clearRecords() {
+    for (final r in _records) r.dispose();
     _records.clear();
     notifyListeners();
   }
 
-  /// 删除指定记录
   void removeRecord(String id) {
     final record = getRecordById(id);
     if (record != null) {
@@ -120,12 +121,7 @@ class ExportStore extends ChangeNotifier {
 
   @override
   void dispose() {
-    _recordSub?.cancel();
-    _progressSub?.cancel();
-    _statusSub?.cancel();
-    for (final record in _records) {
-      record.dispose();
-    }
+    for (final r in _records) r.dispose();
     _records.clear();
     super.dispose();
   }

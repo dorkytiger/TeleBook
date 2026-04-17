@@ -127,7 +127,7 @@ class AppRoute {
       GoRoute(
         path: parseWeb,
         pageBuilder: (context, state) {
-          final parseUrl = state.pathParameters['url'] ?? '';
+          final parseUrl = state.extra as String? ?? '';
           return MaterialPage(child: ParseWebScreen(parseUrl: parseUrl));
         },
       ),

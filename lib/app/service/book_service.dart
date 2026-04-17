@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dk_util/dk_util.dart';
+import 'package:drift/drift.dart';
 import 'package:tele_book/app/db/app_database.dart';
 
 /// BookService 只负责管理 Book 基础数据
@@ -9,24 +11,8 @@ class BookService {
 
   BookService(this.db);
 
-  Future<List<BookTableData>> fetchPage({
-    int limit = 30,
-    int offset = 0,
-    String? keyword,
-  }) async {
-    return db.bookDao.getBooksPage(limit: limit, offset: offset, name: keyword);
-  }
-
-  Future<List<BookTableData>> fetchAfter({
-    DateTime? lastCreatedAt,
-    int limit = 30,
-    String? keyword,
-  }) async {
-    return db.bookDao.getBooksAfterCreatedAt(
-      lastCreatedAt: lastCreatedAt,
-      limit: limit,
-      name: keyword,
-    );
+  Stream<List<BookTableData>> watchBooks() {
+    return db.bookDao.watchBooks();
   }
 
   Future<BookTableData?> fetchById(int id) async {
@@ -34,7 +20,23 @@ class BookService {
   }
 
   Future<int> insert(BookTableCompanion companion) async {
-    return await db.bookDao.insertBook(companion);
+    final id = await db.bookDao.insertBook(companion);
+    return id;
+  }
+
+  /// 从导入事件直接构建并保存书籍
+  Future<int> insertWithPaths({
+    required String name,
+    required List<String> localPaths,
+  }) {
+    DKLog.i("插入书籍：$name，路径：$localPaths");
+    return insert(
+      BookTableCompanion.insert(
+        name: name,
+        localPaths: localPaths,
+        createdAt: Value(DateTime.now()),
+      ),
+    );
   }
 
   Future<void> update(BookTableData data) async {

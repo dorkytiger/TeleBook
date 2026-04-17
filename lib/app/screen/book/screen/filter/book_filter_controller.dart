@@ -1,15 +1,10 @@
 import 'dart:async';
 
 import 'package:dk_util/dk_util.dart';
-import 'package:dk_util/state/dk_state_query_get.dart';
 import 'package:dk_util/state/dk_state_query_helper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/service/book_service.dart';
-import 'package:tele_book/app/service/collection_servcie.dart';
-import 'package:tele_book/app/service/mark_service.dart';
-import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
 import 'package:tele_book/app/store/collection_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';

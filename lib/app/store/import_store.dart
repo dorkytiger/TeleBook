@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/import_service.dart';
 
 enum ImportStatus { pending, running, success, failed }
@@ -70,62 +70,15 @@ class ImportTask {
 }
 
 /// 导入状态管理中心
-/// 监听 ImportService 的事件流，管理所有导入组和任务
 class ImportStore extends ChangeNotifier {
   final ImportService _importService;
+  final BookService _bookService;
   final List<ImportGroup> _groups = [];
 
-  StreamSubscription? _groupSub;
-  StreamSubscription? _taskStatusSub;
-  StreamSubscription? _groupStatusSub;
-  StreamSubscription? _bookSaveSub;
-
-  ImportStore(this._importService) {
-    _listenToService();
-  }
+  ImportStore(this._importService, this._bookService);
 
   /// 获取所有导入组
   List<ImportGroup> get groups => List.unmodifiable(_groups);
-
-  /// 监听 Service 的事件流
-  void _listenToService() {
-    // 监听新导入组创建
-    _groupSub = _importService.groupStream.listen((group) {
-      _groups.insert(0, group); // 新组插入到顶部
-      notifyListeners();
-    });
-
-    // 监听任务状态更新
-    _taskStatusSub = _importService.taskStatusStream.listen((event) {
-      final group = getGroupById(event.groupId);
-      if (group != null) {
-        final task = _getTaskById(group, event.taskId);
-        if (task != null) {
-          task.status.value = event.status;
-          task.error = event.error;
-          if (event.distSubPath != null) {
-            task.distSubPath.value = event.distSubPath!;
-          }
-          // ValueNotifier 会自动通知监听者，不需要手动 notifyListeners
-        }
-      }
-    });
-
-    // 监听导入组状态更新
-    _groupStatusSub = _importService.groupStatusStream.listen((event) {
-      final group = getGroupById(event.groupId);
-      if (group != null) {
-        group.status.value = event.status;
-        // ValueNotifier 会自动通知监听者
-      }
-    });
-
-    // 监听书籍保存请求（这个可以由外部的 BookService 监听并处理）
-    _bookSaveSub = _importService.bookSaveStream.listen((event) {
-      // ImportStore 可以记录 bookId 等信息
-      // 实际的书籍保存应该由 BookService 处理
-    });
-  }
 
   /// 根据ID查找导入组
   ImportGroup? getGroupById(String id) {
@@ -145,7 +98,7 @@ class ImportStore extends ChangeNotifier {
     }
   }
 
-  /// 构建导入组（委托给 Service）
+  /// 构建导入组
   Future<ImportGroup> buildImportGroup({
     required String name,
     required ImportType type,
@@ -154,14 +107,32 @@ class ImportStore extends ChangeNotifier {
     return _importService.buildImportGroup(name: name, type: type, files: files);
   }
 
-  /// 添加导入组（委托给 Service，触发广播事件 → Store 自动更新）
+  /// 添加导入组到列表
   void addImportGroup(ImportGroup group) {
-    _importService.addImportGroup(group);
+    _groups.insert(0, group);
+    notifyListeners();
   }
 
-  /// 开始导入（委托给 Service）
+  /// 开始导入，回调直接更新 group/task 状态
   Future<void> startImport(ImportGroup group) {
-    return _importService.startImport(group);
+    return _importService.startImport(
+      group,
+      onTaskStatus: (taskId, status, error, distSubPath) {
+        final task = _getTaskById(group, taskId);
+        if (task != null) {
+          task.status.value = status;
+          task.error = error;
+          if (distSubPath != null) task.distSubPath.value = distSubPath;
+        }
+      },
+      onGroupStatus: (status) {
+        group.status.value = status;
+      },
+      onBookSave: (name, localPaths) async {
+        await _bookService.insertWithPaths(name: name, localPaths: localPaths);
+        notifyListeners();
+      },
+    );
   }
 
   /// 删除指定导入组
@@ -185,11 +156,6 @@ class ImportStore extends ChangeNotifier {
 
   @override
   void dispose() {
-    _groupSub?.cancel();
-    _taskStatusSub?.cancel();
-    _groupStatusSub?.cancel();
-    _bookSaveSub?.cancel();
-
     for (final group in _groups) {
       group.dispose();
     }

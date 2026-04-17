@@ -49,7 +49,7 @@ class _TaskScreenState extends State<TaskScreen>
                 IconButton(
                   onPressed: () {
                     // 使用 go_router 进行导航（替代 Get.toNamed）
-                    context.go(AppRoute.parseForm);
+                    context.push(AppRoute.parseForm);
                   },
                   icon: const Icon(Icons.add),
                 ),

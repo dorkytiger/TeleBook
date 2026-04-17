@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dk_util/dk_util.dart';
+import 'package:dk_util/state/dk_state_query_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
-import 'package:tele_book/app/service/export_service.dart';
-import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
 import 'package:tele_book/app/store/collection_store.dart';
+import 'package:tele_book/app/store/download_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
+import 'package:tele_book/app/store/import_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
 
 /// 书籍页面控制器
@@ -20,8 +22,8 @@ class BookController extends ChangeNotifier {
   final MarkStore markStore;
   final CollectionStore collectionStore;
   final ExportStore exportStore;
-  final ExportService exportService;
-  final PathService pathService;
+  final ImportStore importStore;
+  final DownloadStore downloadStore;
   final SharedPreferences sharedPreferences;
   final BuildContext context;
 
@@ -38,15 +40,15 @@ class BookController extends ChangeNotifier {
 
   // 书籍列表（组合了标签和收藏夹信息）
   List<BookVo> books = [];
-  bool isLoading = false;
+  DKStateQuery<List<BookVo>> fetchBooksState = DkStateQueryIdle();
 
   BookController({
     required this.bookStore,
     required this.markStore,
     required this.collectionStore,
     required this.exportStore,
-    required this.exportService,
-    required this.pathService,
+    required this.importStore,
+    required this.downloadStore,
     required this.sharedPreferences,
     required this.context,
   }) {
@@ -58,6 +60,9 @@ class BookController extends ChangeNotifier {
     bookStore.addListener(_onStoreChanged);
     markStore.addListener(_onStoreChanged);
     collectionStore.addListener(_onStoreChanged);
+    importStore.addListener(_onStoreChanged);
+    downloadStore.addListener(_onStoreChanged);
+    exportStore.addListener(_onStoreChanged);
 
     // 初始加载
     fetchBooks();
@@ -117,71 +122,73 @@ class BookController extends ChangeNotifier {
 
   /// 加载书籍列表
   Future<void> fetchBooks() async {
-    isLoading = true;
-    notifyListeners();
+    DKStateQueryHelper.triggerQuery(
+      query: () async {
+        final bookList = bookStore.items;
+        final collections = collectionStore.collections;
+        final collectionBooks = collectionStore.collectionBooks;
+        final marks = markStore.marks;
+        final markBooks = markStore.markBooks;
 
-    try {
-      final bookList = bookStore.items;
-      final collections = collectionStore.collections;
-      final collectionBooks = collectionStore.collectionBooks;
-      final marks = markStore.marks;
-      final markBooks = markStore.markBooks;
+        List<BookVo> bookVos = [];
 
-      List<BookVo> bookVos = [];
+        for (var book in bookList) {
+          // 获取书籍的标签
+          final bookMarks = markBooks
+              .where((mb) => mb.bookId == book.id)
+              .map((mb) {
+                try {
+                  return marks.firstWhere((m) => m.id == mb.markId);
+                } catch (_) {
+                  return null;
+                }
+              })
+              .whereType<MarkTableData>()
+              .toList();
 
-      for (var book in bookList) {
-        // 获取书籍的标签
-        final bookMarks = markBooks
-            .where((mb) => mb.bookId == book.id)
-            .map((mb) {
+          // 获取书籍的收藏夹
+          CollectionTableData? bookCollection;
           try {
-            return marks.firstWhere((m) => m.id == mb.markId);
+            final cb = collectionBooks.firstWhere((cb) => cb.bookId == book.id);
+            bookCollection = collections.firstWhere(
+              (c) => c.id == cb.collectionId,
+            );
           } catch (_) {
-            return null;
+            bookCollection = null;
           }
-        })
-            .whereType<MarkTableData>()
-            .toList();
 
-        // 获取书籍的收藏夹
-        CollectionTableData? bookCollection;
-        try {
-          final cb = collectionBooks.firstWhere((cb) => cb.bookId == book.id);
-          bookCollection = collections.firstWhere((c) => c.id == cb.collectionId);
-        } catch (_) {
-          bookCollection = null;
+          bookVos.add(
+            BookVo(book: book, marks: bookMarks, collection: bookCollection),
+          );
         }
 
-        bookVos.add(
-          BookVo(book: book, marks: bookMarks, collection: bookCollection),
-        );
-      }
+        // 进行排序
+        bookVos.sort((a, b) {
+          int compareResult = 0;
 
-      // 进行排序
-      bookVos.sort((a, b) {
-        int compareResult = 0;
+          // 根据排序类型进行比较
+          switch (sortBy.type) {
+            case BookSortType.title:
+              compareResult = a.book.name.compareTo(b.book.name);
+              break;
+            case BookSortType.addTime:
+              compareResult = a.book.createdAt.compareTo(b.book.createdAt);
+              break;
+          }
 
-        // 根据排序类型进行比较
-        switch (sortBy.type) {
-          case BookSortType.title:
-            compareResult = a.book.name.compareTo(b.book.name);
-            break;
-          case BookSortType.addTime:
-            compareResult = a.book.createdAt.compareTo(b.book.createdAt);
-            break;
-        }
+          // 根据排序顺序调整结果
+          return sortBy.order == BookSortOrder.asc
+              ? compareResult
+              : -compareResult;
+        });
 
-        // 根据排序顺序调整结果
-        return sortBy.order == BookSortOrder.asc ? compareResult : -compareResult;
-      });
-
-      books = bookVos;
-    } catch (e) {
-      debugPrint('Error fetching books: $e');
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+        return books = bookVos;
+      },
+      onStateChange: (value) {
+        fetchBooksState = value;
+        notifyListeners();
+      },
+    );
   }
 
   /// 搜索书籍
@@ -194,7 +201,7 @@ class BookController extends ChangeNotifier {
 
   /// 导出单本书籍
   Future<void> exportBook(BookTableData data) async {
-    await exportService.exportBook(data);
+    await exportStore.exportBook(data);
 
     // 导航到任务页面的导出 tab
     if (context.mounted) {
@@ -211,7 +218,7 @@ class BookController extends ChangeNotifier {
         .toList();
 
     // 添加所有书籍到导出队列
-    await exportService.exportMultiple(booksToExport);
+    await exportStore.exportMultiple(booksToExport);
 
     // 清除选择状态
     selectedBookIds.clear();
@@ -301,11 +308,7 @@ class BookVo {
   final List<MarkTableData> marks;
   final CollectionTableData? collection;
 
-  BookVo({
-    required this.book,
-    required this.marks,
-    required this.collection,
-  });
+  BookVo({required this.book, required this.marks, required this.collection});
 }
 
 /// 书籍排序
@@ -319,4 +322,3 @@ class BookSort {
 enum BookSortOrder { asc, desc }
 
 enum BookSortType { title, addTime }
-

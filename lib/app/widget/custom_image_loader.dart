@@ -6,8 +6,16 @@ import 'package:tele_book/app/widget/custom_error.dart';
 class CustomImageLoader extends StatefulWidget {
   final String? networkUrl;
   final String? localUrl;
+  final double width;
+  final double height;
 
-  const CustomImageLoader({super.key, this.networkUrl, this.localUrl});
+  const CustomImageLoader({
+    super.key,
+    this.networkUrl,
+    this.localUrl,
+    this.width = 80,
+    this.height = 80,
+  });
 
   @override
   _CustomImageLoaderState createState() => _CustomImageLoaderState();
@@ -30,7 +38,7 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
 
   void _setUrl() {
     if (widget.networkUrl == null && widget.localUrl == null) {
-      throw ArgumentError('Both networkUrl and localUrl cannot be null');
+      return;
     }
 
     setState(() {
@@ -59,29 +67,58 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.localUrl == null && widget.networkUrl == null) {
+      return SizedBox.shrink();
+    }
+
     if (widget.localUrl != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
-          height: 80,
-          width: 80,
+          height: widget.height,
+          width: widget.width,
           child: Image.file(File(_url), fit: BoxFit.cover),
         ),
       );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        height: 80,
-        width: 80,
-        child: Image.network(
-          _url,
-          fit: BoxFit.cover,
-          frameBuilder: (context, child, frame, _) {
-            if (frame == null) {
+    } else {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: SizedBox(
+          height: widget.height,
+          width: widget.width,
+          child: Image.network(
+            _url,
+            fit: BoxFit.cover,
+            frameBuilder: (context, child, frame, _) {
+              if (frame == null) {
+                return Container(
+                  height: widget.height,
+                  width: widget.width,
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: SizedBox.square(
+                      dimension: 20, // 明确指定正方形尺寸
+                      child: CircularProgressIndicator.adaptive(
+                        strokeWidth: 2, // 更细的线条适合小尺寸
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return child;
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                return child;
+              }
               return Container(
-                height: 80,
-                width: 80,
+                height: widget.height,
+                width: widget.width,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(8),
@@ -95,40 +132,18 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
                   ),
                 ),
               );
-            }
-            return child;
-          },
-          loadingBuilder: (context, widget, loadingProgress) {
-            if (loadingProgress == null) {
-              return widget;
-            }
-            return Container(
-              height: 80,
-              width: 80,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: SizedBox.square(
-                  dimension: 20, // 明确指定正方形尺寸
-                  child: CircularProgressIndicator.adaptive(
-                    strokeWidth: 2, // 更细的线条适合小尺寸
-                  ),
+            },
+            errorBuilder: (context, error, stackTrace) {
+              return Center(
+                child: CustomError(
+                  title: error.toString(),
+                  description: stackTrace.toString(),
                 ),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Center(
-              child: CustomError(
-                title: error.toString(),
-                description: stackTrace.toString(),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

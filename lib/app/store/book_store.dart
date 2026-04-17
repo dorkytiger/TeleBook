@@ -1,58 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/service/book_service.dart';
 
 class BookStore extends ChangeNotifier {
   final BookService _service;
+  StreamSubscription? _bookStreamSubscription;
 
-  List<BookTableData> items = [];
-  bool isLoading = false;
-  bool isRefreshing = false;
-  bool hasMore = true;
-  DateTime? _cursor;
-  String? keyword;
+  List<BookTableData> _items = [];
 
-  BookStore(this._service);
+  List<BookTableData> get items => _items;
 
-  Future<void> refresh({String? newKeyword}) async {
-    keyword = newKeyword;
-    isRefreshing = true;
-    notifyListeners();
-    try {
-      items.clear();
-      _cursor = null;
-      hasMore = true;
-      await loadMore(); // loads first page
-    } finally {
-      isRefreshing = false;
+  BookStore(this._service) {
+    _bookStreamSubscription?.cancel();
+    _bookStreamSubscription = _service.watchBooks().listen((event) {
+      _items = event;
       notifyListeners();
-    }
-  }
-
-  Future<void> loadMore({int pageSize = 30}) async {
-    if (isLoading || !hasMore) return;
-    isLoading = true;
-    notifyListeners();
-    try {
-      final page = await _service.fetchAfter(
-        lastCreatedAt: _cursor,
-        limit: pageSize,
-        keyword: keyword,
-      );
-      if (page.isEmpty) {
-        hasMore = false;
-      } else {
-        items.addAll(page);
-        _cursor = page.last.createdAt;
-        if (page.length < pageSize) hasMore = false;
-      }
-    } catch (e) {
-      // handle error: set an error field or rethrow
-      rethrow;
-    } finally {
-      isLoading = false;
-      notifyListeners();
-    }
+    });
   }
 
   Future<BookTableData?> getBookById(int id) async {

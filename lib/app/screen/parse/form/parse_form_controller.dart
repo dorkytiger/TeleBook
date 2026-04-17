@@ -18,6 +18,14 @@ class ParseFormController extends ChangeNotifier {
   final imageFolderPathController = TextEditingController();
   final batchImageFolderPathController = TextEditingController();
 
+  void setSource(BookFormSources? newSource) {
+    if(newSource!=null){
+      source = newSource;
+      sourceController.text = newSource.desc;
+      notifyListeners();
+    }
+  }
+
   Future<void> submitForm(BuildContext context) async {
     final sourceValue = source;
 
@@ -27,60 +35,42 @@ class ParseFormController extends ChangeNotifier {
         return;
       }
       // 然后打开解析页面
-      context.pushNamed(
-        AppRoute.parseWeb,
-        pathParameters: {"url": url.toString()},
-      );
+      context.push(AppRoute.parseWeb, extra: url.toString());
     }
     if (sourceValue == BookFormSources.archive) {
       final file = filePathController.text;
       if (file.toString().trim().isEmpty) {
         return;
       }
-      context.pushNamed(
-        AppRoute.parseArchiveSingle,
-        pathParameters: {"file": file.toString()},
-      );
+      context.push(AppRoute.parseArchiveSingle, extra: file.toString());
     }
     if (sourceValue == BookFormSources.batchArchive) {
       final folder = folderPathController.text;
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      context.pushNamed(
-        AppRoute.parseArchiveBatch,
-        pathParameters: {"folder": folder.toString()},
-      );
+      context.push(AppRoute.parseArchiveBatch, extra: folder.toString());
     }
     if (sourceValue == BookFormSources.pdf) {
       final pdf = pdfPathController.text;
       if (pdf.toString().trim().isEmpty) {
         return;
       }
-      context.pushNamed(
-        AppRoute.parsePdf,
-        pathParameters: {"path": pdf.toString()},
-      );
+      context.push(AppRoute.parsePdf, extra: pdf.toString());
     }
     if (sourceValue == BookFormSources.imageFolder) {
       final folder = imageFolderPathController.text;
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      context.pushNamed(
-        AppRoute.parseImageFolder,
-        pathParameters: {"folder": folder.toString()},
-      );
+      context.push(AppRoute.parseImageFolder, extra: folder.toString());
     }
     if (sourceValue == BookFormSources.batchImageFolder) {
       final folder = batchImageFolderPathController.text;
       if (folder.toString().trim().isEmpty) {
         return;
       }
-      context.pushNamed(
-        AppRoute.parseBatchImageFolder,
-        pathParameters: {"folder": folder.toString()},
-      );
+      context.push(AppRoute.parseBatchImageFolder, extra: folder.toString());
     }
   }
 

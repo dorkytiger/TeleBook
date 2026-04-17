@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,13 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/screen/book/book_controller.dart';
-import 'package:tele_book/app/service/export_service.dart';
-import 'package:tele_book/app/service/path_service.dart';
 import 'package:tele_book/app/store/book_store.dart';
 import 'package:tele_book/app/store/collection_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
+import 'package:tele_book/app/widget/custom_image_loader.dart';
 
 /// 书籍页面 - 使用 Provider 模式
 class BookScreen extends StatelessWidget {
@@ -27,8 +26,8 @@ class BookScreen extends StatelessWidget {
         markStore: context.read<MarkStore>(),
         collectionStore: context.read<CollectionStore>(),
         exportStore: context.read<ExportStore>(),
-        exportService: context.read<ExportService>(),
-        pathService: context.read<PathService>(),
+        importStore: context.read(),
+        downloadStore: context.read(),
         sharedPreferences: context.read<SharedPreferences>(),
         context: context,
       ),
@@ -59,9 +58,14 @@ class _BookScreenContent extends StatelessWidget {
             ),
             body: RefreshIndicator(
               onRefresh: () => controller.fetchBooks(),
-              child: controller.bookLayout == BookLayoutSetting.list
-                  ? const _BookListView()
-                  : const _BookGridView(),
+              child: DKStateQueryDisplay(
+                state: controller.fetchBooksState,
+                successBuilder: (data) {
+                  return controller.bookLayout == BookLayoutSetting.list
+                      ? const _BookListView()
+                      : const _BookGridView();
+                },
+              ),
             ),
           ),
         );
@@ -87,26 +91,13 @@ class _SearchButton extends StatelessWidget {
         final results = controller.searchBooks(searchController.text);
         return results.map((bookVo) {
           return ListTile(
-            leading: ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: SizedBox(
-                width: 40,
-                height: 60,
-                child: Image.file(
-                  File(
-                    controller.pathService.getBookFilePath(
-                      bookVo.book.localPaths.first,
-                    ),
-                  ),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    child: const Icon(Icons.broken_image, size: 20),
-                  ),
-                ),
+            leading: FutureBuilder(
+              future: FileUtil.getBookImageFullPath(
+                bookVo.book.localPaths.first,
               ),
+              builder: (context, snapData) {
+                return CustomImageLoader(localUrl: snapData.data);
+              },
             ),
             title: Text(bookVo.book.name),
             subtitle: Text(
@@ -219,9 +210,13 @@ class _ActionPopupButton extends StatelessWidget {
   }
 
   void _showBottomSheet(BuildContext context) {
+    final controller = context.read<BookController>();
     showModalBottomSheet(
       context: context,
-      builder: (context) => const _BatchEditBottomSheet(),
+      builder: (sheetContext) => ChangeNotifierProvider.value(
+        value: controller,
+        child: const _BatchEditBottomSheet(),
+      ),
     );
   }
 }
@@ -234,14 +229,6 @@ class _BookListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
-        if (controller.isLoading && controller.books.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (controller.books.isEmpty) {
-          return const Center(child: CustomEmpty(message: '暂无书籍'));
-        }
-
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           separatorBuilder: (context, index) => const SizedBox(height: 16),
@@ -265,7 +252,6 @@ class _BookListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.read<BookController>();
-    final pathService = context.read<PathService>();
     final isSelected = controller.selectedBookIds.contains(bookVo.book.id);
 
     void onTap() {
@@ -301,7 +287,7 @@ class _BookListItem extends StatelessWidget {
               ),
             )
           else
-            _buildCover(context, pathService),
+            _buildCover(context),
           // 信息区域
           Expanded(child: _buildInfo(context)),
         ],
@@ -309,21 +295,12 @@ class _BookListItem extends StatelessWidget {
     );
   }
 
-  Widget _buildCover(BuildContext context, PathService pathService) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        width: 60,
-        height: 80,
-        child: Image.file(
-          File(pathService.getBookFilePath(bookVo.book.localPaths.first)),
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: const Icon(Icons.broken_image, size: 30),
-          ),
-        ),
-      ),
+  Widget _buildCover(BuildContext context) {
+    return FutureBuilder(
+      future: FileUtil.getBookImageFullPath(bookVo.book.localPaths.first),
+      builder: (context, snapData) {
+        return CustomImageLoader(localUrl: snapData.data);
+      },
     );
   }
 
@@ -376,9 +353,13 @@ class _BookListItem extends StatelessWidget {
   }
 
   void _showBottomSheet(BuildContext context) {
+    final controller = context.read<BookController>();
     showModalBottomSheet(
       context: context,
-      builder: (context) => const _BatchEditBottomSheet(),
+      builder: (sheetContext) => ChangeNotifierProvider.value(
+        value: controller,
+        child: const _BatchEditBottomSheet(),
+      ),
     );
   }
 }
@@ -391,14 +372,6 @@ class _BookGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
-        if (controller.isLoading && controller.books.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (controller.books.isEmpty) {
-          return const Center(child: CustomEmpty(message: '暂无书籍'));
-        }
-
         return GridView.builder(
           padding: const EdgeInsets.all(16),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -427,7 +400,6 @@ class _BookGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<BookController>();
-    final pathService = context.read<PathService>();
     final isSelected = controller.selectedBookIds.contains(bookVo.book.id);
 
     void onTap() {
@@ -456,23 +428,13 @@ class _BookGridItem extends StatelessWidget {
           // 封面 + 选择框
           Stack(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: AspectRatio(
-                  aspectRatio: 0.67,
-                  child: Image.file(
-                    File(
-                      pathService.getBookFilePath(bookVo.book.localPaths.first),
-                    ),
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.broken_image, size: 40),
-                    ),
-                  ),
+              FutureBuilder(
+                future: FileUtil.getBookImageFullPath(
+                  bookVo.book.localPaths.first,
                 ),
+                builder: (context, snapData) {
+                  return CustomImageLoader(localUrl: snapData.data);
+                },
               ),
               if (controller.multiEditMode)
                 Positioned(
@@ -587,9 +549,13 @@ class _BookGridItem extends StatelessWidget {
   }
 
   void _showBottomSheet(BuildContext context) {
+    final controller = context.read<BookController>();
     showModalBottomSheet(
       context: context,
-      builder: (context) => const _BatchEditBottomSheet(),
+      builder: (sheetContext) => ChangeNotifierProvider.value(
+        value: controller,
+        child: const _BatchEditBottomSheet(),
+      ),
     );
   }
 }
