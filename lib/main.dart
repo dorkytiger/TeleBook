@@ -1,10 +1,8 @@
-import 'dart:io';
-
 import 'package:dk_util/config/dk_config.dart';
 import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/route/app_route.dart';
 import 'package:tele_book/app/service/book_service.dart';
@@ -19,9 +17,9 @@ import 'package:tele_book/app/store/download_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/store/import_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
-import 'package:tele_book/app/util/file_util.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,7 +61,6 @@ Future<void> _init() async {
   // 书籍状态管理（提前创建，BookStore 内部监听 BookService 自动响应新增）
   final bookStore = BookStore(bookService);
 
-
   appProviders = MultiProvider(
     providers: [
       // Services
@@ -91,47 +88,15 @@ Future<void> _init() async {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
+      builder: (context, child) => ResponsiveBreakpoints.builder(
+        child: child!,
+        breakpoints: [
+          const Breakpoint(start: 0, end: 480, name: MOBILE),
+          const Breakpoint(start: 481, end: 800, name: TABLET),
+          const Breakpoint(start: 801, end: 1200, name: DESKTOP),
+          const Breakpoint(start: 1201, end: double.infinity, name: '4K'),
+        ],
+      ),
     ),
   );
-
-  // 清理临时目录
-  await _cleanupTempDirectory();
-}
-
-/// 清理临时目录
-Future<void> _cleanupTempDirectory() async {
-  try {
-    final tempDir = await getTemporaryDirectory();
-
-    // 清理批量导入的临时文件
-    final batchImportDir = Directory('${tempDir.path}/batch_import');
-    if (await batchImportDir.exists()) {
-      await batchImportDir.delete(recursive: true);
-      debugPrint('已清理批量导入临时目录: ${batchImportDir.path}');
-    }
-
-    // 清理其他临时解压文件（根据时间戳命名的文件夹）
-    if (await tempDir.exists()) {
-      final entries = tempDir.listSync();
-      for (final entry in entries) {
-        if (entry is Directory) {
-          // 删除以数字命名的临时文件夹（时间戳格式）
-          final dirName = entry.path.split(Platform.pathSeparator).last;
-          if (RegExp(r'^\d+$').hasMatch(dirName)) {
-            try {
-              await entry.delete(recursive: true);
-              debugPrint('已清理临时目录: ${entry.path}');
-            } catch (e) {
-              debugPrint('清理临时目录失败: ${entry.path}, 错误: $e');
-            }
-          }
-        }
-      }
-    }
-
-    debugPrint('临时目录清理完成');
-  } catch (e) {
-    debugPrint('清理临时目录时出错: $e');
-    // 清理失败不影响应用启动
-  }
 }

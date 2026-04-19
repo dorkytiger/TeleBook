@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:tele_book/app/db/dao/book/book_dao.dart';
 import 'package:tele_book/app/db/dao/collection/collection_book_dao.dart';
@@ -13,8 +14,6 @@ import 'package:tele_book/app/db/table/mark/mark_book_table.dart';
 import 'package:tele_book/app/db/table/mark/mark_table.dart';
 
 import 'converter/string_list_converter.dart';
-import 'package:path/path.dart' as p;
-import 'sql_log_interceptor.dart';
 
 part 'app_database.g.dart';
 

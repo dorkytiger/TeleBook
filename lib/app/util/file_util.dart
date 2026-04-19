@@ -226,6 +226,7 @@ class FileUtil {
 
     return fullPath;
   }
+
 }
 
 /// 保存图片结果（包含相对路径和完整路径）

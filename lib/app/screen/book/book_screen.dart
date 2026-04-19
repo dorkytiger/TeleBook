@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/enum/setting/book_layout_setting.dart';
 import 'package:tele_book/app/route/app_route.dart';
@@ -230,15 +231,27 @@ class _BookListView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
-        return ListView.separated(
+        final isMobile = ResponsiveBreakpoints.of(context).isMobile;
+        if (isMobile) {
+          return ListView.separated(
+            cacheExtent: 100,
+            padding: const EdgeInsets.all(16),
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            itemCount: controller.books.length,
+            itemBuilder: (context, index) =>
+                _BookListItem(bookVo: controller.books[index]),
+          );
+        }
+        // 平板及以上：网格卡片式列表
+        return MasonryGridView.extent(
           cacheExtent: 100,
           padding: const EdgeInsets.all(16),
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          maxCrossAxisExtent: ResponsiveBreakpoints.of(context).isTablet ? 220 : 180,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
           itemCount: controller.books.length,
-          itemBuilder: (context, index) {
-            final bookVo = controller.books[index];
-            return _BookListItem(bookVo: bookVo);
-          },
+          itemBuilder: (context, index) =>
+              _BookListItem(bookVo: controller.books[index]),
         );
       },
     );
@@ -275,17 +288,34 @@ class _BookListItem extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongTap,
       borderRadius: BorderRadius.circular(8),
-      child: Row(
+      child: ResponsiveRowColumn(
+        layout: ResponsiveBreakpoints.of(context).largerThan(MOBILE)
+            ? ResponsiveRowColumnType.COLUMN
+            : ResponsiveRowColumnType.ROW,
+        columnMainAxisSize: MainAxisSize.min,
+        rowCrossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          controller.multiEditMode
-              ? Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => controller.toggleSelectBook(bookVo.book.id),
-                )
-              : SizedBox.shrink(),
-          _buildCover(context),
-          SizedBox(width: 16),
-          Expanded(child: _buildInfo(context)),
+          if (controller.multiEditMode)
+            ResponsiveRowColumnItem(
+              child: Checkbox(
+                value: isSelected,
+                onChanged: (_) => controller.toggleSelectBook(bookVo.book.id),
+              ),
+            ),
+          ResponsiveRowColumnItem(
+            rowFit: FlexFit.loose,
+            child: _buildCover(context),
+          ),
+          ResponsiveRowColumnItem(
+            rowFit: FlexFit.tight,
+            rowFlex: 1,
+            child: Padding(
+              padding: ResponsiveBreakpoints.of(context).largerThan(MOBILE)
+                  ? const EdgeInsets.only(top: 8)
+                  : const EdgeInsets.only(left: 16),
+              child: _buildInfo(context),
+            ),
+          ),
         ],
       ),
     );
@@ -352,10 +382,12 @@ class _BookGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
+        final bp = ResponsiveBreakpoints.of(context);
+        final maxExtent = bp.isMobile ? 160.0 : bp.isTablet ? 200.0 : 240.0;
         return MasonryGridView.extent(
           cacheExtent: 100,
           padding: const EdgeInsets.all(16),
-          maxCrossAxisExtent: 180,
+          maxCrossAxisExtent: maxExtent,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
           itemCount: controller.books.length,
