@@ -2,9 +2,14 @@
 cmake_minimum_required(VERSION 3.14)
 project(wo_nas LANGUAGES CXX)
 
+# Suppress CMP0175 warning from third-party plugins (e.g. flutter_inappwebview_windows)
+if(POLICY CMP0175)
+  cmake_policy(SET CMP0175 OLD)
+endif()
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "wo_nas")
+set(BINARY_NAME "TeleBook")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

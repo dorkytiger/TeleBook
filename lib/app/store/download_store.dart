@@ -5,7 +5,6 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:tele_book/app/service/book_service.dart';
 import 'package:tele_book/app/service/download_service.dart';
-import 'package:tele_book/app/util/file_util.dart';
 
 // ── 数据模型 ──────────────────────────────────────────────────────────────────
 
@@ -432,33 +431,6 @@ class DownloadStore extends ChangeNotifier {
       _service.openNotificationSettings();
 
 
-  Future<void> saveToBook(String groupId) async {
-    final group = groups[groupId];
-    if (group == null) throw Exception("未找到下载组 $groupId");
-    if (group.completedCount != group.totalCount) {
-      throw Exception("下载未完成（${group.completedCount}/${group.totalCount}），无法保存到书架");
-    }
-
-    final savePaths = _tasksByGroup(groupId)
-        .where((t) => t.status == TaskStatus.complete && t.savePath.isNotEmpty)
-        .map((t) => t.savePath)
-        .toList();
-    if (savePaths.isEmpty) throw Exception('没有找到任何已完成的下载文件');
-
-    // 验证文件是否真实存在
-    final (validPaths, notFoundCount) = await FileUtil.validateFiles(savePaths);
-    if (validPaths.isEmpty) throw Exception('没有找到任何有效的下载文件，可能文件已被删除');
-    if (notFoundCount > 0) debugPrint('⚠️ 有 $notFoundCount 个文件缺失，但仍将保存书籍');
-
-    // 通过 BookService 保存（会触发 bookInsertedStream → BookStore 自动刷新）
-    await _bookService.insertWithPaths(
-      name: group.name,
-      localPaths: validPaths,
-    );
-
-    debugPrint('✅ Store: 下载组 ${group.name} 已保存为书籍');
-    notifyListeners();
-  }
 
   // ── 私有辅助 ──────────────────────────────────────────────────────────────
 
@@ -522,7 +494,14 @@ class DownloadStore extends ChangeNotifier {
       return;
     }
 
-    debugPrint('✅ 下载组 ${groupInfo.name} 全部完成');
+    debugPrint('✅ 下载组 ${groupInfo.name} 全部完成，开始保存书籍');
+    _bookService.insertWithPaths(name: groupInfo.name, localPaths: paths).then((_) {
+      debugPrint('✅ 书籍已保存: ${groupInfo.name}');
+      notifyListeners();
+    }).catchError((e) {
+      debugPrint('❌ 保存书籍失败: $e');
+    });
+
     onGroupCompleted?.call(groupId, groupInfo.name, paths);
   }
 

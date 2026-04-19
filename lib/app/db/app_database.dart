@@ -14,6 +14,7 @@ import 'package:tele_book/app/db/table/mark/mark_table.dart';
 
 import 'converter/string_list_converter.dart';
 import 'package:path/path.dart' as p;
+import 'sql_log_interceptor.dart';
 
 part 'app_database.g.dart';
 
@@ -29,7 +30,8 @@ part 'app_database.g.dart';
 )
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase([QueryExecutor? executor])
+      : super((executor ?? _openConnection()));
 
   @override
   int get schemaVersion => 4;

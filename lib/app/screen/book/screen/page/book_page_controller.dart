@@ -1,8 +1,10 @@
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/enum/reading_direction_enum.dart';
 import 'package:tele_book/app/store/book_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 class BookPageController extends ChangeNotifier {
   final int bookId;
@@ -27,6 +29,7 @@ class BookPageController extends ChangeNotifier {
   // 是否显示进度条
   bool showProgress = true;
   BookTableData? _bookData;
+  List<String> fullImagePaths = [];
 
   BookTableData? get bookData => _bookData;
 
@@ -46,9 +49,14 @@ class BookPageController extends ChangeNotifier {
   }
 
   void _onBookDataChanged() {
-    final book = bookStore.items.firstWhere((b) => b.id == bookId);
+    final book = bookStore.items.cast<BookTableData?>().firstWhere(
+      (b) => b?.id == bookId,
+      orElse: () => null,
+    );
+    if (book == null) return;
     _bookData = book;
     totalPages = book.localPaths.length;
+    fullImagePaths= FileUtil.getBookImageFullPaths(book.localPaths);
     notifyListeners();
   }
 
@@ -71,11 +79,12 @@ class BookPageController extends ChangeNotifier {
       }
 
       _bookData = book;
-
       totalPages = book.localPaths.length;
+      fullImagePaths = await FileUtil.getBookImageFullPaths(book.localPaths);
 
       // 设置当前页为保存的阅读进度
       currentPage = book.currentPage;
+      DKLog.t("Loaded book data: id=${book.id}, name=${book.name}, totalPages=$totalPages, currentPage=$currentPage");
 
       // 初始化页面控制器，从保存的页面开始
       pageController = PageController(initialPage: currentPage);
@@ -171,49 +180,20 @@ class BookPageController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 显示阅读设置对话框
-  void showReadingSettings(BuildContext context) {
-    showGeneralDialog(
-      context: context,
-      pageBuilder: (context, ts, tx) {
-        return AlertDialog(
-          title: Text('阅读设置'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 16),
-              const Text('选择阅读方向：'),
-              const SizedBox(height: 16),
-              RadioGroup<ReadingDirection>(
-                onChanged: (value) {
-                  if (value != null) {
-                    saveReadingDirection(value);
-                  }
-                },
-                groupValue: readingDirection,
-                child: Column(
-                  children: [
-                    RadioListTile(
-                      value: ReadingDirection.leftToRight,
-                      selected:
-                          readingDirection == ReadingDirection.leftToRight,
-                      title: Text('左右阅读'),
-                    ),
-                    RadioListTile(
-                      value: ReadingDirection.topToBottom,
-                      selected:
-                          readingDirection == ReadingDirection.topToBottom,
-                      title: Text('上下阅读'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+
+
+  @override
+  void dispose() {
+    bookStore.removeListener(_onBookDataChanged);
+    if (pageController.hasClients) {
+      pageController.removeListener(_onPageChanged);
+    }
+    pageController.dispose();
+    if (scrollController.hasClients) {
+      scrollController.removeListener(_onScrollChanged);
+    }
+    scrollController.dispose();
+    super.dispose();
   }
 
   /// 保存阅读方向设置

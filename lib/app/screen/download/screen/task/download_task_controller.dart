@@ -14,7 +14,7 @@ class DownloadTaskController extends ChangeNotifier {
 
   List<DownloadTaskInfo> get tasks => downloadStore.getTasksByGroup(groupId);
 
-  Future<String?> getFilePath(String savePath) =>
+  String? getFilePath(String savePath) =>
       FileUtil.getFullPath(savePath);
 
   Future<void> resume(String taskId) => downloadStore.resume(taskId);

@@ -16,151 +16,81 @@ class ParsePdfController extends ChangeNotifier {
 
   final PdfImageConverter _converter = PdfImageConverter();
 
-  DKStateQuery<int> initState = DkStateQueryIdle();
-  bool isImporting = false;
+  /// 处理进度状态，成功后 data 为临时图片文件列表
+  DKStateQuery<List<File>> processState = DkStateQueryIdle();
 
-  final List<Uint8List?> pageImages = [];
-  final List<bool> pageLoading = [];
+  /// 渲染进度
+  int processedCount = 0;
+  int totalPages = 0;
 
-  Future<void> _renderQueue = Future.value();
+  /// 临时目录，dispose 时清理
+  Directory? _tempDir;
 
-  int get totalPages => pageImages.length;
+  String get bookName => p.basenameWithoutExtension(path);
 
   ParsePdfController({required this.path, required this.importStore}) {
-    _openPdf();
+    _processAllPages();
   }
 
   @override
   void dispose() {
     _converter.closePdf();
+    _cleanTempDir();
     super.dispose();
   }
 
-  Future<void> _openPdf() async {
+  void _cleanTempDir() {
+    final dir = _tempDir;
+    if (dir != null && dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+    }
+  }
+
+  Future<void> _processAllPages() async {
     await DKStateQueryHelper.triggerQuery(
       onStateChange: (value) {
-        initState = value;
+        processState = value;
         notifyListeners();
       },
       query: () async {
         await _converter.openPdf(path);
-        final count = _converter.pageCount;
-        pageImages.clear();
-        pageImages.addAll(List<Uint8List?>.filled(count, null));
-        pageLoading.clear();
-        pageLoading.addAll(List<bool>.filled(count, false));
-        return count;
+        totalPages = _converter.pageCount;
+        notifyListeners();
+
+        final tempBase = await getTemporaryDirectory();
+        final id = DateTime.now().millisecondsSinceEpoch.toString();
+        _tempDir = Directory('${tempBase.path}/pdf_preview_$id');
+        await _tempDir!.create(recursive: true);
+
+        final List<File> pageFiles = [];
+        for (var i = 0; i < totalPages; i++) {
+          final Uint8List? imageData = await _converter.renderPage(i);
+          if (imageData == null) continue;
+          final file = File(
+            '${_tempDir!.path}/page_${(i + 1).toString().padLeft(4, '0')}.png',
+          );
+          await file.writeAsBytes(imageData);
+          pageFiles.add(file);
+          processedCount = i + 1;
+          notifyListeners();
+        }
+        return pageFiles;
       },
     );
   }
 
-  Future<void> renderPage(int index) async {
-    if (index < 0 || index >= totalPages) return;
-    if (pageImages[index] != null || pageLoading[index]) return;
-
-    pageLoading[index] = true;
-    notifyListeners();
-
-    _renderQueue = _renderQueue.then((_) => _doRender(index));
-    await _renderQueue;
-  }
-
-  Future<void> _doRender(int index) async {
-    if (index < 0 || index >= totalPages) return;
-    if (pageImages[index] != null) {
-      pageLoading[index] = false;
-      notifyListeners();
-      return;
-    }
-    try {
-      final image = await _converter.renderPage(index);
-      pageImages[index] = image;
-    } catch (e) {
-      debugPrint('渲染第 ${index + 1} 页失败: $e');
-    } finally {
-      if (index < pageLoading.length) {
-        pageLoading[index] = false;
-      }
-      notifyListeners();
-    }
-  }
-
-  void releasePage(int index) {
-    if (index < 0 || index >= totalPages) return;
-    if (pageImages[index] == null) return;
-    pageImages[index] = null;
-    notifyListeners();
-  }
-
   Future<void> importPDF() async {
-    debugPrint('[importPDF] 开始调用, isImporting=$isImporting, totalPages=$totalPages');
-    if (isImporting) {
-      debugPrint('[importPDF] 已在导入中，直接返回');
-      return;
-    }
-    isImporting = true;
-    notifyListeners();
+    final state = processState;
+    if (state is! DkStateQuerySuccess<List<File>>) return;
+    final pageFiles = state.data;
+    if (pageFiles.isEmpty) return;
 
-    try {
-      final id = DateTime.now().millisecondsSinceEpoch.toString();
-      final name = p.basenameWithoutExtension(path);
-      debugPrint('[importPDF] id=$id, name=$name');
-
-      final group = ImportGroup(id: id, name: name, type: ImportType.pdf);
-
-      final tempDir = await getTemporaryDirectory();
-      final pdfTempDir = Directory('${tempDir.path}/pdf_$id');
-      debugPrint('[importPDF] 临时目录: ${pdfTempDir.path}');
-      if (!await pdfTempDir.exists()) {
-        await pdfTempDir.create(recursive: true);
-        debugPrint('[importPDF] 临时目录已创建');
-      }
-
-      for (var i = 0; i < totalPages; i++) {
-        debugPrint('[importPDF] 处理第 ${i + 1}/$totalPages 页');
-        Uint8List? imageData = pageImages[i];
-        bool rendered = false;
-        if (imageData == null) {
-          debugPrint('[importPDF] 第 ${i + 1} 页未缓存，开始渲染');
-          imageData = await _converter.renderPage(i);
-          rendered = true;
-          debugPrint('[importPDF] 第 ${i + 1} 页渲染结果: ${imageData == null ? "null（跳过）" : "${imageData.length} bytes"}');
-        }
-        if (imageData == null) {
-          debugPrint('[importPDF] 第 ${i + 1} 页 imageData 为 null，跳过');
-          continue;
-        }
-
-        final tempFile = File('${pdfTempDir.path}/page_${i + 1}.png');
-        await tempFile.writeAsBytes(imageData);
-        debugPrint('[importPDF] 第 ${i + 1} 页已写入: ${tempFile.path}');
-
-        if (rendered) imageData = null;
-
-        group.tasks.value = [
-          ...group.tasks.value,
-          ImportTask(id: '${id}_task_$i', groupId: id, filePath: tempFile.path),
-        ];
-        debugPrint('[importPDF] 当前 tasks 数量: ${group.tasks.value.length}');
-      }
-
-      debugPrint('[importPDF] 循环结束，共 ${group.tasks.value.length} 个任务，准备调用 addImportGroup');
-      importStore.addImportGroup(group);
-      debugPrint('[importPDF] addImportGroup 完成，准备调用 startImport');
-      await importStore.startImport(group);
-      debugPrint('[importPDF] startImport 完成');
-
-      if (await pdfTempDir.exists()) {
-        await pdfTempDir.delete(recursive: true);
-        debugPrint('[importPDF] 临时目录已删除');
-      }
-    } catch (e, st) {
-      debugPrint('[importPDF] 发生异常: $e\n$st');
-      rethrow;
-    } finally {
-      isImporting = false;
-      notifyListeners();
-      debugPrint('[importPDF] 结束，isImporting 已重置为 false');
-    }
+    final group = await importStore.buildImportGroup(
+      name: bookName,
+      type: ImportType.pdf,
+      files: pageFiles,
+    );
+    importStore.addImportGroup(group);
+    unawaited(importStore.startImport(group));
   }
 }

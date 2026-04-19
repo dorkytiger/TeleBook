@@ -65,7 +65,12 @@ class BookFilterController extends ChangeNotifier {
               .firstOrNull;
 
           bookVos.add(
-            BookVo(book: book, marks: bookMarks, collection: bookCollection),
+            BookVo(
+              book: book,
+              marks: bookMarks,
+              collection: bookCollection,
+              fullLocalPaths: [],
+            ),
           );
         }
 

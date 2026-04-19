@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/app/screen/parse/form/parse_form_controller.dart';
 
@@ -100,29 +101,29 @@ class _ParseFormContent extends StatelessWidget {
   ) {
     return Column(
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: Icon(Icons.close),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  "选择导入源",
-                  style: Theme.of(context).textTheme.titleLarge,
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Text(
+                "选择导入源",
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: Icon(Icons.close),
                 ),
               ),
-            ),
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: Icon(Icons.check),
-            ),
-          ],
+            ],
+          ),
         ),
         RadioGroup<BookFormSources>(
           onChanged: (value) {
             controller.setSource(value);
+            context.pop();
           },
           groupValue: controller.source,
           child: Column(

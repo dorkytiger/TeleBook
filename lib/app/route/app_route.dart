@@ -101,15 +101,11 @@ class AppRoute {
       GoRoute(
         path: bookPage,
         pageBuilder: (context, state) {
-          final bookId = state.pathParameters['id'];
+          final bookId = state.extra as int?;
           if (bookId == null) {
             return MaterialPage(child: ErrorRoutePage(message: '缺少书籍ID参数'));
           }
-          final parsedBookId = int.tryParse(bookId);
-          if (parsedBookId == null) {
-            return MaterialPage(child: ErrorRoutePage(message: '无效的书籍ID参数'));
-          }
-          return MaterialPage(child: BookPageScreen(bookId: parsedBookId));
+          return MaterialPage(child: BookPageScreen(bookId: bookId));
         },
       ),
       GoRoute(

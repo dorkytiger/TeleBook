@@ -1,5 +1,6 @@
 import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,7 +11,6 @@ import 'package:tele_book/app/store/book_store.dart';
 import 'package:tele_book/app/store/collection_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
-import 'package:tele_book/app/util/file_util.dart';
 import 'package:tele_book/app/widget/custom_empty.dart';
 import 'package:tele_book/app/widget/custom_image_loader.dart';
 
@@ -67,6 +67,9 @@ class _BookScreenContent extends StatelessWidget {
                 },
               ),
             ),
+            bottomNavigationBar: controller.multiEditMode
+                ? const _BatchEditBottomAppBar()
+                : null,
           ),
         );
       },
@@ -89,16 +92,9 @@ class _SearchButton extends StatelessWidget {
       },
       suggestionsBuilder: (context, searchController) {
         final results = controller.searchBooks(searchController.text);
-        return results.map((bookVo) {
+          return results.map((bookVo) {
           return ListTile(
-            leading: FutureBuilder(
-              future: FileUtil.getBookImageFullPath(
-                bookVo.book.localPaths.first,
-              ),
-              builder: (context, snapData) {
-                return CustomImageLoader(localUrl: snapData.data);
-              },
-            ),
+            leading: CustomImageLoader(localUrl: bookVo.coverFullPath),
             title: Text(bookVo.book.name),
             subtitle: Text(
               '创建于 ${bookVo.book.createdAt.toIso8601String().split('T')[0]}',
@@ -124,23 +120,39 @@ class _ActionPopupButton extends StatelessWidget {
           icon: const Icon(Icons.more_vert),
           itemBuilder: (context) => [
             PopupMenuItem(
-              child: const Text('批量选择'),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit, size: 20),
+                  const SizedBox(width: 8),
+                  Text('批量编辑'),
+                ],
+              ),
               onTap: () {
                 controller.triggerMultiEditMode(true);
-                _showBottomSheet(context);
               },
             ),
             PopupMenuItem(
-              child: const Text('切换布局'),
+              child: Row(
+                children: [
+                  const Icon(Icons.view_module, size: 20),
+                  const SizedBox(width: 8),
+                  Text(controller.bookLayout == BookLayoutSetting.list
+                      ? '切换到网格视图'
+                      : '切换到列表视图'),
+                ],
+              ),
               onTap: () {
-                controller.bookLayout =
-                    controller.bookLayout == BookLayoutSetting.list
-                    ? BookLayoutSetting.grid
-                    : BookLayoutSetting.list;
+                controller.changeBookLayout();
               },
             ),
             PopupMenuItem(
-              child: const Text('排序方式'),
+              child: Row(
+                children: [
+                  const Icon(Icons.sort, size: 20),
+                  const SizedBox(width: 8),
+                  const Text('排序'),
+                ],
+              ),
               onTap: () => _showSortDialog(context),
             ),
           ],
@@ -208,17 +220,6 @@ class _ActionPopupButton extends StatelessWidget {
       ),
     );
   }
-
-  void _showBottomSheet(BuildContext context) {
-    final controller = context.read<BookController>();
-    showModalBottomSheet(
-      context: context,
-      builder: (sheetContext) => ChangeNotifierProvider.value(
-        value: controller,
-        child: const _BatchEditBottomSheet(),
-      ),
-    );
-  }
 }
 
 /// 列表视图
@@ -230,6 +231,7 @@ class _BookListView extends StatelessWidget {
     return Consumer<BookController>(
       builder: (context, controller, child) {
         return ListView.separated(
+          cacheExtent: 100,
           padding: const EdgeInsets.all(16),
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemCount: controller.books.length,
@@ -266,29 +268,23 @@ class _BookListItem extends StatelessWidget {
       if (!controller.multiEditMode) {
         controller.triggerMultiEditMode(true);
         controller.toggleSelectBook(bookVo.book.id);
-        _showBottomSheet(context);
       }
     }
 
     return InkWell(
       onTap: onTap,
       onLongPress: onLongTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 选择框或封面
-          if (controller.multiEditMode)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Checkbox(
-                value: isSelected,
-                onChanged: (_) => controller.toggleSelectBook(bookVo.book.id),
-              ),
-            )
-          else
-            _buildCover(context),
-          // 信息区域
+          controller.multiEditMode
+              ? Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => controller.toggleSelectBook(bookVo.book.id),
+                )
+              : SizedBox.shrink(),
+          _buildCover(context),
+          SizedBox(width: 16),
           Expanded(child: _buildInfo(context)),
         ],
       ),
@@ -296,12 +292,7 @@ class _BookListItem extends StatelessWidget {
   }
 
   Widget _buildCover(BuildContext context) {
-    return FutureBuilder(
-      future: FileUtil.getBookImageFullPath(bookVo.book.localPaths.first),
-      builder: (context, snapData) {
-        return CustomImageLoader(localUrl: snapData.data);
-      },
-    );
+    return CustomImageLoader(localUrl: bookVo.coverFullPath);
   }
 
   Widget _buildInfo(BuildContext context) {
@@ -351,17 +342,6 @@ class _BookListItem extends StatelessWidget {
       ],
     );
   }
-
-  void _showBottomSheet(BuildContext context) {
-    final controller = context.read<BookController>();
-    showModalBottomSheet(
-      context: context,
-      builder: (sheetContext) => ChangeNotifierProvider.value(
-        value: controller,
-        child: const _BatchEditBottomSheet(),
-      ),
-    );
-  }
 }
 
 /// 网格视图
@@ -372,14 +352,12 @@ class _BookGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
-        return GridView.builder(
+        return MasonryGridView.extent(
+          cacheExtent: 100,
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.6,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
+          maxCrossAxisExtent: 180,
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
           itemCount: controller.books.length,
           itemBuilder: (context, index) {
             final bookVo = controller.books[index];
@@ -414,7 +392,6 @@ class _BookGridItem extends StatelessWidget {
       if (!controller.multiEditMode) {
         controller.triggerMultiEditMode(true);
         controller.toggleSelectBook(bookVo.book.id);
-        _showBottomSheet(context);
       }
     }
 
@@ -428,24 +405,11 @@ class _BookGridItem extends StatelessWidget {
           // 封面 + 选择框
           Stack(
             children: [
-              FutureBuilder(
-                future: FileUtil.getBookImageFullPath(
-                  bookVo.book.localPaths.first,
-                ),
-                builder: (context, snapData) {
-                  return CustomImageLoader(localUrl: snapData.data);
-                },
+              CustomImageLoader(
+                localUrl: bookVo.coverFullPath,
+                width: 180,
+                height: 180,
               ),
-              if (controller.multiEditMode)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Checkbox(
-                    value: isSelected,
-                    onChanged: (_) =>
-                        controller.toggleSelectBook(bookVo.book.id),
-                  ),
-                ),
               // 标签和收藏夹显示在右上角
               if (!controller.multiEditMode &&
                   (bookVo.collection != null || bookVo.marks.isNotEmpty))
@@ -535,124 +499,72 @@ class _BookGridItem extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          // 书名
-          Text(
-            bookVo.book.name,
-            style: Theme.of(context).textTheme.bodyMedium,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+
+          SizedBox(height: 8),
+          Row(
+            children: [
+              if (controller.multiEditMode) SizedBox(width: 4),
+              // 书名
+              Expanded(
+                child: Text(
+                  bookVo.book.name,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 8),
+              if (controller.multiEditMode)
+                Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => controller.toggleSelectBook(bookVo.book.id),
+                ),
+            ],
           ),
         ],
-      ),
-    );
-  }
-
-  void _showBottomSheet(BuildContext context) {
-    final controller = context.read<BookController>();
-    showModalBottomSheet(
-      context: context,
-      builder: (sheetContext) => ChangeNotifierProvider.value(
-        value: controller,
-        child: const _BatchEditBottomSheet(),
       ),
     );
   }
 }
 
 /// 批量编辑底部操作栏
-class _BatchEditBottomSheet extends StatelessWidget {
-  const _BatchEditBottomSheet();
+class _BatchEditBottomAppBar extends StatelessWidget {
+  const _BatchEditBottomAppBar();
 
   @override
   Widget build(BuildContext context) {
     return Consumer<BookController>(
       builder: (context, controller, child) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        return BottomAppBar(
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '已选择 ${controller.selectedBookIds.length} 本书籍',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          if (controller.isAllBooksSelected) {
-                            controller.toggleDeselectAllBooks();
-                          } else {
-                            controller.toggleSelectAllBooks();
-                          }
-                        },
-                        child: Text(
-                          controller.isAllBooksSelected ? '取消全选' : '全选',
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          controller.triggerMultiEditMode(false);
-                          Navigator.pop(context);
-                        },
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ],
+              IconButton(
+                tooltip: 'export',
+                icon: const Icon(Icons.import_export),
+                onPressed: () {},
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  FilledButton.icon(
-                    onPressed: controller.selectedBookIds.isEmpty
-                        ? null
-                        : () async {
-                            await controller.exportMultipleBooks();
-                            if (context.mounted) Navigator.pop(context);
-                          },
-                    icon: const Icon(Icons.upload),
-                    label: const Text('导出'),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: controller.selectedBookIds.isEmpty
-                        ? null
-                        : () {
-                            _showCollectionDialog(context);
-                          },
-                    icon: const Icon(Icons.collections_bookmark),
-                    label: const Text('添加到收藏夹'),
-                  ),
-                  FilledButton.tonalIcon(
-                    onPressed: controller.selectedBookIds.isEmpty
-                        ? null
-                        : () async {
-                            final confirmed = await _showDeleteConfirmDialog(
-                              context,
-                            );
-                            if (confirmed == true && context.mounted) {
-                              await controller.deleteMultipleBooks();
-                              if (context.mounted) Navigator.pop(context);
-                            }
-                          },
-                    icon: const Icon(Icons.delete),
-                    label: const Text('删除'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).colorScheme.errorContainer,
-                      foregroundColor: Theme.of(
-                        context,
-                      ).colorScheme.onErrorContainer,
-                    ),
-                  ),
-                ],
+              IconButton(
+                tooltip: 'Favorite',
+                icon: const Icon(Icons.favorite),
+                onPressed: () {},
+              ),
+              IconButton(
+                tooltip: 'Mark',
+                icon: const Icon(Icons.bookmark_add),
+                onPressed: () {},
+              ),
+              IconButton(
+                tooltip: 'Delete',
+                icon: Icon(
+                  Icons.delete,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: () {},
+              ),
+              Spacer(),
+              TextButton(
+                onPressed: () => controller.triggerMultiEditMode(false),
+                child: const Text('取消'),
               ),
             ],
           ),

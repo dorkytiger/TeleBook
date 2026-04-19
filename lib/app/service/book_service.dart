@@ -46,7 +46,7 @@ class BookService {
   Future<void> updateReadProgress(int id, int progress) async {
     final book = await db.bookDao.getById(id);
     if (book == null) return;
-    await db.bookDao.updateBook(book.copyWith(readCount: progress));
+    await db.bookDao.updateBook(book.copyWith(currentPage: progress));
   }
 
   Future<int> delete(int id) async {

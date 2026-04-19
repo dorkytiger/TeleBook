@@ -61,20 +61,23 @@ class _DownloadGroupItem extends StatelessWidget {
     final controller = context.read<DownloadController>();
     final firstTask = controller.getTasksByGroup(groupId).firstOrNull;
 
-    return InkWell(
-      onTap: () {
-        context.push(AppRoute.downloadTask, extra: groupId);
-      },
-      child: Row(
-        children: [
-          // 封面
-          _buildCover(context, controller, firstTask),
-          const SizedBox(width: 12),
-          // 信息
-          Expanded(child: _buildInfo(context, group)),
-          // 操作按钮
-          _buildMenu(context, controller, group),
-        ],
+    return ChangeNotifierProvider.value(
+      value: controller,
+      child: InkWell(
+        onTap: () {
+          context.push(AppRoute.downloadTask, extra: groupId);
+        },
+        child: Row(
+          children: [
+            // 封面
+            _buildCover(context, controller, firstTask),
+            const SizedBox(width: 12),
+            // 信息
+            Expanded(child: _buildInfo(context, group)),
+            // 操作按钮
+            _buildMenu(context, controller, group),
+          ],
+        ),
       ),
     );
   }
@@ -92,7 +95,7 @@ class _DownloadGroupItem extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
-          width: 60,
+          width: 80,
           height: 80,
           child: CustomImageLoader(networkUrl: firstTask.url),
         ),
@@ -129,7 +132,7 @@ class _DownloadGroupItem extends StatelessWidget {
   Widget _buildInfo(BuildContext context, DownloadGroupInfo group) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 6,
+      spacing: 8,
       children: [
         Text(
           group.name,
@@ -165,27 +168,6 @@ class _DownloadGroupItem extends StatelessWidget {
   ) {
     return MenuAnchor(
       menuChildren: [
-        if (group.completedCount == group.totalCount)
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.save),
-            onPressed: () async {
-              try {
-                await controller.saveToBook(groupId);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('已保存到书架')));
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('保存失败: $e')));
-                }
-              }
-            },
-            child: const Text("保存到书架"),
-          ),
         if (group.completedCount != group.totalCount)
           MenuItemButton(
             leadingIcon: const Icon(Icons.cancel),

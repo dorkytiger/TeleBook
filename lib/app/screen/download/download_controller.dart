@@ -13,21 +13,12 @@ import 'package:tele_book/app/store/download_store.dart';
 class DownloadController extends ChangeNotifier {
   final DownloadStore _downloadStore;
 
-  // UI 状态（与业务状态分离）
-  bool isSavingToBook = false;
-  String? savingError;
-
-  DownloadController({
-    required DownloadStore downloadStore,
-  }) : _downloadStore = downloadStore {
-    // 监听 Store 的变化，自动更新 UI
+  DownloadController({required DownloadStore downloadStore})
+      : _downloadStore = downloadStore {
     _downloadStore.addListener(_onStoreChanged);
   }
 
-  void _onStoreChanged() {
-    // Store 变化时，通知 UI 更新
-    notifyListeners();
-  }
+  void _onStoreChanged() => notifyListeners();
 
   // ══════════════════════════════════════════════════════════════════════════
   // ViewModel - 暴露 UI 需要的数据
@@ -60,27 +51,6 @@ class DownloadController extends ChangeNotifier {
   // 用户操作 - 转发给 Store
   // ══════════════════════════════════════════════════════════════════════════
 
-  /// 保存下载组为书籍
-  Future<void> saveToBook(String groupId) async {
-    isSavingToBook = true;
-    savingError = null;
-    notifyListeners();
-
-    try {
-      // 单向数据流：Controller → Store
-      await _downloadStore.saveToBook(groupId);
-
-      // 成功
-      isSavingToBook = false;
-      notifyListeners();
-    } catch (e) {
-      // 失败：捕获错误并显示给用户
-      isSavingToBook = false;
-      savingError = e.toString();
-      notifyListeners();
-      rethrow;
-    }
-  }
 
   /// 取消下载组
   Future<void> cancelGroup(String groupId) async {
@@ -107,11 +77,6 @@ class DownloadController extends ChangeNotifier {
     await _downloadStore.deleteGroup(groupId);
   }
 
-  /// 清除错误信息
-  void clearError() {
-    savingError = null;
-    notifyListeners();
-  }
 
   @override
   void dispose() {

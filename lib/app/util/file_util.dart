@@ -12,6 +12,15 @@ class FileUtil {
   static final Uuid _uuid = Uuid();
   static final String allSaveDir = 'books';
 
+  static late String _appDocDir;
+  static late String _tempDir;
+
+  /// 必须在 main() 中调用一次
+  static Future<void> init() async {
+    _appDocDir = (await getApplicationDocumentsDirectory()).path;
+    _tempDir = (await getTemporaryDirectory()).path;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // 文件名处理
   // ═══════════════════════════════════════════════════════════════════════════
@@ -46,28 +55,17 @@ class FileUtil {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// 获取应用文档目录的绝对路径
-  static Future<String> getAppDocumentsPath() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return dir.path;
-  }
+  static String getAppDocumentsPath() => _appDocDir;
 
   /// 获取应用临时目录的绝对路径
-  static Future<String> getAppTempPath() async {
-    final dir = await getTemporaryDirectory();
-    return dir.path;
-  }
+  static String getAppTempPath() => _tempDir;
 
   /// 将相对路径转换为完整路径
-  static Future<String> getFullPath(String relativePath) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return '${appDir.path}/$relativePath';
-  }
+  static String getFullPath(String relativePath) => '$_appDocDir/$relativePath';
 
   /// 从绝对路径中提取相对路径（相对于应用文档目录）
-  static Future<String> getRelativePath(String fullPath) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    return fullPath.replaceFirst('${appDir.path}/', '');
-  }
+  static String getRelativePath(String fullPath) =>
+      fullPath.replaceFirst('$_appDocDir/', '');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 文件存在性检查
@@ -88,15 +86,12 @@ class FileUtil {
   static Future<(List<String>, int)> validateFiles(
     List<String> relativePaths,
   ) async {
-    final appDir = await getApplicationDocumentsDirectory();
     final validPaths = <String>[];
     int notFoundCount = 0;
 
     for (final relativePath in relativePaths) {
-      final fullPath = '${appDir.path}/$relativePath';
-      final exists = await File(fullPath).exists();
-
-      if (exists) {
+      final fullPath = '$_appDocDir/$relativePath';
+      if (await File(fullPath).exists()) {
         validPaths.add(relativePath);
       } else {
         notFoundCount++;
@@ -119,30 +114,20 @@ class FileUtil {
     String destDir, {
     String? newFileName,
   }) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final destDirectory = Directory('${appDir.path}/$destDir');
-
-    // 确保目标目录存在
+    final destDirectory = Directory('$_appDocDir/$destDir');
     if (!await destDirectory.exists()) {
       await destDirectory.create(recursive: true);
     }
-
-    // 确定文件名
     final fileName = newFileName ?? p.basename(sourceFile.path);
     final destPath = '${destDirectory.path}/$fileName';
-
-    // 复制文件
     await sourceFile.copy(destPath);
-
-    // 返回相对路径
     return '$destDir/$fileName';
   }
 
   /// 将文件复制到临时目录，返回完整路径
   static Future<String> copyFileToTempDir(String sourcePath) async {
-    final tempDir = await getTemporaryDirectory();
     final fileName = p.basename(sourcePath);
-    final destPath = '${tempDir.path}/${fileName}_${_uuid.v4()}';
+    final destPath = '$_tempDir/${fileName}_${_uuid.v4()}';
     await File(sourcePath).copy(destPath);
     return destPath;
   }
@@ -152,10 +137,8 @@ class FileUtil {
   // ═══════════════════════════════════════════════════════════════════════════
 
   /// 读取文件内容（相对路径）
-  static Future<List<int>> readFileBytes(String relativePath) async {
-    final fullPath = await getFullPath(relativePath);
-    final file = File(fullPath);
-    return file.readAsBytes();
+  static Future<List<int>> readFileBytes(String relativePath) {
+    return File('$_appDocDir/$relativePath').readAsBytes();
   }
 
   /// 写入文件内容（相对路径），返回相对路径
@@ -163,15 +146,11 @@ class FileUtil {
     String relativePath,
     List<int> bytes,
   ) async {
-    final fullPath = await getFullPath(relativePath);
-    final file = File(fullPath);
-
-    // 确保父目录存在
+    final file = File('$_appDocDir/$relativePath');
     final dir = file.parent;
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
-
     await file.writeAsBytes(bytes);
     return relativePath;
   }
@@ -187,34 +166,25 @@ class FileUtil {
     List<int> data,
     int pageNumber,
   ) async {
-    final documentsDir = await getApplicationDocumentsDirectory();
     final safeTitle = "${sanitizeFileName(bookTitle)}${_uuid.v4()}";
     final handledPageNumber = formatPageNumber(pageNumber);
     final relativePath = '$allSaveDir/$safeTitle/$handledPageNumber.jpg';
-    final saveDir = '${documentsDir.path}/$allSaveDir/$safeTitle';
+    final saveDir = '$_appDocDir/$allSaveDir/$safeTitle';
 
     if (!await Directory(saveDir).exists()) {
       await Directory(saveDir).create(recursive: true);
     }
 
-    final file = File('${documentsDir.path}/$relativePath');
+    final file = File('$_appDocDir/$relativePath');
     await file.writeAsBytes(data);
     return SavedImageResult(relativePath: relativePath, fullPath: file.path);
   }
 
-  static Future<String> getBookImageFullPath(String relativePath) async {
-    return await getFullPath(relativePath);
-  }
+  static String getBookImageFullPath(String relativePath) =>
+      getFullPath(relativePath);
 
-  static Future<List<String>> getBookImageFullPaths(
-    List<String> relativePaths,
-  ) async {
-    final fullPaths = <String>[];
-    for (final relativePath in relativePaths) {
-      fullPaths.add(await getFullPath(relativePath));
-    }
-    return fullPaths;
-  }
+  static List<String> getBookImageFullPaths(List<String> relativePaths) =>
+      relativePaths.map(getFullPath).toList();
 
   // ═══════════════════════════════════════════════════════════════════════════
   // 文件删除
@@ -222,20 +192,14 @@ class FileUtil {
 
   /// 删除文件（相对路径）
   static Future<void> deleteFile(String relativePath) async {
-    final fullPath = await getFullPath(relativePath);
-    final file = File(fullPath);
-    if (await file.exists()) {
-      await file.delete();
-    }
+    final file = File('$_appDocDir/$relativePath');
+    if (await file.exists()) await file.delete();
   }
 
   /// 删除目录及其内容（相对路径）
   static Future<void> deleteDirectory(String relativePath) async {
-    final fullPath = await getFullPath(relativePath);
-    final dir = Directory(fullPath);
-    if (await dir.exists()) {
-      await dir.delete(recursive: true);
-    }
+    final dir = Directory('$_appDocDir/$relativePath');
+    if (await dir.exists()) await dir.delete(recursive: true);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -19,6 +19,7 @@ import 'package:tele_book/app/store/download_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/store/import_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 import 'package:tele_book/app/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,6 +34,7 @@ void main() async {
 late Widget appProviders;
 
 Future<void> _init() async {
+  await FileUtil.init();
   await DKLog.initFileLog();
   DkConfig.setShowStateLog(true);
 

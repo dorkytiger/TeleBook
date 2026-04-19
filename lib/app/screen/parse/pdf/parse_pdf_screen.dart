@@ -1,15 +1,12 @@
+import 'dart:io';
+
 import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/app/route/app_route.dart';
-import 'package:tele_book/app/widget/custom_loading.dart';
 
 import 'parse_pdf_controller.dart';
-
-/// 离屏超过此页数时释放内存
-const _kReleaseThreshold = 5;
 
 class ParsePdfScreen extends StatelessWidget {
   final String pdfPath;
@@ -36,212 +33,99 @@ class _ParsePdfContent extends StatelessWidget {
     return Consumer<ParsePdfController>(
       builder: (context, controller, _) {
         return Scaffold(
-          appBar: AppBar(title: Text('PDF解析'), leading: BackButton()),
+          appBar: AppBar(
+            title: Text(controller.bookName),
+            leading: const BackButton(),
+          ),
           body: DKStateQueryDisplay(
-            state: controller.initState,
-            loadingBuilder: () => const Center(child: CustomLoading()),
-            successBuilder: (totalPages) => Column(
-              children: [
-                // 页数提示
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(
-                    '共 $totalPages 页，滚动时按需加载',
-                    style: Theme.of(context).textTheme.bodySmall
-                        ?.copyWith(color: Colors.grey),
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: totalPages,
-                    cacheExtent: 800,
-                    itemBuilder: (context, index) =>
-                        _PageTile(index: index),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: controller.isImporting
-                          ? null
-                          : () async {
-                              await controller.importPDF();
-                              if (context.mounted) {
-                                context.go(
-                                    '${AppRoute.home}?tab=1&taskTab=1');
-                              }
-                            },
-                      icon: controller.isImporting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.save),
-                      label: Text(
-                          controller.isImporting ? '导入中…' : '导入PDF'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            state: controller.processState,
+            loadingBuilder: () => _buildLoading(controller),
+            successBuilder: (files) => _buildSuccess(context, controller, files),
           ),
         );
       },
     );
   }
-}
 
-/// 单页 tile，进入可见区域时触发渲染，离屏时释放
-class _PageTile extends StatelessWidget {
-  const _PageTile({required this.index});
-  final int index;
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = context.read<ParsePdfController>();
-    return VisibilityDetectorTile(
-      index: index,
-      onVisible: () => controller.renderPage(index),
-      onInvisible: () {
-        // 超出阈值范围的页面释放内存
-        final visibleItems = _VisibilityTracker.instance.visibleIndices;
-        if (visibleItems.isEmpty) return;
-        final minVisible = visibleItems.reduce((a, b) => a < b ? a : b);
-        final maxVisible = visibleItems.reduce((a, b) => a > b ? a : b);
-        if (index < minVisible - _kReleaseThreshold ||
-            index > maxVisible + _kReleaseThreshold) {
-          controller.releasePage(index);
-        }
-      },
-      child: Consumer<ParsePdfController>(
-        builder: (_, c, __) {
-          final image = c.pageImages.length > index ? c.pageImages[index] : null;
-          final loading = c.pageLoading.length > index ? c.pageLoading[index] : false;
-          return ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text('第 ${index + 1} 页'),
-            leading: SizedBox(
-              width: 60,
-              height: 80,
-              child: image != null
-                  ? Image.memory(image, fit: BoxFit.cover)
-                  : loading
-                  ? const Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : const Icon(Icons.image_outlined, size: 36),
-            ),
-            subtitle: image != null
-                ? Text('大小: ${(image.lengthInBytes / 1024).toStringAsFixed(1)} KB')
-                : loading
-                ? const Text('渲染中…')
-                : const Text('待渲染'),
-          );
-        },
+  Widget _buildLoading(ParsePdfController controller) {
+    final total = controller.totalPages;
+    final done = controller.processedCount;
+    final progress = total > 0 ? done / total : null;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.picture_as_pdf, size: 56, color: Colors.grey),
+            const SizedBox(height: 24),
+            const Text('处理 PDF 中…', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 8),
+            if (total > 0)
+              Text('$done / $total 页', style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
       ),
     );
   }
-}
 
-// ─── 简易可见性检测 ──────────────────────────────────────────────
-
-/// 全局追踪当前可见的 index 集合（用于释放判断）
-class _VisibilityTracker {
-  _VisibilityTracker._();
-  static final instance = _VisibilityTracker._();
-  final visibleIndices = <int>{};
-}
-
-/// 用 StatefulWidget + didChangeDependencies 配合 ScrollNotification 来判断可见性
-class VisibilityDetectorTile extends StatefulWidget {
-  const VisibilityDetectorTile({
-    super.key,
-    required this.index,
-    required this.onVisible,
-    required this.onInvisible,
-    required this.child,
-  });
-
-  final int index;
-  final VoidCallback onVisible;
-  final VoidCallback onInvisible;
-  final Widget child;
-
-  @override
-  State<VisibilityDetectorTile> createState() =>
-      _VisibilityDetectorTileState();
-}
-
-class _VisibilityDetectorTileState extends State<VisibilityDetectorTile> {
-  bool _wasVisible = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // 首次 build 后触发渲染
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _checkVisibility());
+  Widget _buildSuccess(
+    BuildContext context,
+    ParsePdfController controller,
+    List<File> files,
+  ) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: Text(
+            '共 ${files.length} 页，确认后点击导入',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+          ),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemCount: files.length,
+            itemBuilder: (context, index) {
+              final file = files[index];
+              return ListTile(
+                contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                leading: SizedBox(
+                  width: 56,
+                  height: 72,
+                  child: Image.file(file, fit: BoxFit.cover),
+                ),
+                title: Text('第 ${index + 1} 页'),
+                subtitle: Text(
+                  '${(file.lengthSync() / 1024).toStringAsFixed(1)} KB',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () async {
+                await controller.importPDF();
+                if (context.mounted) {
+                  context.go('${AppRoute.home}?tab=1&taskTab=1');
+                }
+              },
+              icon: const Icon(Icons.save),
+              label: const Text('导入 PDF'),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  @override
-  void dispose() {
-    _VisibilityTracker.instance.visibleIndices.remove(widget.index);
-    if (_wasVisible) widget.onInvisible();
-    super.dispose();
-  }
-
-  void _checkVisibility() {
-    if (!mounted) return;
-    final renderObject = context.findRenderObject();
-    if (renderObject == null) return;
-
-    final viewport = RenderAbstractViewport.maybeOf(renderObject);
-    if (viewport == null) {
-      // 不在 viewport 中，直接触发（第一屏）
-      _setVisible(true);
-      return;
-    }
-
-    final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-    final offset = Scrollable.maybeOf(context)?.position.pixels ?? 0;
-    final viewportDim =
-        Scrollable.maybeOf(context)?.position.viewportDimension ?? 0;
-    final itemTop = reveal.offset - offset;
-    final itemBox = renderObject as RenderBox;
-    final itemBottom = itemTop + itemBox.size.height;
-
-    final isVisible = itemBottom > 0 && itemTop < viewportDim;
-    _setVisible(isVisible);
-  }
-
-  void _setVisible(bool visible) {
-    if (visible == _wasVisible) return;
-    _wasVisible = visible;
-    if (visible) {
-      _VisibilityTracker.instance.visibleIndices.add(widget.index);
-      widget.onVisible();
-    } else {
-      _VisibilityTracker.instance.visibleIndices.remove(widget.index);
-      widget.onInvisible();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 每次 build 后重新检测（应对滚动触发的重建）
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _checkVisibility());
-    return widget.child;
-  }
 }

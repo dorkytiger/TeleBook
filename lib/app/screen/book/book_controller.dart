@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:dk_util/dk_util.dart';
 import 'package:dk_util/state/dk_state_query_helper.dart';
@@ -14,6 +13,7 @@ import 'package:tele_book/app/store/download_store.dart';
 import 'package:tele_book/app/store/export_store.dart';
 import 'package:tele_book/app/store/import_store.dart';
 import 'package:tele_book/app/store/mark_store.dart';
+import 'package:tele_book/app/util/file_util.dart';
 
 /// 书籍页面控制器
 /// 整合 BookStore、MarkStore、CollectionStore 和 ExportStore
@@ -114,6 +114,14 @@ class BookController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void changeBookLayout() {
+    bookLayout == BookLayoutSetting.grid
+        ? bookLayout = BookLayoutSetting.list
+        : bookLayout = BookLayoutSetting.grid;
+    sharedPreferences.setInt('book_layout', bookLayout.index);
+    notifyListeners();
+  }
+
   /// 改变排序方式
   void changeSortBy(BookSortType type, BookSortOrder order) {
     sortBy = BookSort(type: type, order: order);
@@ -158,7 +166,12 @@ class BookController extends ChangeNotifier {
           }
 
           bookVos.add(
-            BookVo(book: book, marks: bookMarks, collection: bookCollection),
+            BookVo(
+              book: book,
+              marks: bookMarks,
+              collection: bookCollection,
+              fullLocalPaths: await FileUtil.getBookImageFullPaths(book.localPaths),
+            ),
           );
         }
 
@@ -184,6 +197,7 @@ class BookController extends ChangeNotifier {
 
         return books = bookVos;
       },
+      isEmpty: (data) => data.isEmpty,
       onStateChange: (value) {
         fetchBooksState = value;
         notifyListeners();
@@ -307,8 +321,18 @@ class BookVo {
   final BookTableData book;
   final List<MarkTableData> marks;
   final CollectionTableData? collection;
+  /// 已解析的完整本地路径列表（由 fetchBooks 通过 FileUtil 预处理）
+  final List<String> fullLocalPaths;
 
-  BookVo({required this.book, required this.marks, required this.collection});
+  BookVo({
+    required this.book,
+    required this.marks,
+    required this.collection,
+    required this.fullLocalPaths,
+  });
+
+  /// 封面完整路径（第一张图）
+  String? get coverFullPath => fullLocalPaths.isNotEmpty ? fullLocalPaths.first : null;
 }
 
 /// 书籍排序

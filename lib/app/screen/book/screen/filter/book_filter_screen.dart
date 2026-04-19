@@ -92,14 +92,12 @@ class BookFilterContent extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // 封面
-                      FutureBuilder<String>(
-                        future: FileUtil.getBookImageFullPath(
+                      CustomImageLoader(
+                        localUrl: FileUtil.getBookImageFullPath(
                           bookData.book.localPaths.first,
                         ),
-                        builder: (context, snapshot) {
-                          return CustomImageLoader(localUrl: snapshot.data);
-                        },
                       ),
+
                       SizedBox(width: 12),
                       // 信息区域
                       Expanded(
@@ -243,15 +241,10 @@ class BookFilterContent extends StatelessWidget {
                           SizedBox(
                             width: double.infinity,
                             height: double.infinity,
-                            child: FutureBuilder(
-                              future: FileUtil.getBookImageFullPath(
+                            child: CustomImageLoader(
+                              localUrl: FileUtil.getBookImageFullPath(
                                 bookData.book.localPaths.first,
                               ),
-                              builder: (context, snapshot) {
-                                return CustomImageLoader(
-                                  localUrl: snapshot.data,
-                                );
-                              },
                             ),
                           ),
                           // 右上角显示收藏夹和标签

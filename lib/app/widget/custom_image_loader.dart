@@ -8,6 +8,7 @@ class CustomImageLoader extends StatefulWidget {
   final String? localUrl;
   final double width;
   final double height;
+  final BoxFit fit;
 
   const CustomImageLoader({
     super.key,
@@ -15,6 +16,7 @@ class CustomImageLoader extends StatefulWidget {
     this.localUrl,
     this.width = 80,
     this.height = 80,
+    this.fit = BoxFit.cover,
   });
 
   @override
@@ -71,13 +73,17 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
       return SizedBox.shrink();
     }
 
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    // 只传 cacheWidth，高度由 Flutter 按原始比例自动计算，避免拉伸
+    final cacheW = widget.width.isInfinite ? null : (widget.width * dpr).toInt();
+
     if (widget.localUrl != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: SizedBox(
           height: widget.height,
           width: widget.width,
-          child: Image.file(File(_url), fit: BoxFit.cover),
+          child: Image.file(File(_url), fit: widget.fit, cacheWidth: cacheW),
         ),
       );
     } else {
@@ -88,7 +94,8 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
           width: widget.width,
           child: Image.network(
             _url,
-            fit: BoxFit.cover,
+            fit: widget.fit,
+            cacheWidth: cacheW,
             frameBuilder: (context, child, frame, _) {
               if (frame == null) {
                 return Container(
@@ -135,10 +142,28 @@ class _CustomImageLoaderState extends State<CustomImageLoader> {
             },
             errorBuilder: (context, error, stackTrace) {
               return Center(
-                child: CustomError(
-                  title: error.toString(),
-                  description: stackTrace.toString(),
-                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.broken_image,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      '加载失败',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _retryLoading,
+                      child: Text('重试'),
+                    ),
+                  ],
+                )
               );
             },
           ),

@@ -31,7 +31,7 @@ class _DownloadTaskContent extends StatelessWidget {
       builder: (context, controller, _) {
         final tasks = controller.tasks;
         return Scaffold(
-          appBar:  AppBar(title: Text('下载任务')),
+          appBar: AppBar(title: Text('下载任务')),
           body: ListView.separated(
             padding: const EdgeInsets.all(16),
             separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -43,24 +43,15 @@ class _DownloadTaskContent extends StatelessWidget {
                 children: [
                   // 封面图：完成后显示本地图，否则显示网络预览
                   task.status == TaskStatus.complete
-                      ? FutureBuilder<String?>(
-                          future: controller.getFilePath(task.savePath),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData) {
-                              return CustomImageLoader(
-                                  localUrl: snapshot.data);
-                            }
-                            return _placeholder(context);
-                          },
+                      ? CustomImageLoader(
+                          localUrl: controller.getFilePath(task.savePath),
                         )
                       : CustomImageLoader(networkUrl: task.url),
                   Expanded(
                     child: ListTile(
                       title: Text(
                         task.filename,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
+                        style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -111,12 +102,12 @@ class _DownloadTaskContent extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context) => Container(
-        height: 100,
-        width: 80,
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Icon(
-          Icons.insert_drive_file,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-      );
+    height: 100,
+    width: 80,
+    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+    child: Icon(
+      Icons.insert_drive_file,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    ),
+  );
 }

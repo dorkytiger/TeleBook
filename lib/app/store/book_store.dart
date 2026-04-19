@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:tele_book/app/db/app_database.dart';
 import 'package:tele_book/app/service/book_service.dart';
@@ -35,13 +36,8 @@ class BookStore extends ChangeNotifier {
   }
 
   Future<void> saveReadProgress(int bookId, int progress) async {
+    DKLog.t("Saving read progress for bookId=$bookId, progress=$progress");
     await _service.updateReadProgress(bookId, progress);
-    // 更新本地数据
-    final index = items.indexWhere((item) => item.id == bookId);
-    if (index != -1) {
-      items[index] = items[index].copyWith(readCount: progress);
-      notifyListeners();
-    }
   }
 
   Future<void> deleteBook(int id) async {
