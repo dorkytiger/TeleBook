@@ -1,4 +1,5 @@
 import 'package:tele_book/common/config/global_config.dart';
+import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
 import 'package:tele_book/feature/book/model/vo/book_vo.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
@@ -33,5 +34,9 @@ class BookService {
           }).toList();
           return BookListVo(bookVos: bookVos);
         });
+  }
+
+  Future<void> updateBook(BookTableData book) {
+    return _bookRepository.updateBook(book);
   }
 }

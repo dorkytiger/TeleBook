@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tele_book/common/widget/network_image_widget.dart';
 
 class TaskItemWidget extends StatelessWidget {
   final String title;
@@ -24,33 +25,7 @@ class TaskItemWidget extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              coverUrl,
-              width: 64,
-              height: 64,
-              fit: BoxFit.cover,
-              cacheWidth: 100,
-              errorBuilder: (context, error, stackTrace) => Icon(
-                Icons.broken_image,
-                size: 32,
-                color: Theme.of(context).disabledColor,
-              ),
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(
-                  width: 64,
-                  height: 64,
-                  alignment: Alignment.center,
-                  child: Text(
-                    "${((loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)) * 100).toStringAsFixed(0)}%",
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                );
-              },
-            ),
-          ),
+          NetworkImageWidget(imageUrl: coverUrl),
           Expanded(
             child: ListTile(
               title: Text(
@@ -67,7 +42,7 @@ class TaskItemWidget extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   SizedBox(height: 8),
-                  LinearProgressIndicator(value: progress),
+                  LinearProgressIndicator(value: progress,borderRadius: BorderRadius.circular(4),),
                 ],
               ),
               trailing: trailing,

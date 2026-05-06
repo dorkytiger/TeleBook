@@ -88,6 +88,12 @@ class BookStore extends ChangeNotifier {
     _loadFirstPage(); // 重载第一页
   }
 
+  Future<void> updateReadProgress(int bookId, int progress) async {
+    final book = books.firstWhere((b) => b.book.id == bookId).book;
+    final updatedBook = book.copyWith(currentPage: progress);
+    await _bookService.updateBook(updatedBook);
+  }
+
   @override
   void dispose() {
     _bookSubscription?.cancel();

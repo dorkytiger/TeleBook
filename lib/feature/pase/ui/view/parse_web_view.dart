@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
+import 'package:tele_book/common/widget/network_image_widget.dart';
 import 'package:tele_book/feature/pase/ui/viewmodel/parse_web_viewmodel.dart';
 
 class ParseWebView extends StatelessWidget {
@@ -84,45 +85,27 @@ class __ParseWebContentState extends State<_ParseWebContent> {
               itemCount: vm.urls.length,
               itemBuilder: (context, index) {
                 final url = vm.urls[index];
-                return ListTile(
-                  leading: Image.network(
-                    url,
-                    width: 50,
-                    height: 50,
-                    fit: BoxFit.cover,
-                    cacheWidth: 100,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return SizedBox(
-                        width: 50,
-                        height: 50,
-                        child: Center(
-                          child: Text(
-                            "${(loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1) * 100).toStringAsFixed(0)}%",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
+                return Row(
+                  children: [
+                    NetworkImageWidget(imageUrl: url),
+                    Expanded(
+                      child: ListTile(
+                        title: Text(
+                          url,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 50,
-                      height: 50,
-                      color: Colors.grey[300],
-                      child: Icon(Icons.broken_image, color: Colors.grey[600]),
-                    ),
-                  ),
-                  title: Text(url),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => _buildImagePreview(url),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => _buildImagePreview(url),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                    ),
+                  ],
                 );
               },
             ),

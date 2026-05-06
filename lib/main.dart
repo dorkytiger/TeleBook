@@ -1,16 +1,12 @@
-import 'package:dk_util/config/dk_config.dart';
-import 'package:dk_util/dk_util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:provider/provider.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 import 'package:tele_book/common/config/global_config.dart';
+import 'package:tele_book/common/theme/app_theme.dart';
 import 'package:tele_book/core/di/app_di.dart';
 import 'package:tele_book/core/route/app_route.dart';
-
-import 'package:responsive_framework/responsive_framework.dart';
-import 'package:tele_book/common/theme/app_theme.dart';
-import 'package:tele_book/core/util/file_util.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,9 +20,6 @@ late Widget appProviders;
 WebViewEnvironment? webViewEnvironment;
 
 Future<void> _init() async {
-  await FileUtil.init();
-  await DKLog.initFileLog();
-  DkConfig.setShowStateLog(true);
   await GlobalConfig.init();
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {

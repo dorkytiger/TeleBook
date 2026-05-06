@@ -10,14 +10,13 @@ class DownloadListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => DownloadStore(context.read()),
-      child: _DownloadListContent(),
-    );
+    return const _DownloadListContent();
   }
 }
 
 class _DownloadListContent extends StatefulWidget {
+  const _DownloadListContent();
+
   @override
   State<_DownloadListContent> createState() => _DownloadListContentState();
 }

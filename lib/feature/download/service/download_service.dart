@@ -275,35 +275,6 @@ class DownloadService {
     );
   }
 
-  Future<void> saveToBook(List<String> sourcePaths, String title) async {
-    final bookId = Uuid().v4();
-    // 目标目录使用 GlobalConfig.booksDir/bookId
-    final bookDir = Directory('${GlobalConfig.booksDir.path}/$bookId');
-    if (!await bookDir.exists()) {
-      await bookDir.create(recursive: true);
-    }
-
-    // 只存相对子路径（bookId/序号），不存绝对路径，避免重启后路径失效
-    final relativeSubPaths = <String>[];
-    for (var index = 0; index < sourcePaths.length; index++) {
-      final srcPath = sourcePaths[index];
-      final srcFile = File(srcPath);
-      if (!await srcFile.exists()) {
-        throw FileSystemException('downloaded source file not found', srcPath);
-      }
-      final fileName = index.toString().padLeft(7, '0');
-      final destPath = '${bookDir.path}/$fileName';
-      await srcFile.copy(destPath);
-      // 只保存相对部分：bookId/序号
-      relativeSubPaths.add('$bookId/$fileName');
-    }
-
-    final book = BookTableCompanion.insert(
-      name: title,
-      localSubPaths: relativeSubPaths,
-    );
-    await _bookRepository.insertBook(book);
-  }
 
   /// 检查组是否已完成且无失败，若满足则自动保存为书籍
   Future<void> _checkAndAutoSave(String groupId) async {
@@ -324,7 +295,7 @@ class DownloadService {
       // 按 order 排序后再保存
       final sortedItems = List<DownloadItemBo>.from(items)
         ..sort((a, b) => a.order.compareTo(b.order));
-      await saveToBook(
+      await _bookRepository.saveToBook(
         sortedItems
             .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
             .toList(),

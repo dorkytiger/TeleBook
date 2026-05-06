@@ -4,6 +4,7 @@ import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
 import 'package:tele_book/feature/book/ui/view/book_page_view.dart';
 import 'package:tele_book/feature/home/ui/view/home/home_view.dart';
+import 'package:tele_book/feature/pase/ui/view/parse_archive_view.dart';
 import 'package:tele_book/feature/pase/ui/view/parse_form_view.dart';
 import 'package:tele_book/feature/pase/ui/view/parse_web_view.dart';
 
@@ -77,6 +78,16 @@ class AppRoute {
             return MaterialPage(child: ErrorRoutePage(message: "缺少URL参数"));
           }
           return MaterialPage(child: ParseWebView(url: url));
+        },
+      ),
+      GoRoute(
+        path: parseArchiveSingle,
+        pageBuilder: (context, state) {
+          final path = state.extra as String?;
+          if (path == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少文件路径参数"));
+          }
+          return MaterialPage(child: ParseArchiveView(archivePath: path));
         },
       ),
     ],
