@@ -25,4 +25,9 @@ class BookRepository {
           sort: sort,
         );
   }
+
+  Future<void> insertBook(BookTableCompanion book) {
+    return _bookLocalDatasource.insertBook(book);
+  }
+
 }

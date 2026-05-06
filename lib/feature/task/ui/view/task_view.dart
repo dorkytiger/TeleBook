@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
 import 'package:tele_book/feature/task/store/task_store.dart';
 
 class TaskView extends StatefulWidget {
@@ -30,7 +33,17 @@ class _TaskViewState extends State<TaskView>
     final store = context.watch<TaskStore>();
     tabController.index = store.taskTabIndex;
     return Scaffold(
-      appBar: AppBar(title: Text('任务')),
+      appBar: AppBar(
+        title: Text('任务'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: () {
+              context.push(AppRoute.parseForm);
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           TabBar(
@@ -46,9 +59,9 @@ class _TaskViewState extends State<TaskView>
           ),
           Expanded(
             child: TabBarView(
-              controller:tabController ,
+              controller: tabController,
               children: [
-                Center(child: Text('下载任务')),
+                DownloadListView(),
                 Center(child: Text('导入任务')),
                 Center(child: Text('导出任务')),
               ],

@@ -1,3 +1,4 @@
+import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
 import 'package:tele_book/feature/book/model/vo/book_vo.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
@@ -22,12 +23,15 @@ class BookService {
           name: name,
           sort: sort,
         )
-        .map(
-          (books) => BookListVo(
-            bookVos: books
-                .map((book) => BookListItemVo(book: book, coverImagePath: ''))
-                .toList(),
-          ),
-        );
+        .map((books) {
+          final bookVos = books.map((book) {
+            // 用 GlobalConfig 解析封面路径，避免 async/await
+            final coverPath = book.localSubPaths.isNotEmpty
+                ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
+                : '';
+            return BookListItemVo(book: book, coverImagePath: coverPath);
+          }).toList();
+          return BookListVo(bookVos: bookVos);
+        });
   }
 }

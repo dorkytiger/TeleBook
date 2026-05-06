@@ -1,12 +1,11 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:tele_book/common/widget/cross_platform_webview.dart';
 
-class HtmlUtil {
-  static Future<String> extractTitleFromWebView(
-    CrossPlatformWebViewController controller,
-  ) async {
+class ParseWebService {
+  Future<String> extractTitleFromWebView({
+    required Future<String?> Function(String) onTitleExtracted,
+  }) async {
     final js = r"""
     (function(){
       try {
@@ -15,7 +14,7 @@ class HtmlUtil {
       } catch(e) { return ''; }
     })();
   """;
-    final resObj = await controller.runJavaScriptReturningResult(js);
+    final resObj = await onTitleExtracted(js);
 
     // 将返回的 Object 安全地转为字符串
     String title;
@@ -30,9 +29,9 @@ class HtmlUtil {
     return title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '').trim();
   }
 
-  static Future<List<String>> extractImagesFromWebView(
-    CrossPlatformWebViewController controller,
-  ) async {
+   Future<List<String>> extractImagesFromWebView({
+    required Future<String?> Function(String) onExtractImages,
+  }) async {
     final js = r"""
     (function(){
       try {
@@ -51,7 +50,7 @@ class HtmlUtil {
       }
     })();
   """;
-    final resObj = await controller.runJavaScriptReturningResult(js);
+    final resObj = await onExtractImages(js);
 
     // 将返回的 Object 安全地转为字符串
     String resString;
@@ -81,7 +80,7 @@ class HtmlUtil {
     }
   }
 
-  static Future<String> downloadImageToFile(String url, String saveDir) async {
+   Future<String> downloadImageToFile(String url, String saveDir) async {
     final filePath =
         '$saveDir/${DateTime.now().microsecondsSinceEpoch}_${url.split('/').last}.jpg';
     final dio = Dio();

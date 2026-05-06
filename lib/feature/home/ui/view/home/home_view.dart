@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tele_book/feature/book/ui/view/list/book_list_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
 import 'package:tele_book/feature/home/store/home_store.dart';
 import 'package:tele_book/feature/task/ui/view/task_view.dart';
 

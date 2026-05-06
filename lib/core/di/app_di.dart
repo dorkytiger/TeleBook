@@ -5,6 +5,8 @@ import 'package:tele_book/core/di/repository_di.dart';
 import 'package:tele_book/core/di/service_di.dart';
 import 'package:tele_book/core/di/store_di.dart';
 
+
+
 List<SingleChildWidget> createAppDI() {
   return [
     ...createCoreDI(),

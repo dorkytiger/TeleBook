@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tele_book/feature/book/ui/view/list/book_list_view.dart';
+import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_page_view.dart';
 import 'package:tele_book/feature/home/ui/view/home/home_view.dart';
+import 'package:tele_book/feature/pase/ui/view/parse_form_view.dart';
+import 'package:tele_book/feature/pase/ui/view/parse_web_view.dart';
 
 class AppRoute {
   // ══════════════════════════════════════════════════════════════════════════
@@ -34,8 +38,6 @@ class AppRoute {
   static const parseArchiveBatch = '/parse/archive/batch';
   static const parseArchiveBatchEdit = '/parse/archive/batch/edit';
 
-  // Build a GoRouter instance. We still call Get Bindings when building each page
-  // to keep existing dependency registration behavior.
   static final GoRouter router = GoRouter(
     initialLocation: home,
     routes: [
@@ -49,6 +51,32 @@ class AppRoute {
         path: book,
         pageBuilder: (context, state) {
           return MaterialPage(child: BookListView());
+        },
+      ),
+      GoRoute(
+        path: bookPage,
+        pageBuilder: (context, state) {
+          final book = state.extra as BookTableData?;
+          if (book == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少书籍参数"));
+          }
+          return MaterialPage(child: BookPageView(book: book));
+        },
+      ),
+      GoRoute(
+        path: parseForm,
+        pageBuilder: (context, state) {
+          return MaterialPage(child: ParseFormView());
+        },
+      ),
+      GoRoute(
+        path: parseWeb,
+        pageBuilder: (context, state) {
+          final url = state.extra as String?;
+          if (url == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少URL参数"));
+          }
+          return MaterialPage(child: ParseWebView(url: url));
         },
       ),
     ],
