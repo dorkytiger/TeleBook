@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/common/widget/task_item_widget.dart';
+import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/store/download_store.dart';
@@ -32,6 +34,14 @@ class _DownloadListContentState extends State<_DownloadListContent> {
   Widget build(BuildContext context) {
     final store = context.watch<DownloadStore>();
     return Scaffold(
+      appBar: AppBar(
+        title: Text("下载任务"),
+        leading: BackButton(
+          onPressed: () {
+            context.go(AppRoute.book);
+          },
+        ),
+      ),
       body: store.tasks.isEmpty
           ? Center(
               child: Column(
@@ -79,7 +89,7 @@ class _DownloadListContentState extends State<_DownloadListContent> {
                 .expand((task) => task.downloadItemBoList)
                 .toList();
 
-            if(tasks.isEmpty){
+            if (tasks.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(16),
                 child: Center(

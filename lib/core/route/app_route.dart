@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/core/db/app_database.dart';
-import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_form_view.dart';
 import 'package:tele_book/feature/book/ui/view/book_page_view.dart';
-import 'package:tele_book/feature/home/ui/view/home/home_view.dart';
-import 'package:tele_book/feature/pase/ui/view/parse_archive_view.dart';
-import 'package:tele_book/feature/pase/ui/view/parse_form_view.dart';
-import 'package:tele_book/feature/pase/ui/view/parse_web_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_view.dart';
+import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
+import 'package:tele_book/feature/export/ui/view/export_batch_form_view.dart';
+import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_archive_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_batch_archive_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_batch_image_folder_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_form_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_image_folder_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
 
 class AppRoute {
-  // ══════════════════════════════════════════════════════════════════════════
-  // 路由常量定义
-  // ══════════════════════════════════════════════════════════════════════════
-
   // 主页面
-  static const home = '/home';
   static const book = '/book';
-  static const export = '/export';
-  static const collection = '/collection';
-  static const mark = '/mark';
+
+  // 导出
+  static const exportSingle = '/export/single';
+  static const exportBatch = '/export/batch';
 
   // 书籍相关
-  static const bookEdit = '/book/edit';
+  static const bookForm = '/book/form';
   static const bookPage = '/book/page';
-  static const bookFilter = '/book/filter';
 
   // 下载
   static const download = '/download';
-  static const downloadTask = '/download/task';
 
   // 解析
   static const parseForm = '/parse/form';
@@ -40,18 +40,22 @@ class AppRoute {
   static const parseArchiveBatchEdit = '/parse/archive/batch/edit';
 
   static final GoRouter router = GoRouter(
-    initialLocation: home,
+    initialLocation: book,
     routes: [
-      GoRoute(
-        path: home,
-        pageBuilder: (context, state) {
-          return MaterialPage(child: HomeView());
-        },
-      ),
       GoRoute(
         path: book,
         pageBuilder: (context, state) {
-          return MaterialPage(child: BookListView());
+          return MaterialPage(child: BookView());
+        },
+      ),
+      GoRoute(
+        path: bookForm,
+        pageBuilder: (context, state) {
+          final book = state.extra as BookTableData?;
+          if (book == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少书籍参数"));
+          }
+          return MaterialPage(child: BookFormView(book: book));
         },
       ),
       GoRoute(
@@ -62,6 +66,32 @@ class AppRoute {
             return MaterialPage(child: ErrorRoutePage(message: "缺少书籍参数"));
           }
           return MaterialPage(child: BookPageView(book: book));
+        },
+      ),
+      GoRoute(
+        path: download,
+        pageBuilder: (context, state) {
+          return MaterialPage(child: Scaffold(body: DownloadListView()));
+        },
+      ),
+      GoRoute(
+        path: exportSingle,
+        pageBuilder: (context, state) {
+          final book = state.extra as BookTableData?;
+          if (book == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少书籍参数"));
+          }
+          return MaterialPage(child: ExportSingleFormView(book: book));
+        },
+      ),
+      GoRoute(
+        path: exportBatch,
+        pageBuilder: (context, state) {
+          final books = state.extra as List<BookTableData>?;
+          if (books == null || books.isEmpty) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少书籍参数"));
+          }
+          return MaterialPage(child: ExportBatchFormView(books: books));
         },
       ),
       GoRoute(
@@ -81,6 +111,28 @@ class AppRoute {
         },
       ),
       GoRoute(
+        path: parseImageFolder,
+        pageBuilder: (context, state) {
+          final folderPath = state.extra as String?;
+          if (folderPath == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          }
+          return MaterialPage(child: ParseImageFolderView(folderPath: folderPath));
+        },
+      ),
+      GoRoute(
+        path: parseBatchImageFolder,
+        pageBuilder: (context, state) {
+          final parentDirPath = state.extra as String?;
+          if (parentDirPath == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少父目录路径参数"));
+          }
+          return MaterialPage(
+            child: ParseBatchImageFolderView(parentDirPath: parentDirPath),
+          );
+        },
+      ),
+      GoRoute(
         path: parseArchiveSingle,
         pageBuilder: (context, state) {
           final path = state.extra as String?;
@@ -88,6 +140,18 @@ class AppRoute {
             return MaterialPage(child: ErrorRoutePage(message: "缺少文件路径参数"));
           }
           return MaterialPage(child: ParseArchiveView(archivePath: path));
+        },
+      ),
+      GoRoute(
+        path: parseArchiveBatch,
+        pageBuilder: (context, state) {
+          final archiveDirPath = state.extra as String?;
+          if (archiveDirPath == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          }
+          return MaterialPage(
+            child: ParseBatchArchiveView(archiveDirPath: archiveDirPath),
+          );
         },
       ),
     ],
@@ -111,8 +175,14 @@ class ErrorRoutePage extends StatelessWidget {
           },
         ),
       ),
-      body: Center(
-        child: Text(message, style: TextStyle(fontSize: 18, color: Colors.red)),
+      body: Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: Text(
+            message,
+            style: TextStyle(fontSize: 18, color: Colors.red),
+          ),
+        ),
       ),
     );
   }

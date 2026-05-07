@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:synchronized/synchronized.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
@@ -77,6 +78,7 @@ class DownloadService {
           ),
         );
       }
+
       for (var item in downloadItems) {
         _downloader.download(
           DownloadTask(
@@ -166,7 +168,6 @@ class DownloadService {
 
     var currentItem = item;
 
-
     // 重试时，重置该项状态为下载中，组状态也改为下载中
     final retryingItem = item.copyWith(
       progress: 0,
@@ -200,8 +201,9 @@ class DownloadService {
         await _stateLock.synchronized(() {
           switch (status) {
             case TaskStatus.failed:
-              final failedItem =
-                  currentItem.copyWith(status: DownloadStatus.failed);
+              final failedItem = currentItem.copyWith(
+                status: DownloadStatus.failed,
+              );
               currentItem = failedItem;
               _downloadRepository.upsertItem(failedItem);
 
@@ -245,9 +247,15 @@ class DownloadService {
     if (items.isEmpty) return;
 
     // 统计各状态的任务数
-    final completedCount = items.where((i) => i.status == DownloadStatus.completed).length;
-    final failedCount = items.where((i) => i.status == DownloadStatus.failed).length;
-    final downloadingCount = items.where((i) => i.status == DownloadStatus.downloading).length;
+    final completedCount = items
+        .where((i) => i.status == DownloadStatus.completed)
+        .length;
+    final failedCount = items
+        .where((i) => i.status == DownloadStatus.failed)
+        .length;
+    final downloadingCount = items
+        .where((i) => i.status == DownloadStatus.downloading)
+        .length;
 
     DownloadStatus newStatus = DownloadStatus.pending;
 
@@ -275,7 +283,6 @@ class DownloadService {
     );
   }
 
-
   /// 检查组是否已完成且无失败，若满足则自动保存为书籍
   Future<void> _checkAndAutoSave(String groupId) async {
     // 避免重复保存同一组
@@ -295,11 +302,13 @@ class DownloadService {
       // 按 order 排序后再保存
       final sortedItems = List<DownloadItemBo>.from(items)
         ..sort((a, b) => a.order.compareTo(b.order));
-      await _bookRepository.saveToBook(
-        sortedItems
-            .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
-            .toList(),
-        group.name,
+      await _bookRepository.saveAsBook(
+        SaveAsBookDto(
+          title: group.name,
+          paths: sortedItems
+              .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
+              .toList(),
+        ),
       );
     }
   }

@@ -21,6 +21,8 @@ WebViewEnvironment? webViewEnvironment;
 
 Future<void> _init() async {
   await GlobalConfig.init();
+  // 启动后台缓存清理，不阻塞启动流程
+  GlobalConfig.cleanCacheOnStartup();
 
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
     final availableVersion = await WebViewEnvironment.getAvailableVersion();

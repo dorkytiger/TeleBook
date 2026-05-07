@@ -36,7 +36,30 @@ class BookService {
         });
   }
 
-  Future<void> updateBook(BookTableData book) {
-    return _bookRepository.updateBook(book);
-  }
-}
+   Future<BookListVo> fetchBooks({
+     int? page,
+     DateTime? lastCreatedAt,
+     int pageSize = 20,
+     String? name,
+     BookSort? sort,
+   }) async {
+     final books = await _bookRepository.fetchBooks(
+       page: page,
+       lastCreatedAt: lastCreatedAt,
+       pageSize: pageSize,
+       name: name,
+       sort: sort,
+     );
+     final bookVos = books.map((book) {
+       final coverPath = book.localSubPaths.isNotEmpty
+           ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
+           : '';
+       return BookListItemVo(book: book, coverImagePath: coverPath);
+     }).toList();
+     return BookListVo(bookVos: bookVos);
+   }
+
+   Future<void> updateBook(BookTableData book) {
+     return _bookRepository.updateBook(book);
+   }
+ }

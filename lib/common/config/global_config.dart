@@ -1,7 +1,28 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+
+// 顶层函数供 compute() 在后台 Isolate 中调用
+Future<void> _cleanDirsInBackground(List<String> dirPaths) async {
+  for (final dirPath in dirPaths) {
+    final dir = Directory(dirPath);
+    if (!await dir.exists()) continue;
+    try {
+      // 只删目录内的子项，保留目录本身
+      await for (final entity in dir.list()) {
+        try {
+          if (entity is Directory) {
+            await entity.delete(recursive: true);
+          } else {
+            await entity.delete();
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+}
 
 class GlobalConfig {
   static Directory? _appDocDir;
@@ -27,5 +48,16 @@ class GlobalConfig {
     // 确保这两个目录存在
     await booksDir.create(recursive: true);
     await downloadCacheDir.create(recursive: true);
+  }
+
+  /// 启动时清理缓存目录（后台执行，不阻塞启动）。
+  /// 清理范围：appTempDir（临时解压残留）、downloadCacheDir（中断的下载缓存）
+  static void cleanCacheOnStartup() {
+    compute(_cleanDirsInBackground, [
+      _appTempDir!.path,
+      downloadCacheDir.path,
+    ]).catchError((e) {
+      debugPrint('[GlobalConfig] 缓存清理失败: $e');
+    });
   }
 }
