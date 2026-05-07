@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/export/enum/export_format.dart';
 import 'package:tele_book/feature/export/model/export_item.dart';
@@ -18,7 +19,14 @@ class ExportBatchViewmodel extends ChangeNotifier {
   String? errorMessage;
 
   ExportBatchViewmodel({required List<BookTableData> books}) {
-    items = books.map((b) => ExportItem(book: b)).toList();
+    items = books
+        .map(
+          (b) => ExportItem(
+            book: b,
+            coverPath: "${GlobalConfig.booksDir.path}/${b.localSubPaths.first}",
+          ),
+        )
+        .toList();
   }
 
   void setFormat(ExportFormat fmt) {
@@ -87,4 +95,3 @@ class ExportBatchViewmodel extends ChangeNotifier {
     super.dispose();
   }
 }
-

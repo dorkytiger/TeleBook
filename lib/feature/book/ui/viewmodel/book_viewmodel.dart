@@ -121,6 +121,14 @@ class BookViewmodel extends ChangeNotifier {
           bookStore.sort.copyWith(type: BookSortType.lastCreatedAt),
         );
         break;
+      case BookTopMenuType.list:
+        layout = BookLayout.list;
+        notifyListeners();
+        break;
+      case BookTopMenuType.grid:
+        layout = BookLayout.grid;
+        notifyListeners();
+        break;
     }
   }
 
@@ -165,15 +173,18 @@ class BookViewmodel extends ChangeNotifier {
 }
 
 enum BookTopMenuType {
-  add('添加书籍'),
-  desc('降序'),
-  asc('升序'),
-  name('按标题排序'),
-  lastCreatedAt('按创建时间排序');
+  add('添加', Icons.add),
+  desc('降序',Icons.arrow_downward),
+  asc('升序',Icons.arrow_upward),
+  name('按标题',Icons.sort_by_alpha),
+  lastCreatedAt('按时间',Icons.access_time),
+  list('列表',Icons.view_list),
+  grid('网格',Icons.grid_view);
 
   final String title;
+  final IconData icon;
 
-  const BookTopMenuType(this.title);
+  const BookTopMenuType(this.title,this.icon);
 }
 
 enum BookItemMenuType {

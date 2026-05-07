@@ -10,8 +10,10 @@ import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_archive_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_batch_archive_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_batch_image_folder_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_batch_pdf_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_form_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_image_folder_view.dart';
+import 'package:tele_book/feature/parse/ui/view/parse_pdf_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
 
 class AppRoute {
@@ -33,6 +35,7 @@ class AppRoute {
   static const parseForm = '/parse/form';
   static const parseWeb = '/parse/web';
   static const parsePdf = '/parse/pdf';
+  static const parseBatchPdf = '/parse/batch_pdf';
   static const parseImageFolder = '/parse/image_folder';
   static const parseBatchImageFolder = '/parse/batch_image_folder';
   static const parseArchiveSingle = '/parse/archive/single';
@@ -152,6 +155,26 @@ class AppRoute {
           return MaterialPage(
             child: ParseBatchArchiveView(archiveDirPath: archiveDirPath),
           );
+        },
+      ),
+      GoRoute(
+        path: parsePdf,
+        pageBuilder: (context, state) {
+          final path = state.extra as String?;
+          if (path == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少 PDF 文件路径参数"));
+          }
+          return MaterialPage(child: ParsePdfView(pdfPath: path));
+        },
+      ),
+      GoRoute(
+        path: parseBatchPdf,
+        pageBuilder: (context, state) {
+          final dirPath = state.extra as String?;
+          if (dirPath == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          }
+          return MaterialPage(child: ParseBatchPdfView(pdfDirPath: dirPath));
         },
       ),
     ],

@@ -5,10 +5,10 @@ import 'package:tele_book/core/db/app_database.dart';
 class ExportItem {
   final BookTableData book;
   final TextEditingController nameController;
+  final String coverPath;
 
-  ExportItem({required this.book})
-      : nameController = TextEditingController(text: book.name);
+  ExportItem({required this.book, required this.coverPath})
+    : nameController = TextEditingController(text: book.name);
 
   void dispose() => nameController.dispose();
 }
-

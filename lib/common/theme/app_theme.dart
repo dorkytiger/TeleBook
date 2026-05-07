@@ -73,7 +73,7 @@ abstract final class AppTheme {
       dialogRadius: 12.0,
       snackBarRadius: 6,
       snackBarElevation: 6,
-      snackBarBackgroundSchemeColor: SchemeColor.surfaceContainerLow,
+      snackBarBackgroundSchemeColor: SchemeColor.surfaceContainerHighest,
       appBarBackgroundSchemeColor: SchemeColor.surfaceContainerLowest,
       appBarScrolledUnderElevation: 0.5,
       bottomAppBarHeight: 60,

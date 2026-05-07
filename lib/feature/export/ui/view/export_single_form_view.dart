@@ -30,7 +30,12 @@ class _ExportSingleFormContent extends StatelessWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('导出成功！'), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text('导出成功！'),
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
+          ),
         );
         Navigator.of(context).pop();
       });
@@ -133,4 +138,3 @@ class _ExportSingleFormContent extends StatelessWidget {
     );
   }
 }
-

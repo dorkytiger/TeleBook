@@ -44,8 +44,8 @@ class _BookViewContent extends StatelessWidget {
         body: bookStore.books.isEmpty && !bookStore.isLoading
             ? _buildEmpty()
             : vm.layout == BookLayout.list
-                ? _BookListView(vm: vm)
-                : _BookGridView(vm: vm),
+            ? _BookListView(vm: vm)
+            : _BookGridView(vm: vm),
         bottomNavigationBar: vm.isSelectionMode
             ? _buildSelectionBottomBar(context, vm)
             : null,
@@ -85,13 +85,6 @@ class _BookViewContent extends StatelessWidget {
                 ),
               )
             : const SizedBox.shrink(),
-        IconButton(
-          onPressed: vm.toggleLayout,
-          icon: Icon(
-            vm.layout == BookLayout.list ? Icons.grid_view : Icons.view_list,
-          ),
-          tooltip: vm.layout == BookLayout.list ? '网格显示' : '列表显示',
-        ),
         _buildTopMenuButton(context, vm, bookStore),
       ],
     );
@@ -104,12 +97,7 @@ class _BookViewContent extends StatelessWidget {
         onPressed: vm.exitSelectionMode,
       ),
       title: Text('已选 ${vm.selectedBookIds.length} 本'),
-      actions: [
-        TextButton(
-          onPressed: vm.selectAll,
-          child: const Text('全选'),
-        ),
-      ],
+      actions: [TextButton(onPressed: vm.selectAll, child: const Text('全选'))],
     );
   }
 
@@ -145,6 +133,12 @@ class _BookViewContent extends StatelessWidget {
             value: type,
             child: Row(
               children: [
+                Icon(
+                  type.icon,
+                  size: 16,
+                  color: Colors.grey[600],
+                ),
+                SizedBox(width: 8),
                 Text(type.title),
                 const SizedBox(width: 8),
                 if (type == BookTopMenuType.asc &&
@@ -158,6 +152,12 @@ class _BookViewContent extends StatelessWidget {
                   const Icon(Icons.check, size: 16),
                 if (type == BookTopMenuType.lastCreatedAt &&
                     bookStore.sort.type == BookSortType.lastCreatedAt)
+                  const Icon(Icons.check, size: 16),
+                if (type == BookTopMenuType.list &&
+                    vm.layout == BookLayout.list)
+                  const Icon(Icons.check, size: 16),
+                if (type == BookTopMenuType.grid &&
+                    vm.layout == BookLayout.grid)
                   const Icon(Icons.check, size: 16),
               ],
             ),
@@ -379,11 +379,11 @@ class _BookGridTile extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.grey[200],
-        child: Icon(Icons.book, color: Colors.grey[400], size: 40),
-      );
+    width: double.infinity,
+    height: double.infinity,
+    color: Colors.grey[200],
+    child: Icon(Icons.book, color: Colors.grey[400], size: 40),
+  );
 
   void _showItemMenu(BuildContext context) {
     showModalBottomSheet(

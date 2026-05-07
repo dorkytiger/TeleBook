@@ -15,6 +15,8 @@ class ParseFormViewmodel extends ChangeNotifier {
       TextEditingController();
   final TextEditingController batchImageFolderPathController =
       TextEditingController();
+  final TextEditingController pdfPathController = TextEditingController();
+  final TextEditingController batchPdfPathController = TextEditingController();
 
   void setType(ParseFormType? newType) {
     if (newType != null) {
@@ -52,7 +54,13 @@ class ParseFormViewmodel extends ChangeNotifier {
           extra: batchImageFolderPathController.text,
         );
         break;
-      }
+      case ParseFormType.pdf:
+        context.push(AppRoute.parsePdf, extra: pdfPathController.text);
+        break;
+      case ParseFormType.batchPdf:
+        context.push(AppRoute.parseBatchPdf, extra: batchPdfPathController.text);
+        break;
+    }
   }
 
   Future<void> getClipboardUrl() async {
@@ -106,6 +114,48 @@ class ParseFormViewmodel extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> pickerPdf(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      dialogTitle: "选择 PDF 文件",
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (result != null && result.files.single.path != null) {
+      pdfPathController.text = result.files.single.path!;
+      notifyListeners();
+    }
+  }
+
+  Future<void> pickerBatchPdf(BuildContext context) async {
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: "选择包含 PDF 的文件夹",
+    );
+    if (result != null) {
+      batchPdfPathController.text = result;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    urlController.dispose();
+    archivePathController.dispose();
+    batchArchivePathController.dispose();
+    imageFolderPathController.dispose();
+    batchImageFolderPathController.dispose();
+    pdfPathController.dispose();
+    batchPdfPathController.dispose();
+    super.dispose();
+  }
 }
 
-enum ParseFormType { web, archive, batchArchive, imageFolder, batchImageFolder }
+enum ParseFormType {
+  web,
+  archive,
+  batchArchive,
+  imageFolder,
+  batchImageFolder,
+  pdf,
+  batchPdf,
+}

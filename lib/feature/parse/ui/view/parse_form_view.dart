@@ -24,7 +24,6 @@ class _ParseFormContent extends StatefulWidget {
 class _ParseFormContentState extends State<_ParseFormContent> {
   @override
   Widget build(BuildContext context) {
-    // 读取 viewmodel，用 watch 会在 vm 调用 notifyListeners() 时重建本 Widget
     final vm = context.watch<ParseFormViewmodel>();
 
     return Scaffold(
@@ -43,7 +42,6 @@ class _ParseFormContentState extends State<_ParseFormContent> {
                     return const InputDecoration(
                       labelText: "选择解析来源",
                       prefixIcon: Icon(Icons.source),
-
                       border: OutlineInputBorder(),
                     );
                   },
@@ -76,6 +74,16 @@ class _ParseFormContentState extends State<_ParseFormContent> {
                       label: "批量文件夹",
                       leadingIcon: Icon(Icons.folder_copy),
                     ),
+                    DropdownMenuEntry(
+                      value: ParseFormType.pdf,
+                      label: "PDF",
+                      leadingIcon: Icon(Icons.picture_as_pdf),
+                    ),
+                    DropdownMenuEntry(
+                      value: ParseFormType.batchPdf,
+                      label: "批量 PDF",
+                      leadingIcon: Icon(Icons.folder_special),
+                    ),
                   ],
                   onSelected: (value) {
                     vm.setType(value);
@@ -84,8 +92,8 @@ class _ParseFormContentState extends State<_ParseFormContent> {
               },
             ),
             const SizedBox(height: 16),
-            _buildSubForm(context, vm.type), // 根据选择的类型显示不同的表单
-            Spacer(),
+            _buildSubForm(context, vm.type),
+            const Spacer(),
             FilledButton(
               onPressed: () {
                 vm.onParse(context);
@@ -100,40 +108,33 @@ class _ParseFormContentState extends State<_ParseFormContent> {
   }
 
   Widget _buildSubForm(BuildContext context, ParseFormType type) {
+    final vm = context.read<ParseFormViewmodel>();
     switch (type) {
       case ParseFormType.web:
-        return _buildWebForm(context, context.read<ParseFormViewmodel>());
+        return _buildWebForm(context, vm);
       case ParseFormType.archive:
-        return _buildArchiveForm(context, context.read<ParseFormViewmodel>());
+        return _buildArchiveForm(context, vm);
       case ParseFormType.batchArchive:
-        return _buildBatchArchiveForm(
-          context,
-          context.read<ParseFormViewmodel>(),
-        );
+        return _buildBatchArchiveForm(context, vm);
       case ParseFormType.imageFolder:
-        return _buildImageFolderForm(
-          context,
-          context.read<ParseFormViewmodel>(),
-        );
+        return _buildImageFolderForm(context, vm);
       case ParseFormType.batchImageFolder:
-        return _buildBatchImageFolderForm(
-          context,
-          context.read<ParseFormViewmodel>(),
-        );
+        return _buildBatchImageFolderForm(context, vm);
+      case ParseFormType.pdf:
+        return _buildPdfForm(context, vm);
+      case ParseFormType.batchPdf:
+        return _buildBatchPdfForm(context, vm);
     }
   }
 
   Widget _buildWebForm(BuildContext context, ParseFormViewmodel vm) {
     return TextField(
       controller: vm.urlController,
-      // 推荐把 controller 放到 vm 并在 dispose 里释放
       decoration: InputDecoration(
         labelText: "输入文本",
         prefixIcon: const Icon(Icons.web),
         suffixIcon: IconButton(
-          onPressed: () {
-            vm.getClipboardUrl();
-          },
+          onPressed: () => vm.getClipboardUrl(),
           icon: const Icon(Icons.paste),
         ),
         border: const OutlineInputBorder(),
@@ -144,14 +145,11 @@ class _ParseFormContentState extends State<_ParseFormContent> {
   Widget _buildArchiveForm(BuildContext context, ParseFormViewmodel vm) {
     return TextField(
       controller: vm.archivePathController,
-      // 推荐把 controller 放到 vm 并在 dispose 里释放
       decoration: InputDecoration(
         labelText: "请选择压缩包文件",
         prefixIcon: const Icon(Icons.archive),
         suffixIcon: IconButton(
-          onPressed: () {
-            vm.pickerArchive(context);
-          },
+          onPressed: () => vm.pickerArchive(context),
           icon: const Icon(Icons.folder_open),
         ),
         border: const OutlineInputBorder(),
@@ -162,14 +160,11 @@ class _ParseFormContentState extends State<_ParseFormContent> {
   Widget _buildBatchArchiveForm(BuildContext context, ParseFormViewmodel vm) {
     return TextField(
       controller: vm.batchArchivePathController,
-      // 推荐把 controller 放到 vm 并在 dispose 里释放
       decoration: InputDecoration(
         labelText: "请选择压缩包文件夹",
         prefixIcon: const Icon(Icons.folder),
         suffixIcon: IconButton(
-          onPressed: () {
-            vm.pickerBatchArchive(context);
-          },
+          onPressed: () => vm.pickerBatchArchive(context),
           icon: const Icon(Icons.folder_open),
         ),
         border: const OutlineInputBorder(),
@@ -184,9 +179,7 @@ class _ParseFormContentState extends State<_ParseFormContent> {
         labelText: "请选择图片文件夹",
         prefixIcon: const Icon(Icons.photo_library),
         suffixIcon: IconButton(
-          onPressed: () {
-            vm.pickerImageFolder(context);
-          },
+          onPressed: () => vm.pickerImageFolder(context),
           icon: const Icon(Icons.folder_open),
         ),
         border: const OutlineInputBorder(),
@@ -194,19 +187,44 @@ class _ParseFormContentState extends State<_ParseFormContent> {
     );
   }
 
-  Widget _buildBatchImageFolderForm(
-    BuildContext context,
-    ParseFormViewmodel vm,
-  ) {
+  Widget _buildBatchImageFolderForm(BuildContext context, ParseFormViewmodel vm) {
     return TextField(
       controller: vm.batchImageFolderPathController,
       decoration: InputDecoration(
         labelText: "请选择批量图片文件夹父目录",
         prefixIcon: const Icon(Icons.folder_copy),
         suffixIcon: IconButton(
-          onPressed: () {
-            vm.pickerBatchImageFolder(context);
-          },
+          onPressed: () => vm.pickerBatchImageFolder(context),
+          icon: const Icon(Icons.folder_open),
+        ),
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildPdfForm(BuildContext context, ParseFormViewmodel vm) {
+    return TextField(
+      controller: vm.pdfPathController,
+      decoration: InputDecoration(
+        labelText: "请选择 PDF 文件",
+        prefixIcon: const Icon(Icons.picture_as_pdf),
+        suffixIcon: IconButton(
+          onPressed: () => vm.pickerPdf(context),
+          icon: const Icon(Icons.folder_open),
+        ),
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildBatchPdfForm(BuildContext context, ParseFormViewmodel vm) {
+    return TextField(
+      controller: vm.batchPdfPathController,
+      decoration: InputDecoration(
+        labelText: "请选择包含 PDF 的文件夹",
+        prefixIcon: const Icon(Icons.folder_special),
+        suffixIcon: IconButton(
+          onPressed: () => vm.pickerBatchPdf(context),
           icon: const Icon(Icons.folder_open),
         ),
         border: const OutlineInputBorder(),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tele_book/common/widget/local_image_widget.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/export/enum/export_format.dart';
 import 'package:tele_book/feature/export/ui/viewmodel/export_batch_viewmodel.dart';
@@ -29,19 +30,18 @@ class _ExportBatchFormContent extends StatelessWidget {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+           SnackBar(
             content: Text('全部导出成功！'),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
         );
         Navigator.of(context).pop();
       });
+
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('批量导出（${vm.items.length} 本）'),
-      ),
+      appBar: AppBar(title: Text('批量导出（${vm.items.length} 本）')),
       body: Column(
         children: [
           // 顶部设置区
@@ -117,47 +117,57 @@ class _ExportBatchFormContent extends StatelessWidget {
           // 导出项列表
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              padding: const EdgeInsets.all(16),
+              separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemCount: vm.items.length,
               itemBuilder: (context, index) {
                 final item = vm.items[index];
-                return Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.book_outlined, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.book.name,
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: Colors.grey),
-                            ),
-                            const SizedBox(height: 4),
-                            TextField(
-                              controller: item.nameController,
-                              enabled: !vm.isExporting,
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                border: OutlineInputBorder(),
-                                labelText: '导出文件名',
-                              ),
-                            ),
-                          ],
+                return Row(
+                  children: [
+                    LocalImageWidget(imagePath: item.coverPath),
+                    Expanded(
+                      child: ListTile(
+                        title: Text(
+                          item.book.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                        subtitle: Text('${item.book.localSubPaths.length} 页'),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${item.book.localSubPaths.length} 页',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        showGeneralDialog(
+                          context: context,
+                          pageBuilder: (_, _, _) {
+                            return AlertDialog(
+                              title: Text('编辑导出文件名'),
+                              content: TextField(
+                                controller: item.nameController,
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  labelText: '导出文件名',
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: Text('取消'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text('确定'),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      icon: const Icon(Icons.edit),
+                    ),
+                  ],
                 );
               },
             ),
@@ -188,4 +198,3 @@ class _ExportBatchFormContent extends StatelessWidget {
     );
   }
 }
-
