@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:path/path.dart' as p;
-import 'package:pdf_image_renderer/pdf_image_renderer.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/util/failure_util.dart';
 import 'package:tele_book/core/util/result_util.dart';
@@ -10,6 +12,33 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:uuid/uuid.dart';
 
 class ParsePdfService {
+  static bool _pdfrxInitialized = false;
+
+  void _ensurePdfrxInitialized() {
+    if (_pdfrxInitialized) return;
+    pdfrxFlutterInitialize();
+    _pdfrxInitialized = true;
+  }
+
+  Future<Uint8List?> _bgraToPng(Uint8List bgra, int width, int height) async {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromPixels(
+      bgra,
+      width,
+      height,
+      ui.PixelFormat.bgra8888,
+      completer.complete,
+    );
+
+    final image = await completer.future;
+    try {
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      return data?.buffer.asUint8List();
+    } finally {
+      image.dispose();
+    }
+  }
+
   /// 解析单个 PDF：逐页渲染为 PNG 并写入临时目录，返回临时图片路径列表
   Future<Result<List<String>>> parsePdf(
     String pdfPath, {
@@ -18,33 +47,44 @@ class ParsePdfService {
     final tempDir = p.join(GlobalConfig.appTempDir.path, const Uuid().v4());
     await Directory(tempDir).create(recursive: true);
 
-    final renderer = PdfImageRenderer(path: pdfPath);
+    _ensurePdfrxInitialized();
+
+    PdfDocument? document;
     try {
-      await renderer.open();
-      final pageCount = await renderer.getPageCount();
+      document = await PdfDocument.openFile(pdfPath);
+      final pageCount = document.pages.length;
       final imagePaths = <String>[];
 
       for (var i = 0; i < pageCount; i++) {
-        await renderer.openPage(pageIndex: i);
-        final size = await renderer.getPageSize(pageIndex: i);
-        final bytes = await renderer.renderPage(
-          pageIndex: i,
-          x: 0,
-          y: 0,
-          width: size.width,
-          height: size.height,
-          scale: 2,
-          background: Color(0xFFFFFFFF),
-        );
-        await renderer.closePage(pageIndex: i);
+        final page = await document.pages[i].ensureLoaded();
+        final fullWidth = (page.width * 2).roundToDouble();
+        final fullHeight = (page.height * 2).roundToDouble();
 
-        if (bytes != null && bytes.isNotEmpty) {
-          final filePath = p.join(
-            tempDir,
-            '${i.toString().padLeft(7, '0')}.png',
-          );
-          await File(filePath).writeAsBytes(bytes);
-          imagePaths.add(filePath);
+        final rendered = await page.render(
+          fullWidth: fullWidth,
+          fullHeight: fullHeight,
+          backgroundColor: 0xFFFFFFFF,
+        );
+
+        if (rendered != null) {
+          try {
+            final pngBytes = await _bgraToPng(
+              rendered.pixels,
+              rendered.width,
+              rendered.height,
+            );
+
+            if (pngBytes != null && pngBytes.isNotEmpty) {
+              final filePath = p.join(
+                tempDir,
+                '${i.toString().padLeft(7, '0')}.png',
+              );
+              await File(filePath).writeAsBytes(pngBytes);
+              imagePaths.add(filePath);
+            }
+          } finally {
+            rendered.dispose();
+          }
         }
 
         onProgress?.call(i + 1, pageCount);
@@ -52,13 +92,13 @@ class ParsePdfService {
         await Future.delayed(Duration.zero);
       }
 
-      await renderer.close();
       return Result.success(imagePaths);
     } catch (e, st) {
-      await renderer.close().catchError((_) {});
       return Result.failure(
         BusinessFailure(message: '解析 PDF 失败', details: e, stackTrace: st),
       );
+    } finally {
+      await document?.dispose();
     }
   }
 

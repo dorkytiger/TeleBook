@@ -133,11 +133,7 @@ class _BookViewContent extends StatelessWidget {
             value: type,
             child: Row(
               children: [
-                Icon(
-                  type.icon,
-                  size: 16,
-                  color: Colors.grey[600],
-                ),
+                Icon(type.icon, size: 16, color: Colors.grey[600]),
                 SizedBox(width: 8),
                 Text(type.title),
                 const SizedBox(width: 8),
@@ -258,7 +254,18 @@ class _BookListTile extends StatelessWidget {
     return PopupMenuButton<BookItemMenuType>(
       onSelected: (value) => vm.onItemMenuSelected(context, value, book),
       itemBuilder: (context) => BookItemMenuType.values
-          .map((type) => PopupMenuItem(value: type, child: Text(type.title)))
+          .map(
+            (type) => PopupMenuItem(
+              value: type,
+              child: Row(
+                children: [
+                  Icon(type.icon, size: 16, color: Colors.grey[600]),
+                  SizedBox(width: 8),
+                  Text(type.title),
+                ],
+              ),
+            ),
+          )
           .toList(),
     );
   }

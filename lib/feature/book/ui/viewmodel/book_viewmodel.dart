@@ -188,11 +188,12 @@ enum BookTopMenuType {
 }
 
 enum BookItemMenuType {
-  edit('编辑'),
-  export('导出'),
-  delete('删除');
+  edit('编辑',Icons.edit),
+  export('导出',Icons.file_download),
+  delete('删除',Icons.delete);
 
   final String title;
+  final IconData icon;
 
-  const BookItemMenuType(this.title);
+  const BookItemMenuType(this.title,this.icon);
 }
