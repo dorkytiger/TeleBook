@@ -6,15 +6,21 @@ import 'package:tele_book/core/util/state_util.dart';
 import 'package:tele_book/feature/parse/ui/viewmodel/parse_image_folder_viewmodel.dart';
 
 class ParseImageFolderView extends StatelessWidget {
-  final String folderPath;
+  final String? folderPath;
+  final List<String>? imagePaths;
 
-  const ParseImageFolderView({super.key, required this.folderPath});
+  const ParseImageFolderView({
+    super.key,
+    this.folderPath,
+    this.imagePaths,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ParseImageFolderViewmodel(
         folderPath: folderPath,
+        imagePathsInput: imagePaths,
         parseArchiveService: context.read(),
         bookRepository: context.read(),
       ),

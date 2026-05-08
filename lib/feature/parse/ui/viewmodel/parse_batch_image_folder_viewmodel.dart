@@ -11,7 +11,8 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
 class ParseBatchImageFolderViewmodel extends ChangeNotifier {
-  final String parentDirPath;
+  final String? parentDirPath;
+  final List<String>? imagePaths;
   final ParseArchiveService parseArchiveService;
   final BookRepository bookRepository;
 
@@ -23,7 +24,8 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
   EventState saveBatchAsBookState = IdleEventState();
 
   ParseBatchImageFolderViewmodel({
-    required this.parentDirPath,
+    this.parentDirPath,
+    this.imagePaths,
     required this.parseArchiveService,
     required this.bookRepository,
   }) {
@@ -54,17 +56,29 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
       return;
     }
 
-    final result = await parseArchiveService.parseBatchImageFolders(
-      parentDirPath,
-      (total) {
-        totalCount = total;
-        notifyListeners();
-      },
-      (count) {
-        completeCount = count;
-        notifyListeners();
-      },
-    );
+    final result = imagePaths != null && imagePaths!.isNotEmpty
+        ? await parseArchiveService.parseBatchImageFoldersFromPaths(
+            imagePaths!,
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          )
+        : await parseArchiveService.parseBatchImageFolders(
+            parentDirPath ?? '',
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          );
 
     result.fold(
       onSuccess: (data) {

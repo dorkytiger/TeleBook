@@ -9,15 +9,21 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/ui/viewmodel/parse_batch_image_folder_viewmodel.dart';
 
 class ParseBatchImageFolderView extends StatelessWidget {
-  final String parentDirPath;
+  final String? parentDirPath;
+  final List<String>? imagePaths;
 
-  const ParseBatchImageFolderView({super.key, required this.parentDirPath});
+  const ParseBatchImageFolderView({
+    super.key,
+    this.parentDirPath,
+    this.imagePaths,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ParseBatchImageFolderViewmodel(
         parentDirPath: parentDirPath,
+        imagePaths: imagePaths,
         parseArchiveService: context.read(),
         bookRepository: context.read(),
       ),

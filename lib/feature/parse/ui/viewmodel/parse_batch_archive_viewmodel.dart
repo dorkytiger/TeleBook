@@ -11,7 +11,8 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
 class ParseBatchArchiveViewmodel extends ChangeNotifier {
-  final String archiveDirPath;
+  final String? archiveDirPath;
+  final List<String>? archivePaths;
   final ParseArchiveService parseArchiveService;
   final BookRepository bookRepository;
   List<ParseBatchArchiveVo> parseBatchArchiveList = [];
@@ -22,7 +23,8 @@ class ParseBatchArchiveViewmodel extends ChangeNotifier {
   EventState saveBatchAsBookState = IdleEventState();
 
   ParseBatchArchiveViewmodel({
-    required this.archiveDirPath,
+    this.archiveDirPath,
+    this.archivePaths,
     required this.parseArchiveService,
     required this.bookRepository,
   }) {
@@ -58,17 +60,29 @@ class ParseBatchArchiveViewmodel extends ChangeNotifier {
       return;
     }
 
-    final result = await parseArchiveService.parseBatchArchives(
-      archiveDirPath,
-      (total) {
-        totalCount = total;
-        notifyListeners();
-      },
-      (count) {
-        completeCount = count;
-        notifyListeners();
-      },
-    );
+    final result = archivePaths != null && archivePaths!.isNotEmpty
+        ? await parseArchiveService.parseBatchArchivesFromPaths(
+            archivePaths!,
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          )
+        : await parseArchiveService.parseBatchArchives(
+            archiveDirPath ?? '',
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          );
 
     result.fold(
       onSuccess: (data) {

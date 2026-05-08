@@ -39,7 +39,73 @@ bool _isImageFileStatic(String path) {
       p.endsWith('.webp');
 }
 
+String _baseName(String path) {
+  return path.split(RegExp(r'[\\/]')).last;
+}
+
+String _dirName(String path) {
+  final normalized = path.replaceAll('\\', '/');
+  final index = normalized.lastIndexOf('/');
+  if (index <= 0) return '';
+  return normalized.substring(0, index);
+}
+
 class ParseArchiveService {
+  Future<Result<List<String>>> parseImagePaths(List<String> imagePaths) async {
+    try {
+      final images = imagePaths
+          .where((path) => _isImageFileStatic(path))
+          .toList()
+        ..sort();
+      return Result.success(images);
+    } catch (e, st) {
+      return Result.failure(
+        BusinessFailure(message: "解析图片文件失败", details: e, stackTrace: st),
+      );
+    }
+  }
+
+  Future<Result<List<ParseBatchArchiveVo>>> _parseBatchArchivePaths(
+    List<String> archivePaths,
+    Function(int total) onStart,
+    Function(int count) onProgress,
+  ) async {
+    try {
+      final filteredPaths = archivePaths
+          .where((path) => path.toLowerCase().endsWith('.zip'))
+          .toList()
+        ..sort();
+
+      onStart(filteredPaths.length);
+
+      final results = <ParseBatchArchiveVo>[];
+      for (var index = 0; index < filteredPaths.length; index++) {
+        final path = filteredPaths[index];
+
+        // 每处理一个文件，让出事件循环，让 UI / GC 有机会运行
+        await Future.delayed(Duration.zero);
+
+        final parseResult = await parseArchive(path);
+        if (parseResult.isSuccess) {
+          results.add(
+            ParseBatchArchiveVo(
+              name: path.split(Platform.pathSeparator).last,
+              tempPaths: parseResult.data!,
+            ),
+          );
+          onProgress(index + 1);
+        } else {
+          throw Exception(parseResult.error?.message);
+        }
+      }
+      return Result.success(results);
+    } catch (e, st) {
+      return Result.failure(
+        BusinessFailure(message: "批量解析压缩包失败", details: e, stackTrace: st),
+      );
+    }
+  }
+
   // ── 单文件夹解析（只收集路径，不读取文件内容）──────────
   Future<Result<List<String>>> parseImageFolder(String folderPath) async {
     try {
@@ -95,34 +161,20 @@ class ParseArchiveService {
           .map((e) => e.path)
           .toList();
 
-      onStart(archivePaths.length);
-
-      final results = <ParseBatchArchiveVo>[];
-      for (var index = 0; index < archivePaths.length; index++) {
-        final path = archivePaths[index];
-
-        // 每处理一个文件，让出事件循环，让 UI / GC 有机会运行
-        await Future.delayed(Duration.zero);
-
-        final parseResult = await parseArchive(path);
-        if (parseResult.isSuccess) {
-          results.add(
-            ParseBatchArchiveVo(
-              name: path.split(Platform.pathSeparator).last,
-              tempPaths: parseResult.data!,
-            ),
-          );
-          onProgress(index + 1);
-        } else {
-          throw Exception(parseResult.error?.message);
-        }
-      }
-      return Result.success(results);
+      return _parseBatchArchivePaths(archivePaths, onStart, onProgress);
     } catch (e, st) {
       return Result.failure(
         BusinessFailure(message: "批量解析压缩包失败", details: e, stackTrace: st),
       );
     }
+  }
+
+  Future<Result<List<ParseBatchArchiveVo>>> parseBatchArchivesFromPaths(
+    List<String> archivePaths,
+    Function(int total) onStart,
+    Function(int count) onProgress,
+  ) {
+    return _parseBatchArchivePaths(archivePaths, onStart, onProgress);
   }
 
   // ── 批量文件夹解析 ────────────────────────────────────
@@ -170,6 +222,46 @@ class ParseArchiveService {
     } catch (e, st) {
       return Result.failure(
         BusinessFailure(message: "批量解析图片文件夹失败", details: e, stackTrace: st),
+      );
+    }
+  }
+
+  Future<Result<List<ParseBatchArchiveVo>>> parseBatchImageFoldersFromPaths(
+    List<String> imagePaths,
+    Function(int total) onStart,
+    Function(int count) onProgress,
+  ) async {
+    try {
+      final grouped = <String, List<String>>{};
+      for (final path in imagePaths) {
+        if (!_isImageFileStatic(path)) continue;
+        final parent = _dirName(path);
+        grouped.putIfAbsent(parent, () => <String>[]).add(path);
+      }
+
+      final keys = grouped.keys.toList()..sort();
+      onStart(keys.length);
+
+      final results = <ParseBatchArchiveVo>[];
+      for (var index = 0; index < keys.length; index++) {
+        final key = keys[index];
+        final paths = grouped[key]!..sort();
+        if (paths.isNotEmpty) {
+          results.add(
+            ParseBatchArchiveVo(
+              name: key.isEmpty ? _baseName(paths.first) : _baseName(key),
+              tempPaths: paths,
+            ),
+          );
+        }
+        onProgress(index + 1);
+        await Future.delayed(Duration.zero);
+      }
+
+      return Result.success(results);
+    } catch (e, st) {
+      return Result.failure(
+        BusinessFailure(message: "批量解析图片文件失败", details: e, stackTrace: st),
       );
     }
   }

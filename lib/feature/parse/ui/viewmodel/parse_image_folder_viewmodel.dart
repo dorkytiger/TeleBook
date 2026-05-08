@@ -10,7 +10,8 @@ import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
 class ParseImageFolderViewmodel extends ChangeNotifier {
-  final String folderPath;
+  final String? folderPath;
+  final List<String>? imagePathsInput;
   final ParseArchiveService parseArchiveService;
   final BookRepository bookRepository;
 
@@ -20,11 +21,20 @@ class ParseImageFolderViewmodel extends ChangeNotifier {
   String folderName = "";
 
   ParseImageFolderViewmodel({
-    required this.folderPath,
+    this.folderPath,
+    this.imagePathsInput,
     required this.parseArchiveService,
     required this.bookRepository,
   }) {
-    folderName = folderPath.split(RegExp(r'[\\/]')).last;
+    if (folderPath != null && folderPath!.isNotEmpty) {
+      folderName = folderPath!.split(RegExp(r'[\\/]')).last;
+    } else if (imagePathsInput != null && imagePathsInput!.isNotEmpty) {
+      final first = imagePathsInput!.first;
+      final parts = first.split(RegExp(r'[\\/]'));
+      folderName = parts.length > 1 ? parts[parts.length - 2] : '导入图片';
+    } else {
+      folderName = '导入图片';
+    }
     parseImageFolder();
   }
 
@@ -50,7 +60,9 @@ class ParseImageFolderViewmodel extends ChangeNotifier {
       return;
     }
 
-    final result = await parseArchiveService.parseImageFolder(folderPath);
+    final result = imagePathsInput != null && imagePathsInput!.isNotEmpty
+        ? await parseArchiveService.parseImagePaths(imagePathsInput!)
+        : await parseArchiveService.parseImageFolder(folderPath ?? '');
     result.fold(
       onSuccess: (data) {
         imagePaths = data;

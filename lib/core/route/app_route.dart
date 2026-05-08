@@ -116,23 +116,45 @@ class AppRoute {
       GoRoute(
         path: parseImageFolder,
         pageBuilder: (context, state) {
-          final folderPath = state.extra as String?;
-          if (folderPath == null) {
-            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          final extra = state.extra;
+          if (extra is String) {
+            return MaterialPage(child: ParseImageFolderView(folderPath: extra));
           }
-          return MaterialPage(child: ParseImageFolderView(folderPath: folderPath));
+          if (extra is List<String>) {
+            return MaterialPage(child: ParseImageFolderView(imagePaths: extra));
+          }
+          if (extra is List) {
+            final paths = extra.whereType<String>().toList();
+            if (paths.isNotEmpty) {
+              return MaterialPage(child: ParseImageFolderView(imagePaths: paths));
+            }
+          }
+          return MaterialPage(child: ErrorRoutePage(message: "缺少图片路径参数"));
         },
       ),
       GoRoute(
         path: parseBatchImageFolder,
         pageBuilder: (context, state) {
-          final parentDirPath = state.extra as String?;
-          if (parentDirPath == null) {
-            return MaterialPage(child: ErrorRoutePage(message: "缺少父目录路径参数"));
+          final extra = state.extra;
+          if (extra is String) {
+            return MaterialPage(
+              child: ParseBatchImageFolderView(parentDirPath: extra),
+            );
           }
-          return MaterialPage(
-            child: ParseBatchImageFolderView(parentDirPath: parentDirPath),
-          );
+          if (extra is List<String>) {
+            return MaterialPage(
+              child: ParseBatchImageFolderView(imagePaths: extra),
+            );
+          }
+          if (extra is List) {
+            final paths = extra.whereType<String>().toList();
+            if (paths.isNotEmpty) {
+              return MaterialPage(
+                child: ParseBatchImageFolderView(imagePaths: paths),
+              );
+            }
+          }
+          return MaterialPage(child: ErrorRoutePage(message: "缺少图片路径参数"));
         },
       ),
       GoRoute(
@@ -148,13 +170,29 @@ class AppRoute {
       GoRoute(
         path: parseArchiveBatch,
         pageBuilder: (context, state) {
-          final archiveDirPath = state.extra as String?;
-          if (archiveDirPath == null) {
-            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          final extra = state.extra;
+          if (extra is String) {
+            return MaterialPage(
+              child: ParseBatchArchiveView(archiveDirPath: extra),
+            );
           }
-          return MaterialPage(
-            child: ParseBatchArchiveView(archiveDirPath: archiveDirPath),
-          );
+          if (extra is List<String>) {
+            return MaterialPage(
+              child: ParseBatchArchiveView(archivePaths: extra),
+            );
+          }
+          if (extra is List) {
+            final paths = extra.whereType<String>().toList();
+            if (paths.isNotEmpty) {
+              return MaterialPage(
+                child: ParseBatchArchiveView(archivePaths: paths),
+              );
+            }
+          }
+          if (extra == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少路径参数"));
+          }
+          return MaterialPage(child: ErrorRoutePage(message: "批量压缩包参数格式错误"));
         },
       ),
       GoRoute(
@@ -170,11 +208,20 @@ class AppRoute {
       GoRoute(
         path: parseBatchPdf,
         pageBuilder: (context, state) {
-          final dirPath = state.extra as String?;
-          if (dirPath == null) {
-            return MaterialPage(child: ErrorRoutePage(message: "缺少文件夹路径参数"));
+          final extra = state.extra;
+          if (extra is String) {
+            return MaterialPage(child: ParseBatchPdfView(pdfDirPath: extra));
           }
-          return MaterialPage(child: ParseBatchPdfView(pdfDirPath: dirPath));
+          if (extra is List<String>) {
+            return MaterialPage(child: ParseBatchPdfView(pdfPaths: extra));
+          }
+          if (extra is List) {
+            final paths = extra.whereType<String>().toList();
+            if (paths.isNotEmpty) {
+              return MaterialPage(child: ParseBatchPdfView(pdfPaths: paths));
+            }
+          }
+          return MaterialPage(child: ErrorRoutePage(message: "缺少 PDF 路径参数"));
         },
       ),
     ],

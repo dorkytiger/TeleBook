@@ -9,15 +9,21 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/ui/viewmodel/parse_batch_archive_viewmodel.dart';
 
 class ParseBatchArchiveView extends StatelessWidget {
-  final String archiveDirPath;
+  final String? archiveDirPath;
+  final List<String>? archivePaths;
 
-  const ParseBatchArchiveView({super.key, required this.archiveDirPath});
+  const ParseBatchArchiveView({
+    super.key,
+    this.archiveDirPath,
+    this.archivePaths,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ParseBatchArchiveViewmodel(
         archiveDirPath: archiveDirPath,
+        archivePaths: archivePaths,
         parseArchiveService: context.read(),
         bookRepository: context.read(),
       ),

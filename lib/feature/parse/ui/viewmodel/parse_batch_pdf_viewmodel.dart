@@ -11,7 +11,8 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_pdf_service.dart';
 
 class ParseBatchPdfViewmodel extends ChangeNotifier {
-  final String pdfDirPath;
+  final String? pdfDirPath;
+  final List<String>? pdfPaths;
   final ParsePdfService parsePdfService;
   final BookRepository bookRepository;
 
@@ -24,7 +25,8 @@ class ParseBatchPdfViewmodel extends ChangeNotifier {
   EventState saveBatchAsBookState = const IdleEventState();
 
   ParseBatchPdfViewmodel({
-    required this.pdfDirPath,
+    this.pdfDirPath,
+    this.pdfPaths,
     required this.parsePdfService,
     required this.bookRepository,
   }) {
@@ -54,17 +56,29 @@ class ParseBatchPdfViewmodel extends ChangeNotifier {
       return;
     }
 
-    final result = await parsePdfService.parseBatchPdfs(
-      pdfDirPath,
-      (total) {
-        totalCount = total;
-        notifyListeners();
-      },
-      (count) {
-        completeCount = count;
-        notifyListeners();
-      },
-    );
+    final result = pdfPaths != null && pdfPaths!.isNotEmpty
+        ? await parsePdfService.parseBatchPdfsFromPaths(
+            pdfPaths!,
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          )
+        : await parsePdfService.parseBatchPdfs(
+            pdfDirPath ?? '',
+            (total) {
+              totalCount = total;
+              notifyListeners();
+            },
+            (count) {
+              completeCount = count;
+              notifyListeners();
+            },
+          );
 
     result.fold(
       onSuccess: (data) {

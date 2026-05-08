@@ -121,6 +121,37 @@ class ParsePdfService {
           .toList()
         ..sort();
 
+      return _parseBatchPdfsByPaths(pdfPaths, onStart, onProgress);
+    } catch (e, st) {
+      return Result.failure(
+        BusinessFailure(
+          message: '批量解析 PDF 失败',
+          details: e,
+          stackTrace: st,
+        ),
+      );
+    }
+  }
+
+  Future<Result<List<ParseBatchArchiveVo>>> parseBatchPdfsFromPaths(
+    List<String> pdfPaths,
+    void Function(int total) onStart,
+    void Function(int count) onProgress,
+  ) {
+    final filtered = pdfPaths
+        .where((path) => path.toLowerCase().endsWith('.pdf'))
+        .toList();
+    return _parseBatchPdfsByPaths(filtered, onStart, onProgress);
+  }
+
+  Future<Result<List<ParseBatchArchiveVo>>> _parseBatchPdfsByPaths(
+    List<String> pdfPaths,
+    void Function(int total) onStart,
+    void Function(int count) onProgress,
+  ) async {
+    try {
+      pdfPaths.sort();
+
       onStart(pdfPaths.length);
 
       final results = <ParseBatchArchiveVo>[];

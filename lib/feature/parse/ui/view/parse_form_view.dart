@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/feature/parse/ui/viewmodel/parse_form_viewmodel.dart';
@@ -161,7 +163,7 @@ class _ParseFormContentState extends State<_ParseFormContent> {
     return TextField(
       controller: vm.batchArchivePathController,
       decoration: InputDecoration(
-        labelText: "请选择压缩包文件夹",
+        labelText: Platform.isIOS ? "请选择一个或多个 ZIP 文件" : "请选择压缩包文件夹",
         prefixIcon: const Icon(Icons.folder),
         suffixIcon: IconButton(
           onPressed: () => vm.pickerBatchArchive(context),
@@ -176,7 +178,7 @@ class _ParseFormContentState extends State<_ParseFormContent> {
     return TextField(
       controller: vm.imageFolderPathController,
       decoration: InputDecoration(
-        labelText: "请选择图片文件夹",
+        labelText: Platform.isIOS ? "请选择一个或多个图片文件" : "请选择图片文件夹",
         prefixIcon: const Icon(Icons.photo_library),
         suffixIcon: IconButton(
           onPressed: () => vm.pickerImageFolder(context),
@@ -191,7 +193,9 @@ class _ParseFormContentState extends State<_ParseFormContent> {
     return TextField(
       controller: vm.batchImageFolderPathController,
       decoration: InputDecoration(
-        labelText: "请选择批量图片文件夹父目录",
+        labelText: Platform.isIOS
+            ? "请选择多个图片文件（按文件夹分组）"
+            : "请选择批量图片文件夹父目录",
         prefixIcon: const Icon(Icons.folder_copy),
         suffixIcon: IconButton(
           onPressed: () => vm.pickerBatchImageFolder(context),
@@ -221,7 +225,7 @@ class _ParseFormContentState extends State<_ParseFormContent> {
     return TextField(
       controller: vm.batchPdfPathController,
       decoration: InputDecoration(
-        labelText: "请选择包含 PDF 的文件夹",
+        labelText: Platform.isIOS ? "请选择一个或多个 PDF 文件" : "请选择包含 PDF 的文件夹",
         prefixIcon: const Icon(Icons.folder_special),
         suffixIcon: IconButton(
           onPressed: () => vm.pickerBatchPdf(context),

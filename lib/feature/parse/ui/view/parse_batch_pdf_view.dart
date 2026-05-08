@@ -8,15 +8,21 @@ import 'package:tele_book/feature/parse/ui/viewmodel/parse_batch_pdf_viewmodel.d
 import 'dart:io';
 
 class ParseBatchPdfView extends StatelessWidget {
-  final String pdfDirPath;
+  final String? pdfDirPath;
+  final List<String>? pdfPaths;
 
-  const ParseBatchPdfView({super.key, required this.pdfDirPath});
+  const ParseBatchPdfView({
+    super.key,
+    this.pdfDirPath,
+    this.pdfPaths,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => ParseBatchPdfViewmodel(
         pdfDirPath: pdfDirPath,
+        pdfPaths: pdfPaths,
         parsePdfService: context.read(),
         bookRepository: context.read(),
       ),
