@@ -20,8 +20,32 @@ Future<void> _extractInBackground(List<String> args) async {
 List<String> _collectImagePathsSync(String dirPath) {
   final dir = Directory(dirPath);
   final result = <String>[];
-  for (final entity in dir.listSync(recursive: true)) {
+  for (final entity in dir.listSync(recursive: true, followLinks: false)) {
     if (entity is File && _isImageFileStatic(entity.path)) {
+      result.add(entity.path);
+    }
+  }
+  result.sort();
+  return result;
+}
+
+List<String> _collectDirectImagePathsSync(String dirPath) {
+  final dir = Directory(dirPath);
+  final result = <String>[];
+  for (final entity in dir.listSync(recursive: false, followLinks: false)) {
+    if (entity is File && _isImageFileStatic(entity.path)) {
+      result.add(entity.path);
+    }
+  }
+  result.sort();
+  return result;
+}
+
+List<String> _collectSubDirectoryPathsSync(String dirPath) {
+  final dir = Directory(dirPath);
+  final result = <String>[];
+  for (final entity in dir.listSync(recursive: true, followLinks: false)) {
+    if (entity is Directory) {
       result.add(entity.path);
     }
   }
@@ -189,13 +213,8 @@ class ParseArchiveService {
         throw FileSystemException("目录不存在", parentDirPath);
       }
 
-      // 异步扫描子目录列表
-      final folders = await parentDir
-          .list()
-          .where((e) => e is Directory)
-          .map((e) => e.path)
-          .toList()
-        ..sort();
+      // 遍历父目录下的所有子文件夹（不包含父目录自身）
+      final folders = await compute(_collectSubDirectoryPathsSync, parentDirPath);
 
       onStart(folders.length);
 
@@ -206,12 +225,12 @@ class ParseArchiveService {
         // 让出事件循环
         await Future.delayed(Duration.zero);
 
-        // 每个子文件夹的图片扫描在后台 Isolate 中跑
-        final images = await compute(_collectImagePathsSync, folderPath);
-        if (images.isNotEmpty) {
+        // 每个子文件夹仅统计当前文件夹内的图片数量；大于 1 才视作一本书
+        final images = await compute(_collectDirectImagePathsSync, folderPath);
+        if (images.length > 1) {
           results.add(
             ParseBatchArchiveVo(
-              name: folderPath.split(Platform.pathSeparator).last,
+              name: _baseName(folderPath),
               tempPaths: images,
             ),
           );
@@ -246,7 +265,7 @@ class ParseArchiveService {
       for (var index = 0; index < keys.length; index++) {
         final key = keys[index];
         final paths = grouped[key]!..sort();
-        if (paths.isNotEmpty) {
+        if (paths.length > 1) {
           results.add(
             ParseBatchArchiveVo(
               name: key.isEmpty ? _baseName(paths.first) : _baseName(key),
