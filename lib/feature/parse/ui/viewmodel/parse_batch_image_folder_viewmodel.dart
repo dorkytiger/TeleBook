@@ -19,9 +19,18 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
   List<ParseBatchArchiveVo> parseBatchFolderList = [];
   int completeCount = 0;
   int totalCount = 0;
+  String currentFileName = '';
+  int currentFileProgress = 0;
+  int currentFileTotal = 0;
   int saveAsBookCount = 0;
   EventState parseBatchFolderState = IdleEventState();
   EventState saveBatchAsBookState = IdleEventState();
+
+  String get currentFileProgressText {
+    if (currentFileName.isEmpty) return '';
+    if (currentFileTotal <= 0) return '当前文件进度：准备中';
+    return '当前文件进度：$currentFileProgress / $currentFileTotal';
+  }
 
   ParseBatchImageFolderViewmodel({
     this.parentDirPath,
@@ -67,6 +76,17 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
               completeCount = count;
               notifyListeners();
             },
+            onCurrentItemChanged: (fileName) {
+              currentFileName = fileName;
+              currentFileProgress = 0;
+              currentFileTotal = 0;
+              notifyListeners();
+            },
+            onCurrentItemProgress: (current, total) {
+              currentFileProgress = current;
+              currentFileTotal = total;
+              notifyListeners();
+            },
           )
         : await parseArchiveService.parseBatchImageFolders(
             parentDirPath ?? '',
@@ -76,6 +96,17 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
             },
             (count) {
               completeCount = count;
+              notifyListeners();
+            },
+            onCurrentItemChanged: (fileName) {
+              currentFileName = fileName;
+              currentFileProgress = 0;
+              currentFileTotal = 0;
+              notifyListeners();
+            },
+            onCurrentItemProgress: (current, total) {
+              currentFileProgress = current;
+              currentFileTotal = total;
               notifyListeners();
             },
           );

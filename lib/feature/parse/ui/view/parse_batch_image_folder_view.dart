@@ -53,6 +53,10 @@ class _ParseBatchImageFolderContentView extends StatelessWidget {
                 const CircularProgressIndicator(),
                 const SizedBox(height: 8),
                 Text("正在处理：${viewmodel.completeCount}/${viewmodel.totalCount}"),
+                if (viewmodel.currentFileName.isNotEmpty)
+                  Text("当前文件：${viewmodel.currentFileName}"),
+                if (viewmodel.currentFileProgressText.isNotEmpty)
+                  Text(viewmodel.currentFileProgressText),
               ],
             ),
           );

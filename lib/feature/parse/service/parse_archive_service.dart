@@ -93,6 +93,10 @@ class ParseArchiveService {
     List<String> archivePaths,
     Function(int total) onStart,
     Function(int count) onProgress,
+    {
+    void Function(String currentName)? onCurrentItemChanged,
+    void Function(int current, int total)? onCurrentItemProgress,
+  }
   ) async {
     try {
       final filteredPaths = archivePaths
@@ -105,11 +109,18 @@ class ParseArchiveService {
       final results = <ParseBatchArchiveVo>[];
       for (var index = 0; index < filteredPaths.length; index++) {
         final path = filteredPaths[index];
+        onCurrentItemChanged?.call(_baseName(path));
+        onCurrentItemProgress?.call(0, 2);
 
         // 每处理一个文件，让出事件循环，让 UI / GC 有机会运行
         await Future.delayed(Duration.zero);
 
-        final parseResult = await parseArchive(path);
+        final parseResult = await parseArchive(
+          path,
+          onProgress: (current, total) {
+            onCurrentItemProgress?.call(current, total);
+          },
+        );
         if (parseResult.isSuccess) {
           results.add(
             ParseBatchArchiveVo(
@@ -148,15 +159,21 @@ class ParseArchiveService {
   }
 
   // ── 单压缩包解析 ──────────────────────────────────────
-  Future<Result<List<String>>> parseArchive(String archivePath) async {
+  Future<Result<List<String>>> parseArchive(
+    String archivePath, {
+    void Function(int current, int total)? onProgress,
+  }) async {
     try {
       final tempOutputDir = "${GlobalConfig.appTempDir.path}/${const Uuid().v4()}";
+      onProgress?.call(0, 2);
 
       // ① 解压放后台 Isolate（最重，可能 OOM，独立内存空间更安全）
       await compute(_extractInBackground, [archivePath, tempOutputDir]);
+      onProgress?.call(1, 2);
 
       // ② 扫描解压后的目录，也放后台 Isolate
       final imagePaths = await compute(_collectImagePathsSync, tempOutputDir);
+      onProgress?.call(2, 2);
 
       return Result.success(imagePaths);
     } catch (e, st) {
@@ -171,6 +188,10 @@ class ParseArchiveService {
     String archiveDirPath,
     Function(int total) onStart,
     Function(int count) onProgress,
+    {
+    void Function(String currentName)? onCurrentItemChanged,
+    void Function(int current, int total)? onCurrentItemProgress,
+  }
   ) async {
     try {
       final archiveDir = Directory(archiveDirPath);
@@ -185,7 +206,13 @@ class ParseArchiveService {
           .map((e) => e.path)
           .toList();
 
-      return _parseBatchArchivePaths(archivePaths, onStart, onProgress);
+      return _parseBatchArchivePaths(
+        archivePaths,
+        onStart,
+        onProgress,
+        onCurrentItemChanged: onCurrentItemChanged,
+        onCurrentItemProgress: onCurrentItemProgress,
+      );
     } catch (e, st) {
       return Result.failure(
         BusinessFailure(message: "批量解析压缩包失败", details: e, stackTrace: st),
@@ -197,8 +224,18 @@ class ParseArchiveService {
     List<String> archivePaths,
     Function(int total) onStart,
     Function(int count) onProgress,
+    {
+    void Function(String currentName)? onCurrentItemChanged,
+    void Function(int current, int total)? onCurrentItemProgress,
+  }
   ) {
-    return _parseBatchArchivePaths(archivePaths, onStart, onProgress);
+    return _parseBatchArchivePaths(
+      archivePaths,
+      onStart,
+      onProgress,
+      onCurrentItemChanged: onCurrentItemChanged,
+      onCurrentItemProgress: onCurrentItemProgress,
+    );
   }
 
   // ── 批量文件夹解析 ────────────────────────────────────
@@ -206,6 +243,10 @@ class ParseArchiveService {
     String parentDirPath,
     Function(int total) onStart,
     Function(int count) onProgress,
+    {
+    void Function(String currentName)? onCurrentItemChanged,
+    void Function(int current, int total)? onCurrentItemProgress,
+  }
   ) async {
     try {
       final parentDir = Directory(parentDirPath);
@@ -221,6 +262,8 @@ class ParseArchiveService {
       final results = <ParseBatchArchiveVo>[];
       for (var index = 0; index < folders.length; index++) {
         final folderPath = folders[index];
+        onCurrentItemChanged?.call(_baseName(folderPath));
+        onCurrentItemProgress?.call(0, 1);
 
         // 让出事件循环
         await Future.delayed(Duration.zero);
@@ -235,6 +278,7 @@ class ParseArchiveService {
             ),
           );
         }
+        onCurrentItemProgress?.call(1, 1);
         onProgress(index + 1);
       }
       return Result.success(results);
@@ -249,6 +293,10 @@ class ParseArchiveService {
     List<String> imagePaths,
     Function(int total) onStart,
     Function(int count) onProgress,
+    {
+    void Function(String currentName)? onCurrentItemChanged,
+    void Function(int current, int total)? onCurrentItemProgress,
+  }
   ) async {
     try {
       final grouped = <String, List<String>>{};
@@ -264,6 +312,8 @@ class ParseArchiveService {
       final results = <ParseBatchArchiveVo>[];
       for (var index = 0; index < keys.length; index++) {
         final key = keys[index];
+        onCurrentItemChanged?.call(key.isEmpty ? '未命名文件夹' : _baseName(key));
+        onCurrentItemProgress?.call(0, 1);
         final paths = grouped[key]!..sort();
         if (paths.length > 1) {
           results.add(
@@ -273,6 +323,7 @@ class ParseArchiveService {
             ),
           );
         }
+        onCurrentItemProgress?.call(1, 1);
         onProgress(index + 1);
         await Future.delayed(Duration.zero);
       }

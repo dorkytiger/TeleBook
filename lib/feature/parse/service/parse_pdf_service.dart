@@ -107,6 +107,10 @@ class ParsePdfService {
     String pdfDirPath,
     void Function(int total) onStart,
     void Function(int count) onProgress,
+    {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }
   ) async {
     try {
       final dir = Directory(pdfDirPath);
@@ -121,7 +125,13 @@ class ParsePdfService {
           .toList()
         ..sort();
 
-      return _parseBatchPdfsByPaths(pdfPaths, onStart, onProgress);
+      return _parseBatchPdfsByPaths(
+        pdfPaths,
+        onStart,
+        onProgress,
+        onCurrentFileChanged: onCurrentFileChanged,
+        onCurrentFileProgress: onCurrentFileProgress,
+      );
     } catch (e, st) {
       return Result.failure(
         BusinessFailure(
@@ -137,17 +147,31 @@ class ParsePdfService {
     List<String> pdfPaths,
     void Function(int total) onStart,
     void Function(int count) onProgress,
+    {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }
   ) {
     final filtered = pdfPaths
         .where((path) => path.toLowerCase().endsWith('.pdf'))
         .toList();
-    return _parseBatchPdfsByPaths(filtered, onStart, onProgress);
+    return _parseBatchPdfsByPaths(
+      filtered,
+      onStart,
+      onProgress,
+      onCurrentFileChanged: onCurrentFileChanged,
+      onCurrentFileProgress: onCurrentFileProgress,
+    );
   }
 
   Future<Result<List<ParseBatchArchiveVo>>> _parseBatchPdfsByPaths(
     List<String> pdfPaths,
     void Function(int total) onStart,
     void Function(int count) onProgress,
+    {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }
   ) async {
     try {
       pdfPaths.sort();
@@ -158,8 +182,15 @@ class ParsePdfService {
       for (var i = 0; i < pdfPaths.length; i++) {
         await Future.delayed(Duration.zero);
         final path = pdfPaths[i];
+        onCurrentFileChanged?.call(p.basename(path));
+        onCurrentFileProgress?.call(0, 0);
 
-        final result = await parsePdf(path);
+        final result = await parsePdf(
+          path,
+          onProgress: (current, total) {
+            onCurrentFileProgress?.call(current, total);
+          },
+        );
         if (result.isSuccess) {
           results.add(
             ParseBatchArchiveVo(
