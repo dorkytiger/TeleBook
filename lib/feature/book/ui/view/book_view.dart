@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:responsive_framework/responsive_framework.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/route/app_route.dart';
@@ -281,15 +282,27 @@ class _BookGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     final bookStore = context.watch<BookStore>();
 
+    final isTablet = ResponsiveBreakpoints.of(context).isTablet;
+
+    final gridDelegate = isTablet
+        ? const SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: 180,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 0.65,
+    )
+        : const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 3,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 0.65,
+    );
+
+
     return GridView.builder(
       controller: vm.scrollController,
       padding: const EdgeInsets.all(12),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.65,
-      ),
+      gridDelegate: gridDelegate,
       itemCount: bookStore.books.length + (bookStore.isLoading ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == bookStore.books.length) {
