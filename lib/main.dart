@@ -2,11 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:provider/provider.dart';
 import 'package:responsive_framework/responsive_framework.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/common/theme/app_theme.dart';
-import 'package:tele_book/core/di/app_di.dart';
 import 'package:tele_book/core/route/app_route.dart';
 
 void main() async {
@@ -42,24 +40,21 @@ Future<void> _init() async {
   }
 
   appProviders = ProviderScope(
-    child: MultiProvider(
-      providers: [...createAppDI()],
-      child: MaterialApp.router(
-        title: 'TeleBook',
-        routerConfig: AppRoute.router,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
-        builder: (context, child) => ResponsiveBreakpoints.builder(
-          child: child!,
-          breakpoints: [
-            const Breakpoint(start: 0, end: 480, name: MOBILE),
-            const Breakpoint(start: 481, end: 800, name: TABLET),
-            const Breakpoint(start: 801, end: 1200, name: DESKTOP),
-            const Breakpoint(start: 1201, end: double.infinity, name: '4K'),
-          ],
-        ),
+    child: MaterialApp.router(
+      title: 'TeleBook',
+      routerConfig: AppRoute.router,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
+      builder: (context, child) => ResponsiveBreakpoints.builder(
+        child: child!,
+        breakpoints: [
+          const Breakpoint(start: 0, end: 480, name: MOBILE),
+          const Breakpoint(start: 481, end: 800, name: TABLET),
+          const Breakpoint(start: 801, end: 1200, name: DESKTOP),
+          const Breakpoint(start: 1201, end: double.infinity, name: '4K'),
+        ],
       ),
     ),
   );

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/ui/view/book_form_view.dart';
 import 'package:tele_book/feature/book/ui/view/book_page_view.dart';
-import 'package:tele_book/feature/book/ui/view/book_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
 import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_batch_form_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';

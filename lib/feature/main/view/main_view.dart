@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:tele_book/feature/book/ui/view/book_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
 import 'package:tele_book/feature/collection/ui/view/collection_view.dart';
 import 'package:tele_book/feature/main/viewmodel/main_viewmodel.dart';
 
@@ -25,7 +25,7 @@ class _MainContent extends StatelessWidget {
     return Scaffold(
       body: IndexedStack(
         index: vm.currentIndex,
-        children: [BookView(), CollectionView()],
+        children: [BookListView(), CollectionView()],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: vm.currentIndex,

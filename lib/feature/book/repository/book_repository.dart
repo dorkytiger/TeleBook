@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/util/failure_util.dart';
@@ -18,7 +19,12 @@ class _CopyBookArgs {
   final String bookId;
   final String destDirPath;
   final List<String> srcPaths;
-  _CopyBookArgs({required this.bookId, required this.destDirPath, required this.srcPaths});
+
+  _CopyBookArgs({
+    required this.bookId,
+    required this.destDirPath,
+    required this.srcPaths,
+  });
 }
 
 /// 在后台 Isolate 中复制文件，返回存储用的相对路径列表
@@ -38,7 +44,6 @@ Future<List<String>> _copyBookFiles(_CopyBookArgs args) async {
   return relPaths;
 }
 
-
 /// 在后台 Isolate 中递归删除目录列表
 Future<void> _deleteBookDirs(List<String> dirPaths) async {
   for (final path in dirPaths) {
@@ -49,39 +54,28 @@ Future<void> _deleteBookDirs(List<String> dirPaths) async {
   }
 }
 
+final bookRepositoryProvider = Provider<BookRepository>((ref) {
+  final database = ref.watch(databaseProvider);
+  return BookRepository(database);
+});
+
 class BookRepository {
   final AppDatabase _db;
   late final BookLocalDatasource _bookLocalDatasource = _db.bookLocalDatasource;
 
   BookRepository(this._db);
 
-  Stream<List<BookTableData>> watchBooks({
+  Future<List<BookTableData>> getPagedBooks({
     int? page,
-    int? pageSize,
+    int pageSize = 20,
     DateTime? lastCreatedAt,
     String? name,
     BookSort? sort,
   }) {
-    return _bookLocalDatasource.watchBooks(
-      page: page,
-      pageSize: pageSize,
-      lastCreatedAt: lastCreatedAt,
-      name: name,
-      sort: sort,
-    );
-  }
-
-  Future<List<BookTableData>> fetchBooks({
-    int? page,
-    int? pageSize,
-    DateTime? lastCreatedAt,
-    String? name,
-    BookSort? sort,
-  }) async {
-    return _bookLocalDatasource.getBooks(
+    return _bookLocalDatasource.getPagingBooks(
       page: page,
       lastCreatedAt: lastCreatedAt,
-      limit: pageSize ?? 20,
+      limit: pageSize,
       name: name,
       sort: sort,
     );
@@ -111,7 +105,10 @@ class BookRepository {
         bookDirs.add(p.dirname(subPath));
       } else {
         final normalized = subPath.replaceAll('\\', '/');
-        final segments = normalized.split('/').where((e) => e.isNotEmpty).toList();
+        final segments = normalized
+            .split('/')
+            .where((e) => e.isNotEmpty)
+            .toList();
         if (segments.isNotEmpty) {
           bookDirs.add(p.join(GlobalConfig.booksDir.path, segments.first));
         }
@@ -135,7 +132,11 @@ class BookRepository {
       // ① 文件复制放后台 Isolate
       final relPaths = await compute(
         _copyBookFiles,
-        _CopyBookArgs(bookId: bookId, destDirPath: destDirPath, srcPaths: dto.paths),
+        _CopyBookArgs(
+          bookId: bookId,
+          destDirPath: destDirPath,
+          srcPaths: dto.paths,
+        ),
       );
 
       // ② DB 写入（快，主线程即可）
@@ -147,7 +148,9 @@ class BookRepository {
     } catch (e, st) {
       // 清理已创建的目录（后台 Isolate）
       await compute(_deleteBookDirs, [destDirPath]);
-      return Result.failure(BusinessFailure(message: '保存书籍失败', details: e, stackTrace: st));
+      return Result.failure(
+        BusinessFailure(message: '保存书籍失败', details: e, stackTrace: st),
+      );
     }
   }
 
@@ -176,7 +179,11 @@ class BookRepository {
 
         final relPaths = await compute(
           _copyBookFiles,
-          _CopyBookArgs(bookId: bookId, destDirPath: destDirPath, srcPaths: dto.paths),
+          _CopyBookArgs(
+            bookId: bookId,
+            destDirPath: destDirPath,
+            srcPaths: dto.paths,
+          ),
         );
 
         createdDirs.add(destDirPath);
@@ -188,7 +195,10 @@ class BookRepository {
       await _db.transaction(() async {
         for (final book in bookData) {
           await _bookLocalDatasource.insertBook(
-            BookTableCompanion.insert(name: book.title, localSubPaths: book.relPaths),
+            BookTableCompanion.insert(
+              name: book.title,
+              localSubPaths: book.relPaths,
+            ),
           );
         }
       });

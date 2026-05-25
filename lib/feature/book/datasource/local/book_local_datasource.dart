@@ -46,7 +46,7 @@ class BookLocalDatasource extends DatabaseAccessor<AppDatabase>
     return q.watch();
   }
 
-  Future<List<BookTableData>> getBooks({
+  Future<List<BookTableData>> getPagingBooks({
     int? page,
     DateTime? lastCreatedAt,
     int limit = 20,

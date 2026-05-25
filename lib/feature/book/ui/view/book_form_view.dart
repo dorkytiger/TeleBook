@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
 import 'package:tele_book/core/db/app_database.dart';
-import 'package:tele_book/feature/book/ui/viewmodel/book_form_viewmodel.dart';
 
 class BookFormView extends StatelessWidget {
   final BookTableData book;
