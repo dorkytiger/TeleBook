@@ -57,34 +57,35 @@ final class CollectionListProvider
 
 String _$collectionListHash() => r'8dee32d769cba75cfab03c365a6de455a8222e29';
 
-@ProviderFor(CollectionController)
-final collectionControllerProvider = CollectionControllerProvider._();
+@ProviderFor(CreateCollectionController)
+final createCollectionControllerProvider =
+    CreateCollectionControllerProvider._();
 
-final class CollectionControllerProvider
-    extends $AsyncNotifierProvider<CollectionController, void> {
-  CollectionControllerProvider._()
+final class CreateCollectionControllerProvider
+    extends $AsyncNotifierProvider<CreateCollectionController, void> {
+  CreateCollectionControllerProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'collectionControllerProvider',
+        name: r'createCollectionControllerProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$collectionControllerHash();
+  String debugGetCreateSourceHash() => _$createCollectionControllerHash();
 
   @$internal
   @override
-  CollectionController create() => CollectionController();
+  CreateCollectionController create() => CreateCollectionController();
 }
 
-String _$collectionControllerHash() =>
-    r'9258092689b48ab819099d458d6e7e15f4d970fe';
+String _$createCollectionControllerHash() =>
+    r'4a614af941a2c48759c089990e1658f64b044933';
 
-abstract class _$CollectionController extends $AsyncNotifier<void> {
+abstract class _$CreateCollectionController extends $AsyncNotifier<void> {
   FutureOr<void> build();
   @$mustCallSuper
   @override

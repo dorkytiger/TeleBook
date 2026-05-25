@@ -10,9 +10,9 @@ class CollectionView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listAsync = ref.watch(collectionListProvider);
-    final controllerState = ref.watch(collectionControllerProvider);
+    final createState = ref.watch(createCollectionControllerProvider);
 
-    ref.listen<AsyncValue<void>>(collectionControllerProvider, (prev, next) {
+    ref.listen<AsyncValue<void>>(createCollectionControllerProvider, (prev, next) {
       next.whenOrNull(
         data: (_) {
           if (prev?.isLoading == true) {
@@ -35,10 +35,10 @@ class CollectionView extends ConsumerWidget {
         title: Text("收藏夹"),
         actions: [
           IconButton(
-            onPressed: controllerState.isLoading
+            onPressed: createState.isLoading
                 ? null
                 : () => _showCreateDialog(context, ref),
-            icon: controllerState.isLoading
+            icon: createState.isLoading
                 ? const SizedBox(
                     width: 18,
                     height: 18,
@@ -120,21 +120,21 @@ class CollectionView extends ConsumerWidget {
             ),
             Consumer(
               builder: (context, ref, _) {
-                final isLoading = ref
-                    .watch(collectionControllerProvider)
+                final creating = ref
+                    .watch(createCollectionControllerProvider)
                     .isLoading;
                 return TextButton(
-                  onPressed: isLoading
+                  onPressed: creating
                       ? null
                       : () {
                           ref
-                              .read(collectionControllerProvider.notifier)
+                              .read(createCollectionControllerProvider.notifier)
                               .createCollection(
                                 name: nameController.text,
                                 description: descController.text,
                               );
                         },
-                  child: isLoading
+                  child: creating
                       ? const SizedBox(
                           width: 16,
                           height: 16,

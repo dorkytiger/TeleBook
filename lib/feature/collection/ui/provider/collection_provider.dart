@@ -56,7 +56,7 @@ AsyncValue<List<CollectionListItemVo>> collectionList(Ref ref) {
 }
 
 @riverpod
-class CollectionController extends _$CollectionController {
+class CreateCollectionController extends _$CreateCollectionController {
   @override
   FutureOr<void> build() {
     // 可以在这里进行一些初始化操作
