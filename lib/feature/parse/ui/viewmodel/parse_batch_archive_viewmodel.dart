@@ -151,7 +151,7 @@ class ParseBatchArchiveViewmodel extends ChangeNotifier {
         saveBatchAsBookState = SuccessEventState(data);
         notifyListeners();
         saveAsBookCount = 0;
-        context.go(AppRoute.book);
+        context.go(AppRoute.main);
       },
       onError: (error) {
         saveBatchAsBookState = ErrorEventState(error.message);

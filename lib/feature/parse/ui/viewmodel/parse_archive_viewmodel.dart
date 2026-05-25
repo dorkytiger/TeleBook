@@ -58,7 +58,7 @@ class ParseArchiveViewmodel extends ChangeNotifier {
             context,
           ).showSnackBar(const SnackBar(content: Text("保存成功")));
           notifyListeners();
-          context.go(AppRoute.book);
+          context.go(AppRoute.main);
         },
         onError: (error) {
           saveToBookState = ErrorEventState(error.message);

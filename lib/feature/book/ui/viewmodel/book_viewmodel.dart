@@ -21,8 +21,9 @@ class BookViewmodel extends ChangeNotifier {
   bool isSelectionMode = false;
   final Set<int> selectedBookIds = {};
 
-  List<BookListItemVo> get selectedBooks =>
-      bookStore.books.where((b) => selectedBookIds.contains(b.book.id)).toList();
+  List<BookListItemVo> get selectedBooks => bookStore.books
+      .where((b) => selectedBookIds.contains(b.book.id))
+      .toList();
 
   void enterSelectionMode(BookTableData book) {
     isSelectionMode = true;
@@ -56,6 +57,33 @@ class BookViewmodel extends ChangeNotifier {
     context.push(AppRoute.exportBatch, extra: books);
   }
 
+  void deleteSelected(BuildContext context) {
+    showAdaptiveDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('删除书籍'),
+          content: Text('确定要删除这${selectedBooks.length}本书吗？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: () {
+                for (var book in selectedBooks) {
+                  _bookRepository.deleteBook(book.book.id);
+                }
+                Navigator.of(context).pop();
+              },
+              child: const Text('删除'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // ── 滚动 ─────────────────────────────────────────────────
 
   BookViewmodel(this._bookRepository, this.bookStore) {
@@ -65,7 +93,9 @@ class BookViewmodel extends ChangeNotifier {
   }
 
   void _onScroll() {
-    if (!scrollController.hasClients || bookStore.isLoading || !bookStore.hasMore) {
+    if (!scrollController.hasClients ||
+        bookStore.isLoading ||
+        !bookStore.hasMore) {
       return;
     }
     final pos = scrollController.position;
@@ -174,26 +204,26 @@ class BookViewmodel extends ChangeNotifier {
 
 enum BookTopMenuType {
   add('添加', Icons.add),
-  desc('降序',Icons.arrow_downward),
-  asc('升序',Icons.arrow_upward),
-  name('按标题',Icons.sort_by_alpha),
-  lastCreatedAt('按时间',Icons.access_time),
-  list('列表',Icons.view_list),
-  grid('网格',Icons.grid_view);
+  desc('降序', Icons.arrow_downward),
+  asc('升序', Icons.arrow_upward),
+  name('按标题', Icons.sort_by_alpha),
+  lastCreatedAt('按时间', Icons.access_time),
+  list('列表', Icons.view_list),
+  grid('网格', Icons.grid_view);
 
   final String title;
   final IconData icon;
 
-  const BookTopMenuType(this.title,this.icon);
+  const BookTopMenuType(this.title, this.icon);
 }
 
 enum BookItemMenuType {
-  edit('编辑',Icons.edit),
-  export('导出',Icons.file_download),
-  delete('删除',Icons.delete);
+  edit('编辑', Icons.edit),
+  export('导出', Icons.file_download),
+  delete('删除', Icons.delete);
 
   final String title;
   final IconData icon;
 
-  const BookItemMenuType(this.title,this.icon);
+  const BookItemMenuType(this.title, this.icon);
 }

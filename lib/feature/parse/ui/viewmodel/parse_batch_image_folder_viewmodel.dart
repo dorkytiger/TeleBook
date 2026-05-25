@@ -147,7 +147,7 @@ class ParseBatchImageFolderViewmodel extends ChangeNotifier {
         saveBatchAsBookState = SuccessEventState(null);
         saveAsBookCount = 0;
         notifyListeners();
-        context.go(AppRoute.book);
+        context.go(AppRoute.main);
       },
       onError: (error) {
         saveBatchAsBookState = ErrorEventState(error.message);

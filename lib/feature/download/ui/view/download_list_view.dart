@@ -38,7 +38,7 @@ class _DownloadListContentState extends State<_DownloadListContent> {
         title: Text("下载任务"),
         leading: BackButton(
           onPressed: () {
-            context.go(AppRoute.book);
+            context.go(AppRoute.main);
           },
         ),
       ),

@@ -1,16 +1,25 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-
+import 'package:riverpod/riverpod.dart';
 import 'package:tele_book/feature/book/datasource/local/book_local_datasource.dart';
 import 'package:tele_book/feature/book/model/table/book_table.dart';
+import 'package:tele_book/feature/collection/datasource/local/collection_book_local_datasource.dart';
+import 'package:tele_book/feature/collection/datasource/local/collection_local_datasource.dart';
+import 'package:tele_book/feature/collection/model/table/collection_book_table.dart';
+import 'package:tele_book/feature/collection/model/table/collection_table.dart';
 
 import 'converter/string_list_converter.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [BookTable], daos: [BookLocalDatasource])
+@DriftDatabase(
+  tables: [BookTable, CollectionTable, CollectionBookTable],
+  daos: [
+    BookLocalDatasource,
+    CollectionLocalDatasource,
+    CollectionBookLocalDatasource,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   // Allow injecting a QueryExecutor for tests. If null, use the default on-disk executor.
   AppDatabase([QueryExecutor? executor])
@@ -23,3 +32,9 @@ class AppDatabase extends _$AppDatabase {
     return driftDatabase(name: 'tele_book');
   }
 }
+
+final databaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(() => db.close());
+  return db;
+});

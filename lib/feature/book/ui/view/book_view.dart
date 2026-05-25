@@ -77,6 +77,23 @@ class _BookViewContent extends StatelessWidget {
       title: const Text('书籍'),
       elevation: 0,
       actions: [
+        SearchAnchor(
+          builder: (context, controller) {
+            return IconButton(
+              onPressed: controller.openView,
+              icon: const Icon(Icons.search),
+            );
+          },
+          suggestionsBuilder: (context, searchController) {
+            final results = bookStore.books.where(
+              (book) => book.book.name.toLowerCase().contains(
+                searchController.text.toLowerCase(),
+              ),
+            );
+            return results.map((book) => _BookListTile(book: book, vm: vm));
+          },
+        ),
+
         downloadStore.tasks.isNotEmpty
             ? IconButton(
                 onPressed: () => context.push(AppRoute.download),
@@ -106,17 +123,30 @@ class _BookViewContent extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: FilledButton.icon(
-          onPressed: vm.selectedBookIds.isEmpty
-              ? null
-              : () => vm.onExportSelected(context),
-          icon: const Icon(Icons.upload_file),
-          label: Text(
-            vm.selectedBookIds.isEmpty
-                ? '请选择书籍'
-                : '导出 ${vm.selectedBookIds.length} 本',
-          ),
-        ),
+        child: vm.selectedBooks.isNotEmpty
+            ? Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      vm.onExportSelected(context);
+                    },
+                    icon: Icon(
+                      Icons.move_to_inbox,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      vm.deleteSelected(context);
+                    },
+                    icon: Icon(
+                      Icons.delete,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+              )
+            : SizedBox.shrink(),
       ),
     );
   }
@@ -286,18 +316,17 @@ class _BookGridView extends StatelessWidget {
 
     final gridDelegate = isTablet
         ? const SliverGridDelegateWithMaxCrossAxisExtent(
-      maxCrossAxisExtent: 180,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 0.65,
-    )
+            maxCrossAxisExtent: 180,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.65,
+          )
         : const SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 3,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 0.65,
-    );
-
+            crossAxisCount: 3,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 0.65,
+          );
 
     return GridView.builder(
       controller: vm.scrollController,

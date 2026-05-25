@@ -51,6 +51,6 @@ class ParseWebViewmodel extends ChangeNotifier {
   void startDownload(BuildContext context) {
     if (urls.isEmpty) return;
     _downloadService.startDownload(urls, title);
-    context.go(AppRoute.book);
+    context.go(AppRoute.main);
   }
 }

@@ -88,7 +88,7 @@ class ParseImageFolderViewmodel extends ChangeNotifier {
       onSuccess: (_) {
         saveToBookState = SuccessEventState(null);
         notifyListeners();
-        context.go(AppRoute.book);
+        context.go(AppRoute.main);
       },
       onError: (error) {
         saveToBookState = ErrorEventState(error.message);

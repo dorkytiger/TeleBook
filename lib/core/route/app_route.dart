@@ -7,6 +7,7 @@ import 'package:tele_book/feature/book/ui/view/book_view.dart';
 import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_batch_form_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';
+import 'package:tele_book/feature/main/view/main_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_archive_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_batch_archive_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_batch_image_folder_view.dart';
@@ -18,7 +19,7 @@ import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
 
 class AppRoute {
   // 主页面
-  static const book = '/book';
+  static const main = '/main';
 
   // 导出
   static const exportSingle = '/export/single';
@@ -43,12 +44,12 @@ class AppRoute {
   static const parseArchiveBatchEdit = '/parse/archive/batch/edit';
 
   static final GoRouter router = GoRouter(
-    initialLocation: book,
+    initialLocation: main,
     routes: [
       GoRoute(
-        path: book,
+        path: main,
         pageBuilder: (context, state) {
-          return MaterialPage(child: BookView());
+          return MaterialPage(child: MainView());
         },
       ),
       GoRoute(
@@ -126,7 +127,9 @@ class AppRoute {
           if (extra is List) {
             final paths = extra.whereType<String>().toList();
             if (paths.isNotEmpty) {
-              return MaterialPage(child: ParseImageFolderView(imagePaths: paths));
+              return MaterialPage(
+                child: ParseImageFolderView(imagePaths: paths),
+              );
             }
           }
           return MaterialPage(child: ErrorRoutePage(message: "缺少图片路径参数"));
@@ -200,7 +203,9 @@ class AppRoute {
         pageBuilder: (context, state) {
           final path = state.extra as String?;
           if (path == null) {
-            return MaterialPage(child: ErrorRoutePage(message: "缺少 PDF 文件路径参数"));
+            return MaterialPage(
+              child: ErrorRoutePage(message: "缺少 PDF 文件路径参数"),
+            );
           }
           return MaterialPage(child: ParsePdfView(pdfPath: path));
         },

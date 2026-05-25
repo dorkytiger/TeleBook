@@ -70,7 +70,7 @@ class ParsePdfViewmodel extends ChangeNotifier {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('保存成功')),
           );
-          context.go(AppRoute.book);
+          context.go(AppRoute.main);
         },
         onError: (error) {
           saveToBookState = ErrorEventState(error.message);

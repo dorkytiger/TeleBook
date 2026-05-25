@@ -43,7 +43,7 @@ class BookFormViewmodel extends ChangeNotifier {
       localSubPaths: imagePaths.map((p) => p.subPath).toList(),
     );
     await _bookRepository.updateBook(updatedBook);
-    context.go(AppRoute.book);
+    context.go(AppRoute.main);
   }
 }
 
