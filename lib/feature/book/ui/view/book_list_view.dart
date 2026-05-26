@@ -120,13 +120,17 @@ class _BookListViewState extends ConsumerState<BookListView> {
             final results =
                 bookVos.where((vo) => vo.book.name.toLowerCase().contains(query));
             return results.map(
-              (vo) => ListTile(
-                leading: LocalImageWidget(imagePath: vo.coverImagePath),
-                title: Text(vo.book.name),
-                onTap: () {
-                  searchController.closeView(vo.book.name);
-                  context.push(AppRoute.bookPage, extra: vo.book);
-                },
+              (vo) => Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child:
+                  ListTile(
+                    leading: LocalImageWidget(imagePath: vo.coverImagePath),
+                    title: Text(vo.book.name),
+                    onTap: () {
+                      searchController.closeView(vo.book.name);
+                      context.push(AppRoute.bookPage, extra: vo.book);
+                    },
+                  )
               ),
             );
           },
@@ -392,6 +396,8 @@ class _BookListTile extends ConsumerWidget {
   void _onItemSelected(
       BuildContext context, WidgetRef ref, BookItemMenuType type) {
     switch (type) {
+      case BookItemMenuType.edit:
+        context.push(AppRoute.bookForm, extra: book.book);
       case BookItemMenuType.export:
         Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => ExportSingleFormView(book: book.book)));
@@ -573,6 +579,8 @@ class _BookGridTile extends ConsumerWidget {
   void _onItemSelected(
       BuildContext context, WidgetRef ref, BookItemMenuType type) {
     switch (type) {
+      case BookItemMenuType.edit:
+        context.push(AppRoute.bookForm, extra: book.book);
       case BookItemMenuType.export:
         Navigator.of(context).push(MaterialPageRoute(
             builder: (_) => ExportSingleFormView(book: book.book)));

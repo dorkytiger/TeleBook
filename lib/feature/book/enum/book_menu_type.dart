@@ -17,6 +17,7 @@ enum BookTopMenuType {
 
 /// 单本书条目菜单
 enum BookItemMenuType {
+  edit(icon: Icons.edit, title: '编辑'),
   export(icon: Icons.move_to_inbox, title: '导出'),
   delete(icon: Icons.delete, title: '删除');
 
