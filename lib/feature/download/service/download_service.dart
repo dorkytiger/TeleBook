@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:synchronized/synchronized.dart';
 import 'package:tele_book/common/config/global_config.dart';
@@ -13,6 +14,13 @@ import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
 import 'package:tele_book/feature/download/repository/download_repository.dart';
 import 'package:uuid/uuid.dart';
+
+final downloadServiceProvider = Provider<DownloadService>((ref) {
+  return DownloadService(
+    ref.watch(downloadRepositoryProvider),
+    ref.watch(bookRepositoryProvider),
+  );
+});
 
 class DownloadService {
   final FileDownloader _downloader = FileDownloader();

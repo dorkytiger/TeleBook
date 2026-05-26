@@ -1,0 +1,156 @@
+import 'dart:io';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
+import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
+
+part 'parse_image_folder_provider.freezed.dart';
+
+part 'parse_image_folder_provider.g.dart';
+
+@freezed
+abstract class ParseImageFolderParam with _$ParseImageFolderParam {
+  const factory ParseImageFolderParam({
+    String? folderPath,
+    List<String>? imagePathsInput,
+  }) = _ParseImageFolderParam;
+}
+
+@freezed
+abstract class ParseImageFolderState with _$ParseImageFolderState {
+  const factory ParseImageFolderState({
+    required String folderName,
+    required List<String> imagePaths,
+  }) = _ParseImageFolderState;
+}
+
+@freezed
+abstract class ParseImageFolderSaveBookParam
+    with _$ParseImageFolderSaveBookParam {
+  const factory ParseImageFolderSaveBookParam({
+    required String folderName,
+    required List<String> imagePaths,
+  }) = _ParseImageFolderSaveBookParam;
+}
+
+@freezed
+abstract class ParseImageFolderSaveBookProgress
+    with _$ParseImageFolderSaveBookProgress {
+  const factory ParseImageFolderSaveBookProgress({
+    @Default(0) int current,
+    @Default(0) int total,
+  }) = _ParseImageFolderSaveBookProgress;
+}
+
+final parseImageFolderSaveBookProgressProvider =
+    StateProvider.family<ParseImageFolderSaveBookProgress, ParseImageFolderParam>(
+      (_, __) => const ParseImageFolderSaveBookProgress(),
+    );
+
+@riverpod
+class ParseImageFolder extends _$ParseImageFolder {
+  ParseArchiveService get _parseArchiveService =>
+      ref.read(parseArchiveServiceProvider);
+
+  @override
+  FutureOr<ParseImageFolderState> build(ParseImageFolderParam param) async {
+    final folderName = _resolveFolderName(param);
+    Future.microtask(() => _parseImageFolder(param));
+    return ParseImageFolderState(folderName: folderName, imagePaths: const []);
+  }
+
+  String _resolveFolderName(ParseImageFolderParam param) {
+    final folderPath = param.folderPath;
+    final imagePathsInput = param.imagePathsInput;
+    if (folderPath != null && folderPath.isNotEmpty) {
+      return folderPath.split(RegExp(r'[\\/]')).last;
+    }
+
+    if (imagePathsInput != null && imagePathsInput.isNotEmpty) {
+      final parts = imagePathsInput.first.split(RegExp(r'[\\/]'));
+      return parts.length > 1 ? parts[parts.length - 2] : '导入图片';
+    }
+
+    return '导入图片';
+  }
+
+  Future<bool> _requestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    if (await Permission.manageExternalStorage.isGranted) return true;
+    final status = await Permission.manageExternalStorage.request();
+    if (status.isGranted) return true;
+
+    if (await Permission.storage.isGranted) return true;
+    final storageStatus = await Permission.storage.request();
+    return storageStatus.isGranted;
+  }
+
+  Future<void> _parseImageFolder(ParseImageFolderParam param) async {
+    state = const AsyncLoading();
+
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      state = AsyncError('需要存储权限才能读取图片文件夹', StackTrace.current);
+      return;
+    }
+
+    final folderName = _resolveFolderName(param);
+    final result =
+        param.imagePathsInput != null && param.imagePathsInput!.isNotEmpty
+        ? await _parseArchiveService.parseImagePaths(param.imagePathsInput!)
+        : await _parseArchiveService.parseImageFolder(param.folderPath ?? '');
+
+    result.fold(
+      onSuccess: (data) {
+        state = AsyncData(
+          ParseImageFolderState(folderName: folderName, imagePaths: data),
+        );
+      },
+      onError: (error) {
+        state = AsyncError(error.message, StackTrace.current);
+      },
+    );
+  }
+}
+
+@riverpod
+class ParseImageFolderSaveBook extends _$ParseImageFolderSaveBook {
+  BookRepository get _bookRepository => ref.read(bookRepositoryProvider);
+
+  @override
+  FutureOr<void> build(ParseImageFolderParam param) => null;
+
+  Future<void> submit(ParseImageFolderSaveBookParam submitParam) async {
+    if (state.isLoading || submitParam.imagePaths.isEmpty) return;
+
+    state = const AsyncLoading();
+    ref.read(parseImageFolderSaveBookProgressProvider(param).notifier).state =
+        ParseImageFolderSaveBookProgress(
+          current: 0,
+          total: submitParam.imagePaths.length,
+        );
+
+    final result = await _bookRepository.saveAsBook(
+      SaveAsBookDto(title: submitParam.folderName, paths: submitParam.imagePaths),
+      onProgress: (current, total) {
+        ref.read(parseImageFolderSaveBookProgressProvider(param).notifier).state =
+            ParseImageFolderSaveBookProgress(current: current, total: total);
+      },
+    );
+
+    result.fold(
+      onSuccess: (_) {
+        state = const AsyncData(null);
+      },
+      onError: (error) {
+        state = AsyncError(error.message, StackTrace.current);
+      },
+    );
+  }
+}
+

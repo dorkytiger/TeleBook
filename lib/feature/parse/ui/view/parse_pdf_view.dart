@@ -1,72 +1,62 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:tele_book/core/util/state_util.dart';
-import 'package:tele_book/feature/parse/ui/viewmodel/parse_pdf_viewmodel.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tele_book/feature/parse/ui/provider/parse_pdf_provider.dart';
 
-class ParsePdfView extends StatelessWidget {
+class ParsePdfView extends ConsumerWidget {
   final String pdfPath;
 
   const ParsePdfView({super.key, required this.pdfPath});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ParsePdfViewmodel(
-        pdfPath: pdfPath,
-        parsePdfService: context.read(),
-        bookRepository: context.read(),
-      ),
-      child: const _ParsePdfContent(),
-    );
-  }
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncState = ref.watch(parsePdfProvider(pdfPath));
+    final progress = ref.watch(parsePdfProgressProvider(pdfPath));
 
-class _ParsePdfContent extends StatelessWidget {
-  const _ParsePdfContent();
-
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<ParsePdfViewmodel>();
+    final saveBookProgress = ref.watch(parsePdfSaveBookProgressProvider);
+    final saveBookState = ref.watch(parsePdfSaveBookProvider);
+    final saveBookNotifier = ref.watch(parsePdfSaveBookProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: Text('解析 PDF：${vm.pdfName}')),
-      body: vm.parseState.when<List<String>>(
+      appBar: AppBar(title: Text('解析 PDF：${asyncState.value?.pdfName ?? ''}')),
+      body: asyncState.when(
         loading: () => Center(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 12),
-              if (vm.totalPages > 0)
-                Text('正在渲染：${vm.currentPage} / ${vm.totalPages} 页'),
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('正在解析 ${progress.$1}/${progress.$2}'),
             ],
           ),
         ),
-        success: (images) => GridView.builder(
+        error: (error, stack) => Center(child: Text(error.toString())),
+        data: (state) => GridView.builder(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,
             mainAxisSpacing: 4,
             crossAxisSpacing: 4,
           ),
-          itemCount: images.length,
+          itemCount: state.tempPaths.length,
           itemBuilder: (context, index) =>
-              Image.file(File(images[index]), fit: BoxFit.cover),
+              Image.file(File(state.tempPaths[index]), fit: BoxFit.cover),
         ),
       ),
-      bottomNavigationBar: vm.parseState.isSuccess
+      bottomNavigationBar: asyncState.hasValue == true
           ? Padding(
               padding: const EdgeInsets.all(16),
               child: FilledButton(
-                onPressed: vm.saveToBookState.isLoading
+                onPressed: saveBookState.isLoading
                     ? null
-                    : () => vm.saveToBook(context),
-                child: vm.saveToBookState.isLoading
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    : () => saveBookNotifier.onSave(
+                        ref,
+                        asyncState.value!.tempPaths,
+                        asyncState.value!.pdfName,
+                      ),
+                child: saveBookState.isLoading
+                    ? Text(
+                        '保存中... ${saveBookProgress.$1}/${saveBookProgress.$2}',
                       )
                     : const Text('保存到书架'),
               ),
@@ -75,4 +65,3 @@ class _ParsePdfContent extends StatelessWidget {
     );
   }
 }
-

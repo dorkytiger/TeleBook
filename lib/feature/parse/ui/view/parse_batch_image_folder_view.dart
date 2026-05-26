@@ -1,14 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tele_book/common/widget/error_widget.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
-import 'package:tele_book/core/util/state_util.dart';
-import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
-import 'package:tele_book/feature/parse/ui/viewmodel/parse_batch_image_folder_viewmodel.dart';
+import 'package:tele_book/feature/parse/ui/provider/parse_batch_image_folder.dart';
 
-class ParseBatchImageFolderView extends StatelessWidget {
+class ParseBatchImageFolderView extends ConsumerWidget {
   final String? parentDirPath;
   final List<String>? imagePaths;
 
@@ -19,54 +19,98 @@ class ParseBatchImageFolderView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ParseBatchImageFolderViewmodel(
-        parentDirPath: parentDirPath,
-        imagePaths: imagePaths,
-        parseArchiveService: context.read(),
-        bookRepository: context.read(),
-      ),
-      child: const _ParseBatchImageFolderContentView(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final param = ParseBatchImageFolderParam(
+      parentDirPath: parentDirPath,
+      imagePaths: imagePaths,
     );
-  }
-}
 
-class _ParseBatchImageFolderContentView extends StatelessWidget {
-  const _ParseBatchImageFolderContentView();
+    final parseProvider = parseBatchImageFolderProvider(param);
+    final saveProvider = saveBatchAsBookProvider(param);
+    final parseAsync = ref.watch(parseProvider);
+    final parseNotifier = ref.read(parseProvider.notifier);
+    final saveState = ref.watch(saveProvider);
+    final saveNotifier = ref.read(saveProvider.notifier);
 
-  @override
-  Widget build(BuildContext context) {
-    final viewmodel = context.watch<ParseBatchImageFolderViewmodel>();
+    ref.listen(saveBatchAsBookProvider(param).select((s) => s.submitState), (
+      previous,
+      next,
+    ) {
+      if (next.hasError) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("保存失败：${next.error}")));
+      } else if (previous?.isLoading == true &&
+          next.isLoading == false &&
+          next.error == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("保存成功！")));
+        context.pop();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('批量解析文件夹'), elevation: 0),
-      body: viewmodel.parseBatchFolderState.when<List<ParseBatchArchiveVo>>(
+      body: parseAsync.when(
+        error: (error, stack) => Center(
+          child: CustomErrorWidget(
+            errorMessage: error.toString(),
+            stackTrace: stack,
+          ),
+        ),
         loading: () {
-          if (viewmodel.totalCount == 0 && viewmodel.completeCount == 0) {
-            return const Center(child: CircularProgressIndicator());
+          final current = parseAsync.value;
+          if (current != null && current.totalCount > 0) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 8),
+                  Text("正在处理：${current.completeCount}/${current.totalCount}"),
+                  if (current.currentFileName.isNotEmpty)
+                    Text("当前文件：${current.currentFileName}"),
+                  if (current.currentFileProgressText.isNotEmpty)
+                    Text(current.currentFileProgressText),
+                ],
+              ),
+            );
           }
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 8),
-                Text("正在处理：${viewmodel.completeCount}/${viewmodel.totalCount}"),
-                if (viewmodel.currentFileName.isNotEmpty)
-                  Text("当前文件：${viewmodel.currentFileName}"),
-                if (viewmodel.currentFileProgressText.isNotEmpty)
-                  Text(viewmodel.currentFileProgressText),
-              ],
-            ),
-          );
+          return const Center(child: CircularProgressIndicator());
         },
-        success: (data) {
+        data: (state) {
+          if (state.isParsing) {
+            if (state.totalCount == 0 && state.completeCount == 0) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 8),
+                  Text("正在处理：${state.completeCount}/${state.totalCount}"),
+                  if (state.currentFileName.isNotEmpty)
+                    Text("当前文件：${state.currentFileName}"),
+                  if (state.currentFileProgressText.isNotEmpty)
+                    Text(state.currentFileProgressText),
+                ],
+              ),
+            );
+          }
+
+          if (state.parseBatchFolderList.isEmpty) {
+            return const Center(child: Text('未解析到可用图片文件夹'));
+          }
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: data.length,
+            itemCount: state.parseBatchFolderList.length,
             itemBuilder: (context, index) {
-              final folder = data[index];
+              final folder = state.parseBatchFolderList[index];
               return Row(
                 children: [
                   LocalImageWidget(imagePath: folder.tempPaths.first),
@@ -85,19 +129,30 @@ class _ParseBatchImageFolderContentView extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: viewmodel.parseBatchFolderState.isSuccess
+      bottomNavigationBar:
+          parseAsync.value?.parseBatchFolderList.isNotEmpty == true
           ? Padding(
               padding: const EdgeInsets.all(16),
               child: FilledButton(
-                onPressed: viewmodel.saveBatchAsBookState.isLoading
+                onPressed: saveState.submitState.isLoading
                     ? null
-                    : () => viewmodel.saveBatchAsBook(context),
-                child: viewmodel.saveBatchAsBookState.isLoading
+                    : () => saveNotifier.submit(
+                        parseAsync.value!.parseBatchFolderList,
+                      ),
+                child: saveState.submitState.isLoading
                     ? Text(
-                        "正在保存：${viewmodel.saveAsBookCount}/${viewmodel.parseBatchFolderList.length}",
+                        "正在保存：${saveState.saveAsBookCount}/${saveState.totalCount}",
                       )
                     : const Text("保存到书架"),
               ),
+            )
+          : null,
+      floatingActionButton: parseAsync.value?.isParsing == false
+          ? FloatingActionButton(
+              onPressed: () {
+                parseNotifier.refresh();
+              },
+              child: const Icon(Icons.refresh),
             )
           : null,
     );
@@ -159,4 +214,3 @@ class _ParseBatchImageFolderContentView extends StatelessWidget {
     );
   }
 }
-

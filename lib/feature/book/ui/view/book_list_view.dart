@@ -139,6 +139,9 @@ class _BookListViewState extends ConsumerState<BookListView> {
               child: const Icon(Icons.download),
             ),
           ),
+        IconButton(onPressed: (){
+            context.push(AppRoute.parseForm);
+        }, icon: const Icon(Icons.add)),
         _buildTopMenuButton(context, state),
       ],
     );

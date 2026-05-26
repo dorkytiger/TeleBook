@@ -1,68 +1,58 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:provider/provider.dart';
-import 'package:tele_book/common/widget/local_image_widget.dart';
-import 'package:tele_book/core/util/state_util.dart';
-import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
-import 'package:tele_book/feature/parse/ui/viewmodel/parse_batch_pdf_viewmodel.dart';
 import 'dart:io';
 
-class ParseBatchPdfView extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:tele_book/common/widget/local_image_widget.dart';
+import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
+import 'package:tele_book/feature/parse/ui/provider/parse_batch_pdf_provider.dart';
+
+class ParseBatchPdfView extends ConsumerWidget {
   final String? pdfDirPath;
   final List<String>? pdfPaths;
 
-  const ParseBatchPdfView({
-    super.key,
-    this.pdfDirPath,
-    this.pdfPaths,
-  });
+  const ParseBatchPdfView({super.key, this.pdfDirPath, this.pdfPaths});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ParseBatchPdfViewmodel(
-        pdfDirPath: pdfDirPath,
-        pdfPaths: pdfPaths,
-        parsePdfService: context.read(),
-        bookRepository: context.read(),
-      ),
-      child: const _ParseBatchPdfContent(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final param = ParseBatchPdfParam(
+      pdfDirPath: pdfDirPath ?? '',
+      pdfPaths: pdfPaths ?? [],
     );
-  }
-}
 
-class _ParseBatchPdfContent extends StatelessWidget {
-  const _ParseBatchPdfContent();
+    final asyncState = ref.watch(parseBatchPdfProvider(param));
+    final parseProgress = ref.watch(parseBatchProgressProvider);
 
-  @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<ParseBatchPdfViewmodel>();
+    final saveBatchBookState = ref.watch(parseBatchPdfSaveBookProvider);
+    final saveBatchBookNotifier = ref.watch(
+      parseBatchPdfSaveBookProvider.notifier,
+    );
+    final saveBookProgress = ref.watch(parseBatchPdfSaveBookProgressProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('批量解析 PDF'), elevation: 0),
-      body: vm.parseBatchState.when<List<ParseBatchArchiveVo>>(
-        loading: () {
-          if (vm.totalCount == 0 && vm.completeCount == 0) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 8),
-                Text('正在处理：${vm.completeCount} / ${vm.totalCount}'),
-                if (vm.currentFileName.isNotEmpty) Text('当前文件：${vm.currentFileName}'),
-                if (vm.currentFileProgressText.isNotEmpty) Text(vm.currentFileProgressText),
-              ],
-            ),
-          );
-        },
-        success: (data) => ListView.builder(
+      body: asyncState.when(
+        loading: () => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              SizedBox(height: 8),
+              Text(
+                '正在处理：${parseProgress.completeCount} / ${parseProgress.totalCount}',
+              ),
+              if (parseProgress.currentFileName.isNotEmpty)
+                Text('当前文件：${parseProgress.currentFileName}'),
+              Text("当前文件进度：${parseProgress.currentFileProgress}%"),
+            ],
+          ),
+        ),
+        error: (error, stack) => Center(child: Text(error.toString())),
+        data: (state) => ListView.builder(
           padding: const EdgeInsets.all(16),
-          itemCount: data.length,
+          itemCount: state.parseBatchList.length,
           itemBuilder: (context, index) {
-            final item = data[index];
+            final item = state.parseBatchList[index];
             return Row(
               children: [
                 LocalImageWidget(imagePath: item.tempPaths.first),
@@ -78,16 +68,18 @@ class _ParseBatchPdfContent extends StatelessWidget {
           },
         ),
       ),
-      bottomNavigationBar: vm.parseBatchState.isSuccess
+      bottomNavigationBar: asyncState.hasValue
           ? Padding(
               padding: const EdgeInsets.all(16),
               child: FilledButton(
-                onPressed: vm.saveBatchAsBookState.isLoading
+                onPressed: saveBatchBookState.isLoading == true
                     ? null
-                    : () => vm.saveBatchAsBook(context),
-                child: vm.saveBatchAsBookState.isLoading
+                    : () => saveBatchBookNotifier.saveBatchAsBook(
+                        asyncState.value!.parseBatchList,
+                      ),
+                child: saveBatchBookState.isLoading == true
                     ? Text(
-                        '正在保存：${vm.saveAsBookCount} / ${vm.parseBatchList.length}',
+                        '正在保存：${saveBookProgress.current} / ${saveBookProgress.total}',
                       )
                     : const Text('保存到书架'),
               ),
@@ -145,4 +137,3 @@ class _ParseBatchPdfContent extends StatelessWidget {
     );
   }
 }
-

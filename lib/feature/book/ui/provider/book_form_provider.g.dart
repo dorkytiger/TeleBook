@@ -50,7 +50,7 @@ final class BookFormProvider
   }
 }
 
-String _$bookFormHash() => r'b794138246713fac4e945d5cee8535e25de68702';
+String _$bookFormHash() => r'2407f1247c5dcb1db39c18a8efb0dee929528e93';
 
 final class BookFormFamily extends $Family
     with
@@ -122,7 +122,7 @@ final class BookFormSubmitProvider
   BookFormSubmit create() => BookFormSubmit();
 }
 
-String _$bookFormSubmitHash() => r'b9c0adc2639c452eecc20c65f0a7d99febd5e693';
+String _$bookFormSubmitHash() => r'6e1d62948fc4e5a71a99ddc07525ba1aa5e47a86';
 
 abstract class _$BookFormSubmit extends $AsyncNotifier<void> {
   FutureOr<void> build();

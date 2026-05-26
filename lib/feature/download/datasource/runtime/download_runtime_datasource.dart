@@ -1,8 +1,17 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
+
+final downloadRuntimeDatasourceProvider = Provider<DownloadRuntimeDatasource>((
+  ref,
+) {
+  final ds = DownloadRuntimeDatasource();
+  ref.onDispose(ds.dispose);
+  return ds;
+});
 
 class DownloadRuntimeDatasource {
   final LinkedHashMap<String, DownloadGroupBo> _groupMap = LinkedHashMap();

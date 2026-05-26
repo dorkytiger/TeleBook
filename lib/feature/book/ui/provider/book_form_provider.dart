@@ -1,29 +1,29 @@
 import 'package:flutter/cupertino.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
 
+part 'book_form_provider.freezed.dart';
+
 part 'book_form_provider.g.dart';
 
-class BookFormState {
-  final String title;
-  final List<BookFormPath> imagePaths;
-
-  BookFormState({required this.title, required this.imagePaths});
-
-  BookFormState copyWith({String? title, List<BookFormPath>? imagePaths}) {
-    return BookFormState(
-      title: title ?? this.title,
-      imagePaths: imagePaths ?? this.imagePaths,
-    );
-  }
+@freezed
+abstract class BookFormState with _$BookFormState {
+  const factory BookFormState({
+    required String title,
+    required List<BookFormPath> imagePaths,
+  }) = _BookFormState;
 }
 
-class BookFormPath {
-  final String parentPath;
-  final String subPath;
+@freezed
+abstract class BookFormPath with _$BookFormPath {
+  const factory BookFormPath({
+    required String parentPath,
+    required String subPath,
+  }) = _BookFormPath;
 
-  BookFormPath(this.parentPath, this.subPath);
+  const BookFormPath._();
 
   String get fullPath => '$parentPath/$subPath';
 }
@@ -43,26 +43,29 @@ class BookForm extends _$BookForm {
 
     titleController = TextEditingController(text: book.name);
 
-    titleController.addListener((){
-      if(state.hasValue){
-        state = AsyncValue.data(state.value!.copyWith(title: titleController.text));
+    titleController.addListener(() {
+      if (state.hasValue) {
+        state = AsyncValue.data(
+          state.value!.copyWith(title: titleController.text),
+        );
       }
     });
     final imagePaths = book.localSubPaths
-        .map((subPath) => BookFormPath(GlobalConfig.booksDir.path, subPath))
+        .map(
+          (subPath) => BookFormPath(
+            parentPath: GlobalConfig.booksDir.path,
+            subPath: subPath,
+          ),
+        )
         .toList();
-    return BookFormState(
-      title: book.name,
-      imagePaths: imagePaths,
-    );
+    return BookFormState(title: book.name, imagePaths: imagePaths);
   }
 
   Future<void> deleteImage(BookFormPath path) async {
-    if(!state.hasValue) return;
-    final current =state.requireValue;
+    if (!state.hasValue) return;
+    final current = state.requireValue;
 
-    final updatePaths = current.imagePaths.where((p) => p.fullPath != path.fullPath).toList();
-
+    final updatePaths = current.imagePaths.where((p) => p != path).toList();
     state = AsyncValue.data(current.copyWith(imagePaths: updatePaths));
   }
 
@@ -86,12 +89,10 @@ class BookForm extends _$BookForm {
     // 重新赋给 state 触发 UI 刷新
     state = AsyncData(current.copyWith(imagePaths: updatedPaths));
   }
-
 }
 
 @riverpod
 class BookFormSubmit extends _$BookFormSubmit {
-
   @override
   FutureOr<void> build() => null;
 

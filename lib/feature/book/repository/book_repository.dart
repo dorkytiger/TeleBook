@@ -19,11 +19,13 @@ class _CopyBookArgs {
   final String bookId;
   final String destDirPath;
   final List<String> srcPaths;
+  final Function(int current,int total)? onProgress;
 
   _CopyBookArgs({
     required this.bookId,
     required this.destDirPath,
     required this.srcPaths,
+    this.onProgress,
   });
 }
 
@@ -40,6 +42,7 @@ Future<List<String>> _copyBookFiles(_CopyBookArgs args) async {
     final fileName = i.toString().padLeft(7, '0');
     await src.copy('${args.destDirPath}/$fileName');
     relPaths.add('${args.bookId}/$fileName');
+    args.onProgress?.call(i + 1, args.srcPaths.length);
   }
   return relPaths;
 }
@@ -124,7 +127,10 @@ class BookRepository {
   }
 
   /// 保存单本书：文件复制在后台 Isolate，DB 写入在主线程
-  Future<Result<void>> saveAsBook(SaveAsBookDto dto) async {
+  Future<Result<void>> saveAsBook(
+    SaveAsBookDto dto, {
+    Function(int current,int total)? onProgress,
+  }) async {
     final bookId = const Uuid().v4();
     final destDirPath = '${GlobalConfig.booksDir.path}/$bookId';
 
@@ -136,6 +142,7 @@ class BookRepository {
           bookId: bookId,
           destDirPath: destDirPath,
           srcPaths: dto.paths,
+          onProgress: onProgress,
         ),
       );
 
