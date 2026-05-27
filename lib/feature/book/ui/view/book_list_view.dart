@@ -103,7 +103,6 @@ class _BookListViewState extends ConsumerState<BookListView> {
   AppBar _buildNormalAppBar(BuildContext context) {
     final bookVos =
         ref.watch(bookListProvider.select((s) => s.value?.bookVos ?? []));
-    final taskCount = ref.watch(downloadTasksProvider).value?.length ?? 0;
     final state = ref.watch(bookListProvider).value;
 
     return AppBar(
@@ -135,14 +134,6 @@ class _BookListViewState extends ConsumerState<BookListView> {
             );
           },
         ),
-        if (taskCount > 0)
-          IconButton(
-            onPressed: () => context.push(AppRoute.download),
-            icon: Badge(
-              label: Text('$taskCount'),
-              child: const Icon(Icons.download),
-            ),
-          ),
         IconButton(onPressed: (){
             context.push(AppRoute.parseForm);
         }, icon: const Icon(Icons.add)),

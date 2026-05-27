@@ -21,6 +21,10 @@ class CollectionLocalDatasource extends DatabaseAccessor<AppDatabase>
     return into(collectionTable).insert(collection);
   }
 
+  Future<void> updateCollection(CollectionTableData collection) {
+    return update(collectionTable).replace(collection);
+  }
+
   Future<void> deleteCollectionById(int id) {
     return (delete(collectionTable)..where((tbl) => tbl.id.equals(id))).go();
   }

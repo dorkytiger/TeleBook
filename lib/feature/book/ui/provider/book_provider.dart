@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
@@ -6,6 +7,11 @@ import 'package:tele_book/feature/book/model/state/book_list_state.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 
 part 'book_provider.g.dart';
+
+final booksProvider = StreamProvider.autoDispose<List<BookTableData>>((ref){
+  final bookRepository = ref.watch(bookRepositoryProvider);
+  return bookRepository.watchAllBooks();
+});
 
 @riverpod
 class BookList extends _$BookList {

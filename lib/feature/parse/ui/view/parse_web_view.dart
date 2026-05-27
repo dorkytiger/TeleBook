@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/network_image_widget.dart';
 import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/feature/main/provider/main_provider.dart';
 import 'package:tele_book/feature/parse/ui/provider/parse_web_provider.dart';
 
 class ParseWebView extends ConsumerWidget {
@@ -24,10 +27,17 @@ class ParseWebView extends ConsumerWidget {
           child: const Icon(Icons.photo),
         ),
         onPressed: () {
-          showModalBottomSheet(
+          showModalBottomSheet<bool>(
             context: context,
-            builder: (context) => _buildBottomSheet(context, state, notifier),
-          );
+            builder: (sheetContext) =>
+                _buildBottomSheet(sheetContext: sheetContext, state: state),
+          ).then((confirmed) {
+            if (confirmed != true || !context.mounted) return;
+
+            ref.read(mainProvider.notifier).updateCurrentIndex(1);
+            context.pop();
+            unawaited(notifier.startDownload());
+          });
         },
       ),
       body: Column(
@@ -52,17 +62,16 @@ class ParseWebView extends ConsumerWidget {
     );
   }
 
-  Widget _buildBottomSheet(
-    BuildContext context,
-    ParseWebState state,
-    ParseWeb notifier,
-  ) {
+  Widget _buildBottomSheet({
+    required BuildContext sheetContext,
+    required ParseWebState state,
+  }) {
     return Container(
       padding: EdgeInsets.all(16),
-      height: MediaQuery.of(context).size.height * 0.7,
+      height: MediaQuery.of(sheetContext).size.height * 0.7,
       child: Column(
         children: [
-          Text("解析到的图片链接", style: Theme.of(context).textTheme.titleMedium),
+          Text("解析到的图片链接", style: Theme.of(sheetContext).textTheme.titleMedium),
           SizedBox(height: 16),
           Expanded(
             child: ListView.builder(
@@ -81,7 +90,7 @@ class ParseWebView extends ConsumerWidget {
                         ),
                         onTap: () {
                           Navigator.push(
-                            context,
+                            sheetContext,
                             MaterialPageRoute(
                               builder: (context) => _buildImagePreview(url),
                             ),
@@ -98,8 +107,8 @@ class ParseWebView extends ConsumerWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: () {
-                notifier.startDownload();
-                context.push(AppRoute.download);
+                if (state.urls.isEmpty) return;
+                Navigator.of(sheetContext).pop(true);
               },
               child: Text("下载"),
             ),

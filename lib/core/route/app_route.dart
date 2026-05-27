@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/ui/view/book_form_view.dart';
 import 'package:tele_book/feature/book/ui/view/book_page_view.dart';
-import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
+import 'package:tele_book/feature/book/ui/view/book_picker_view.dart';
+import 'package:tele_book/feature/collection/ui/view/collection_book_view.dart';
 import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_batch_form_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';
@@ -28,9 +29,14 @@ class AppRoute {
   // 书籍相关
   static const bookForm = '/book/form';
   static const bookPage = '/book/page';
+  static const bookPicker = '/book/picker';
 
   // 下载
   static const download = '/download';
+
+
+  static const collection = '/collection';
+  static const collectionBook = '/collection/book';
 
   // 解析
   static const parseForm = '/parse/form';
@@ -73,9 +79,38 @@ class AppRoute {
         },
       ),
       GoRoute(
+        path: bookPicker,
+        pageBuilder: (context, state) {
+          final extra = state.extra;
+          Set<int> disabledBookIds = <int>{};
+          if (extra is List<int>) {
+            disabledBookIds = extra.toSet();
+          } else if (extra is Set<int>) {
+            disabledBookIds = extra;
+          } else if (extra is List) {
+            disabledBookIds = extra.whereType<int>().toSet();
+          }
+          return MaterialPage(
+            child: BookPickerView(disabledBookIds: disabledBookIds),
+          );
+        },
+      ),
+      GoRoute(
         path: download,
         pageBuilder: (context, state) {
           return MaterialPage(child: Scaffold(body: DownloadListView()));
+        },
+      ),
+      GoRoute(
+        path: collectionBook,
+        pageBuilder: (context, state) {
+          final collectionId = state.extra as int?;
+          if (collectionId == null) {
+            return MaterialPage(child: ErrorRoutePage(message: "缺少书籍收藏夹ID参数"));
+          }
+          return MaterialPage(
+            child: CollectionBookView(collectionId: collectionId),
+          );
         },
       ),
       GoRoute(

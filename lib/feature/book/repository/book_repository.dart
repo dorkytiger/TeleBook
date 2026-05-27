@@ -68,6 +68,10 @@ class BookRepository {
 
   BookRepository(this._db);
 
+  Stream<List<BookTableData>> watchAllBooks() {
+    return _bookLocalDatasource.watchAllBooks();
+  }
+
   Future<List<BookTableData>> getPagedBooks({
     int? page,
     int pageSize = 20,

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/feature/book/ui/provider/book_provider.dart';
 import 'package:tele_book/feature/collection/model/vo/collection_list_item_vo.dart';
 import 'package:tele_book/feature/collection/repository/collection_repository.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -21,12 +23,19 @@ final collectionBooksProvider =
 @riverpod
 AsyncValue<List<CollectionListItemVo>> collectionList(Ref ref) {
   final collectionsAsync = ref.watch(collectionsProvider);
-  final booksAsync = ref.watch(collectionBooksProvider);
+  final collectionBooksAsync = ref.watch(collectionBooksProvider);
+  final booksAsync = ref.watch(booksProvider);
 
   if (collectionsAsync.hasError) {
     return AsyncError(
       collectionsAsync.error!,
       collectionsAsync.stackTrace ?? StackTrace.current,
+    );
+  }
+  if (collectionBooksAsync.hasError) {
+    return AsyncError(
+      collectionBooksAsync.error!,
+      collectionBooksAsync.stackTrace ?? StackTrace.current,
     );
   }
   if (booksAsync.hasError) {
@@ -35,21 +44,43 @@ AsyncValue<List<CollectionListItemVo>> collectionList(Ref ref) {
       booksAsync.stackTrace ?? StackTrace.current,
     );
   }
-  if (collectionsAsync.isLoading || booksAsync.isLoading) {
+  if (collectionsAsync.isLoading ||
+      collectionBooksAsync.isLoading ||
+      booksAsync.isLoading) {
     return const AsyncLoading();
   }
 
   final collections = collectionsAsync.value ?? const <CollectionTableData>[];
-  final books = booksAsync.value ?? const <CollectionBookTableData>[];
+  final collectionBooks =
+      collectionBooksAsync.value ?? const <CollectionBookTableData>[];
+  final books = booksAsync.value ?? const <BookTableData>[];
 
   final bookCountMap = <int, int>{};
-  for (final cb in books) {
+  final bookIdsByCollectionId = <int, List<int>>{};
+  for (final cb in collectionBooks) {
     bookCountMap[cb.collectionId] = (bookCountMap[cb.collectionId] ?? 0) + 1;
+    bookIdsByCollectionId
+        .putIfAbsent(cb.collectionId, () => <int>[])
+        .add(cb.bookId);
   }
+
+  final bookById = <int, BookTableData>{for (final b in books) b.id: b};
 
   final list = collections.map((c) {
     final count = bookCountMap[c.id] ?? 0;
-    return CollectionListItemVo(collection: c, count: count);
+    final coverImages = (bookIdsByCollectionId[c.id] ?? const <int>[])
+        .map((bookId) => bookById[bookId])
+        .whereType<BookTableData>()
+        .where((book) => book.localSubPaths.isNotEmpty)
+        .map((book) => GlobalConfig.resolveBookPath(book.localSubPaths.first))
+        .take(4)
+        .toList();
+
+    return CollectionListItemVo(
+      collection: c,
+      count: count,
+      coverImages: coverImages,
+    );
   }).toList();
 
   return AsyncData(list);
@@ -76,6 +107,50 @@ class CreateCollectionController extends _$CreateCollectionController {
     state = await AsyncValue.guard(() async {
       final repo = ref.read(collectionRepositoryProvider);
       await repo.createCollection(name: name, description: description);
+    });
+  }
+}
+
+@riverpod
+class UpdateCollectionController extends _$UpdateCollectionController {
+  @override
+  FutureOr<void> build() => null;
+
+  Future<void> updateCollection({
+    required int collectionId,
+    required String name,
+    String? description,
+  }) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      state = AsyncError('Collection name cannot be empty', StackTrace.current);
+      return;
+    }
+
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(collectionRepositoryProvider);
+      await repo.updateCollection(
+        CollectionTableData(
+          id: collectionId,
+          name: name,
+          description: description,
+        ),
+      );
+    });
+  }
+}
+
+@riverpod
+class DeleteCollectionController extends _$DeleteCollectionController {
+  @override
+  FutureOr<void> build() => null;
+
+  Future<void> deleteCollection({required int collectionId}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final repo = ref.read(collectionRepositoryProvider);
+      await repo.deleteCollection(collectionId);
     });
   }
 }

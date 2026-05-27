@@ -21,35 +21,40 @@ class TaskItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return ListTile(
       onTap: onTap,
-      child: Row(
+      contentPadding: EdgeInsets.zero,
+      leading: NetworkImageWidget(imageUrl: coverUrl),
+      title: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodyLarge,
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          NetworkImageWidget(imageUrl: coverUrl),
-          Expanded(
-            child: ListTile(
-              title: Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyLarge,
+          Row(
+            children: [
+              Text(
+                "状态: $status",
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "状态: $status",
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  SizedBox(height: 8),
-                  LinearProgressIndicator(value: progress,borderRadius: BorderRadius.circular(4),),
-                ],
+              SizedBox(width: 8),
+              Text(
+                "进度: ${(progress * 100).toStringAsFixed(1)}%",
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              trailing: trailing,
-            ),
+            ],
+          ),
+          SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            borderRadius: BorderRadius.circular(4),
           ),
         ],
       ),
+      trailing: trailing,
     );
   }
 }

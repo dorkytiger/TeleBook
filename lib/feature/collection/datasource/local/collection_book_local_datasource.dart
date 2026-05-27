@@ -21,6 +21,25 @@ class CollectionBookLocalDatasource extends DatabaseAccessor<AppDatabase>
     return into(collectionBookTable).insert(entry);
   }
 
+  Future<void> updateCollectionBook(CollectionBookTableData entry) {
+    return update(collectionBookTable).replace(entry);
+  }
+
+  Future<void> insertCollectionBooks(List<CollectionBookTableCompanion> entries) {
+    return batch((batch) {
+      batch.insertAll(collectionBookTable, entries);
+    });
+  }
+
+  Future<void> removeBookFromCollection(int collection, int bookId) {
+    return (delete(
+      collectionBookTable,
+    )
+      ..where((tbl) => tbl.collectionId.equals(collection) & tbl.bookId.equals(bookId)))
+        .go();
+  }
+
+
   Future<void> deleteCollectionBook(int id) {
     return (delete(
       collectionBookTable,

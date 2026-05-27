@@ -11,6 +11,10 @@ class BookLocalDatasource extends DatabaseAccessor<AppDatabase>
     with _$BookLocalDatasourceMixin {
   BookLocalDatasource(super.attachedDatabase);
 
+  Stream<List<BookTableData>> watchAllBooks() {
+    return (select(bookTable)..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])).watch();
+  }
+
   Stream<List<BookTableData>> watchBooks({
     int? page,
     int? pageSize,
