@@ -13,219 +13,252 @@ final booksProvider = StreamProvider.autoDispose<List<BookTableData>>((ref){
   return bookRepository.watchAllBooks();
 });
 
-@riverpod
-class BookList extends _$BookList {
-  final int _pageSize = 20;
+class _BookListQueryState {
+  final String name;
+  final BookSort? sort;
+  final int page;
+  final int pageSize;
 
+  const _BookListQueryState({
+    this.name = '',
+    this.sort,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+
+  _BookListQueryState copyWith({
+    String? name,
+    BookSort? sort,
+    int? page,
+    int? pageSize,
+  }) {
+    return _BookListQueryState(
+      name: name ?? this.name,
+      sort: sort ?? this.sort,
+      page: page ?? this.page,
+      pageSize: pageSize ?? this.pageSize,
+    );
+  }
+}
+
+class _BookListUiState {
+  final bool isSelectionMode;
+  final Set<int> selectedBookIds;
+  final BookLayout layout;
+
+  const _BookListUiState({
+    this.isSelectionMode = false,
+    this.selectedBookIds = const {},
+    this.layout = BookLayout.list,
+  });
+
+  _BookListUiState copyWith({
+    bool? isSelectionMode,
+    Set<int>? selectedBookIds,
+    BookLayout? layout,
+  }) {
+    return _BookListUiState(
+      isSelectionMode: isSelectionMode ?? this.isSelectionMode,
+      selectedBookIds: selectedBookIds ?? this.selectedBookIds,
+      layout: layout ?? this.layout,
+    );
+  }
+}
+
+class _BookListQueryNotifier extends Notifier<_BookListQueryState> {
   @override
-  Future<BookListState> build() async {
-    return _fetchPage(
-      name: '',
-      sort: null,
-      isFirstPage: true,
-      previousBooks: [],
+  _BookListQueryState build() => const _BookListQueryState();
+
+  void updateSearch(String name) {
+    state = state.copyWith(name: name, page: 1);
+  }
+
+  void updateSort(BookSort? sort) {
+    state = state.copyWith(sort: sort, page: 1);
+  }
+
+  void loadNextPage() {
+    state = state.copyWith(page: state.page + 1);
+  }
+}
+
+final bookListQueryProvider =
+    NotifierProvider<_BookListQueryNotifier, _BookListQueryState>(
+      _BookListQueryNotifier.new,
+    );
+
+class _BookListUiNotifier extends Notifier<_BookListUiState> {
+  @override
+  _BookListUiState build() => const _BookListUiState();
+
+  void enterSelectionMode(BookTableData firstBook) {
+    state = state.copyWith(isSelectionMode: true, selectedBookIds: {firstBook.id});
+  }
+
+  void exitSelectionMode() {
+    state = state.copyWith(isSelectionMode: false, selectedBookIds: {});
+  }
+
+  void toggleSelection(int bookId) {
+    final updatedIds = Set<int>.from(state.selectedBookIds);
+    if (updatedIds.contains(bookId)) {
+      updatedIds.remove(bookId);
+      if (updatedIds.isEmpty) {
+        state = state.copyWith(isSelectionMode: false, selectedBookIds: {});
+        return;
+      }
+    } else {
+      updatedIds.add(bookId);
+    }
+
+    state = state.copyWith(selectedBookIds: updatedIds);
+  }
+
+  void selectAll(Iterable<int> ids) {
+    state = state.copyWith(
+      isSelectionMode: true,
+      selectedBookIds: ids.toSet(),
     );
   }
 
-  Future<BookListState> _fetchPage({
-    required String name,
-    required BookSort? sort,
-    required bool isFirstPage,
-    required List<BookListItemVo> previousBooks,
-  }) async {
-    final bookRepository = ref.watch(bookRepositoryProvider);
+  void toggleLayout() {
+    final nextLayout =
+        state.layout == BookLayout.list ? BookLayout.grid : BookLayout.list;
+    state = state.copyWith(layout: nextLayout);
+  }
 
-    final lastCreatedAt = isFirstPage
-        ? null
-        : previousBooks.last.book.createdAt;
+  void clearSelectedIds(Iterable<int> ids) {
+    final updated = Set<int>.from(state.selectedBookIds)
+      ..removeAll(ids);
+    if (updated.isEmpty) {
+      state = state.copyWith(isSelectionMode: false, selectedBookIds: {});
+      return;
+    }
+    state = state.copyWith(selectedBookIds: updated);
+  }
+}
 
-    final newBooks = await bookRepository.getPagedBooks(
-      page: isFirstPage ? 1 : null,
-      pageSize: _pageSize,
-      name: name,
-      sort: sort,
-      lastCreatedAt: lastCreatedAt,
-    );
+final bookListUiProvider = NotifierProvider<_BookListUiNotifier, _BookListUiState>(
+  _BookListUiNotifier.new,
+);
 
-    final bookVos = newBooks
-        .map(
-          (book) => BookListItemVo(
-            book: book,
-            coverImagePath: GlobalConfig.resolveBookPath(
-              book.localSubPaths.first,
-            ),
-          ),
-        )
-        .toList();
+@riverpod
+class BookList extends _$BookList {
+  @override
+  Future<BookListState> build() async {
+    final booksAsync = ref.watch(booksProvider);
+    final query = ref.watch(bookListQueryProvider);
+    final ui = ref.watch(bookListUiProvider);
+
+    if (booksAsync.hasError) {
+      throw booksAsync.error!;
+    }
+    final books =
+        (booksAsync.value ?? await ref.watch(booksProvider.future)) ??
+        const <BookTableData>[];
+    final keyword = query.name.toLowerCase();
+
+    final filtered = books.where((book) {
+      if (keyword.isEmpty) return true;
+      return book.name.toLowerCase().contains(keyword);
+    }).toList();
+
+    if (query.sort != null) {
+      filtered.sort((a, b) {
+        final cmp = switch (query.sort!.type) {
+          BookSortType.title =>
+            a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          BookSortType.lastCreatedAt => a.createdAt.compareTo(b.createdAt),
+        };
+        return query.sort!.order == BookSortOrder.asc ? cmp : -cmp;
+      });
+    } else {
+      filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+
+    final visibleCount = query.page * query.pageSize;
+    final visibleBooks = filtered.take(visibleCount).toList();
+
+    final bookVos = visibleBooks.map((book) {
+      final coverPath = book.localSubPaths.isNotEmpty
+          ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
+          : '';
+      return BookListItemVo(book: book, coverImagePath: coverPath);
+    }).toList();
+
+    final visibleIds = visibleBooks.map((e) => e.id).toSet();
+    final selectedIds = ui.selectedBookIds.where(visibleIds.contains).toSet();
 
     return BookListState(
-      bookVos: isFirstPage ? bookVos : [...previousBooks, ...bookVos],
-      hasMore: newBooks.length == _pageSize,
-      name: name,
-      sort: sort,
+      bookVos: bookVos,
+      hasMore: filtered.length > visibleBooks.length,
+      name: query.name,
+      sort: query.sort,
       isLoadingMore: false,
+      isSelectionMode: ui.isSelectionMode,
+      selectedBookIds: selectedIds,
+      layout: ui.layout,
     );
   }
 
   Future<void> loadNextPage() async {
     if (!state.hasValue || state.isLoading) return;
     final current = state.requireValue;
-
     if (!current.hasMore || current.isLoadingMore) return;
-    state = AsyncData(current.copyWith(isLoadingMore: true));
-
-    try {
-      final nextState = await _fetchPage(
-        name: current.name,
-        sort: current.sort,
-        isFirstPage: false,
-        previousBooks: current.bookVos,
-      );
-      state = AsyncData(nextState);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
+    ref.read(bookListQueryProvider.notifier).loadNextPage();
   }
 
   Future<void> updateSearch(String name) async {
-    if (!state.hasValue) return;
-
-    state = const AsyncLoading();
-    try {
-      final nextState = await _fetchPage(
-        name: name,
-        sort: state.requireValue.sort,
-        isFirstPage: true,
-        previousBooks: [],
-      );
-      state = AsyncData(nextState);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
+    ref.read(bookListQueryProvider.notifier).updateSearch(name);
   }
 
   Future<void> updateSort(BookSort? sort) async {
-    if (!state.hasValue) return;
-    state = const AsyncLoading();
-    try {
-      final nextState = await _fetchPage(
-        name: state.requireValue.name,
-        sort: sort,
-        isFirstPage: true,
-        previousBooks: [],
-      );
-      state = AsyncData(nextState);
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
+    ref.read(bookListQueryProvider.notifier).updateSort(sort);
   }
 
   // ➡️ 进入多选模式并勾选第一本书
   void enterSelectionMode(BookTableData firstBook) {
-    if (!state.hasValue) return;
-    state = AsyncData(state.requireValue.copyWith(
-      isSelectionMode: true,
-      selectedBookIds: {firstBook.id},
-    ));
+    ref.read(bookListUiProvider.notifier).enterSelectionMode(firstBook);
   }
 
   // ➡️ 退出多选模式
   void exitSelectionMode() {
-    if (!state.hasValue) return;
-    state = AsyncData(state.requireValue.copyWith(
-      isSelectionMode: false,
-      selectedBookIds: {}, // 清空勾选
-    ));
+    ref.read(bookListUiProvider.notifier).exitSelectionMode();
   }
 
   // ➡️ 切换某本书的选中状态
   void toggleSelection(int bookId) {
-    if (!state.hasValue) return;
-    final updatedIds = Set<int>.from(state.requireValue.selectedBookIds);
-    if (updatedIds.contains(bookId)) {
-      updatedIds.remove(bookId);
-      // 如果全取消了，可以选择自动退出多选模式
-      if (updatedIds.isEmpty) {
-        exitSelectionMode();
-        return;
-      }
-    } else {
-      updatedIds.add(bookId);
-    }
-    state = AsyncData(state.requireValue.copyWith(selectedBookIds: updatedIds));
+    ref.read(bookListUiProvider.notifier).toggleSelection(bookId);
   }
 
   // ➡️ 全选
   void selectAll() {
-    if (!state.hasValue) return;
-    final allIds = state.requireValue.bookVos.map((vo) => vo.book.id).toSet();
-    state = AsyncData(state.requireValue.copyWith(selectedBookIds: allIds));
+    final ids =
+        state.asData?.value.bookVos.map((vo) => vo.book.id) ?? const <int>[];
+    ref.read(bookListUiProvider.notifier).selectAll(ids);
   }
 
   // ➡️ 切换布局
   void toggleLayout() {
-    if (!state.hasValue) return;
-    final nextLayout = state.requireValue.layout == BookLayout.list
-        ? BookLayout.grid
-        : BookLayout.list;
-    state = AsyncData(state.requireValue.copyWith(layout: nextLayout));
+    ref.read(bookListUiProvider.notifier).toggleLayout();
   }
 
   // ➡️ 删除单本书并刷新列表
   Future<void> deleteBook(int bookId) async {
-    if (!state.hasValue) return;
-    final current = state.requireValue;
     final bookRepository = ref.read(bookRepositoryProvider);
-
-    // 乐观更新：先从 UI 中移除
-    state = AsyncData(current.copyWith(
-      bookVos: current.bookVos.where((v) => v.book.id != bookId).toList(),
-    ));
-
     await bookRepository.deleteBook(bookId);
-
-    // 重新拉取第一页确保数据一致
-    try {
-      final nextState = await _fetchPage(
-        name: current.name,
-        sort: current.sort,
-        isFirstPage: true,
-        previousBooks: [],
-      );
-      state = AsyncData(nextState.copyWith(layout: current.layout));
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
+    ref.read(bookListUiProvider.notifier).clearSelectedIds([bookId]);
   }
 
   // ➡️ 批量删除选中书籍并刷新列表
   Future<void> deleteSelected() async {
     if (!state.hasValue) return;
-    final current = state.requireValue;
-    final selectedIds = Set<int>.from(current.selectedBookIds);
+    final selectedIds = Set<int>.from(state.requireValue.selectedBookIds);
     final bookRepository = ref.read(bookRepositoryProvider);
-
-    // 乐观更新
-    state = AsyncData(current.copyWith(
-      bookVos: current.bookVos.where((v) => !selectedIds.contains(v.book.id)).toList(),
-      isSelectionMode: false,
-      selectedBookIds: {},
-    ));
 
     for (final id in selectedIds) {
       await bookRepository.deleteBook(id);
     }
-
-    try {
-      final nextState = await _fetchPage(
-        name: current.name,
-        sort: current.sort,
-        isFirstPage: true,
-        previousBooks: [],
-      );
-      state = AsyncData(nextState.copyWith(layout: current.layout));
-    } catch (e, st) {
-      state = AsyncError(e, st);
-    }
+    ref.read(bookListUiProvider.notifier).exitSelectionMode();
   }
 }

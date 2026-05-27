@@ -10,7 +10,6 @@ import 'package:tele_book/feature/book/enum/book_menu_type.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
 import 'package:tele_book/feature/book/model/state/book_list_state.dart';
 import 'package:tele_book/feature/book/ui/provider/book_provider.dart';
-import 'package:tele_book/feature/download/ui/provider/download_provider.dart';
 import 'package:tele_book/feature/export/ui/view/export_batch_form_view.dart';
 import 'package:tele_book/feature/export/ui/view/export_single_form_view.dart';
 
