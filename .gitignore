@@ -52,4 +52,4 @@ app.*.map.json
 keystore_base64.txt
 
 pubspec.lock
-
+*.sqlite
