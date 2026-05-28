@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:dk_util/dk_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/feature/parse/ui/provider/parse_pdf_provider.dart';
 
 class ParsePdfView extends ConsumerWidget {
@@ -16,7 +19,24 @@ class ParsePdfView extends ConsumerWidget {
 
     final saveBookProgress = ref.watch(parsePdfSaveBookProgressProvider);
     final saveBookState = ref.watch(parsePdfSaveBookProvider);
-    final saveBookNotifier = ref.watch(parsePdfSaveBookProvider.notifier);
+
+    ref.listen(parsePdfSaveBookProvider, (previous, next) {
+      DKLog.d('保存状态变化：previous=$previous, next=$next');
+
+      if (next.hasError && !next.isLoading) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存失败：${next.error}')));
+      }
+
+      if (previous?.isLoading == true && next.hasValue) {
+        DKLog.d('保存成功，返回书架');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('保存成功')));
+        context.go(AppRoute.main);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text('解析 PDF：${asyncState.value?.pdfName ?? ''}')),
@@ -49,8 +69,7 @@ class ParsePdfView extends ConsumerWidget {
               child: FilledButton(
                 onPressed: saveBookState.isLoading
                     ? null
-                    : () => saveBookNotifier.onSave(
-                        ref,
+                    : () => ref.read(parsePdfSaveBookProvider.notifier).onSave(
                         asyncState.value!.tempPaths,
                         asyncState.value!.pdfName,
                       ),

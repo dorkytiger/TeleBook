@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
@@ -27,7 +30,8 @@ abstract class ParseArchiveSaveBookParam with _$ParseArchiveSaveBookParam {
 }
 
 @freezed
-abstract class ParseArchiveSaveBookProgress with _$ParseArchiveSaveBookProgress {
+abstract class ParseArchiveSaveBookProgress
+    with _$ParseArchiveSaveBookProgress {
   const factory ParseArchiveSaveBookProgress({
     @Default(0) int current,
     @Default(0) int total,
@@ -54,7 +58,23 @@ class ParseArchive extends _$ParseArchive {
     return ParseArchiveState(archiveName: archiveName, tempPaths: const []);
   }
 
+  Future<bool> _requestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    if (await Permission.manageExternalStorage.isGranted) return true;
+    final status = await Permission.manageExternalStorage.request();
+    if (status.isGranted) return true;
+    if (await Permission.storage.isGranted) return true;
+    final storageStatus = await Permission.storage.request();
+    return storageStatus.isGranted;
+  }
+
   Future<void> _parseArchive(String archivePath) async {
+    final hasPermission = await _requestStoragePermission();
+    if (!hasPermission) {
+      state = AsyncError('需要存储权限才能解析压缩包', StackTrace.current);
+      return;
+    }
+
     final archiveName = archivePath.split(RegExp(r'[\\/]')).last;
 
     ref.read(parseArchiveProgressProvider(archivePath).notifier).state = (0, 0);
@@ -72,8 +92,9 @@ class ParseArchive extends _$ParseArchive {
 
     result.fold(
       onSuccess: (data) {
-        state =
-            AsyncData(ParseArchiveState(archiveName: archiveName, tempPaths: data));
+        state = AsyncData(
+          ParseArchiveState(archiveName: archiveName, tempPaths: data),
+        );
       },
       onError: (error) {
         state = AsyncError(error.message, StackTrace.current);
@@ -114,4 +135,3 @@ class ParseArchiveSaveBook extends _$ParseArchiveSaveBook {
     );
   }
 }
-

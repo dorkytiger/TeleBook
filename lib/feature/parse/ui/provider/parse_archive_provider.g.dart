@@ -50,7 +50,7 @@ final class ParseArchiveProvider
   }
 }
 
-String _$parseArchiveHash() => r'abd52c0a9e981404affd3711f8cbd7f3194ee84e';
+String _$parseArchiveHash() => r'15200f8f1b3d556233c5d24a6775874fe06071d7';
 
 final class ParseArchiveFamily extends $Family
     with

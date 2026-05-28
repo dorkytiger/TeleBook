@@ -50,7 +50,7 @@ final class ParsePdfProvider
   }
 }
 
-String _$parsePdfHash() => r'2b3746c5d1962646ecf4a6e600d7e92c093fe77b';
+String _$parsePdfHash() => r'6b20494d7df97ff721a555fc1d5c8dee0b99d85f';
 
 final class ParsePdfFamily extends $Family
     with
@@ -122,7 +122,7 @@ final class ParsePdfSaveBookProvider
   ParsePdfSaveBook create() => ParsePdfSaveBook();
 }
 
-String _$parsePdfSaveBookHash() => r'a7d10d9c9b6aeeb2e470926be2aa25898dbefd2e';
+String _$parsePdfSaveBookHash() => r'7851b1d22cd47f9be7cf7e6ed5d5bbda7f8c8c8c';
 
 abstract class _$ParsePdfSaveBook extends $AsyncNotifier<void> {
   FutureOr<void> build();

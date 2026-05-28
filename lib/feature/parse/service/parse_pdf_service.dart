@@ -3,13 +3,13 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
-import 'package:pdfrx/pdfrx.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/util/failure_util.dart';
 import 'package:tele_book/core/util/result_util.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:pdfrx/pdfrx.dart';
 import 'package:uuid/uuid.dart';
 
 final parsePdfServiceProvider = Provider((ref) => ParsePdfService());
@@ -47,6 +47,13 @@ class ParsePdfService {
     String pdfPath, {
     void Function(int current, int total)? onProgress,
   }) async {
+    final sourceFile = File(pdfPath);
+    if (!await sourceFile.exists()) {
+      return Result.failure(
+        BusinessFailure(message: 'PDF 文件不存在或无访问权限: $pdfPath'),
+      );
+    }
+
     final tempDir = p.join(GlobalConfig.appTempDir.path, const Uuid().v4());
     await Directory(tempDir).create(recursive: true);
 

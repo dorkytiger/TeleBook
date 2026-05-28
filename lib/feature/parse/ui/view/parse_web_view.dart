@@ -35,7 +35,7 @@ class ParseWebView extends ConsumerWidget {
             if (confirmed != true || !context.mounted) return;
 
             ref.read(mainProvider.notifier).updateCurrentIndex(1);
-            context.pop();
+            context.go(AppRoute.main);
             unawaited(notifier.startDownload());
           });
         },

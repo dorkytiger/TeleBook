@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/error_widget.dart';
@@ -9,6 +8,8 @@ import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/service/download_service.dart';
 import 'package:tele_book/feature/download/ui/provider/download_provider.dart';
+import 'package:tele_book/feature/download/ui/widget/download_form_bottom_sheet_widget.dart';
+import 'package:tele_book/feature/download/ui/widget/download_task_sheet_widget.dart';
 
 class DownloadListView extends ConsumerWidget {
   const DownloadListView({super.key});
@@ -26,6 +27,13 @@ class DownloadListView extends ConsumerWidget {
       appBar: AppBar(
         title: Text("下载任务"),
         actions: [
+          IconButton(
+            tooltip: '清空已完成任务',
+            onPressed: () async {
+              await _clearCompletedTasks(context, ref);
+            },
+            icon: const Icon(Icons.delete_sweep),
+          ),
           IconButton(
             onPressed: () async {
               await _showDownloadForm(context);
@@ -82,6 +90,60 @@ class DownloadListView extends ConsumerWidget {
     );
   }
 
+  Future<void> _clearCompletedTasks(BuildContext context, WidgetRef ref) async {
+    final tasks = await ref.read(downloadTasksProvider.future);
+    final hasCompleted = tasks.any(
+      (group) => group.downloadGroupBo.status == DownloadStatus.completed,
+    );
+    if (!hasCompleted) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('没有可清空的已完成任务')));
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('清空已完成任务'),
+          content: const Text('将移除所有已完成的下载任务组及其临时文件，是否继续？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('清空', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      final clearedCount = await ref
+          .read(downloadServiceProvider)
+          .clearCompletedTasks();
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('已清空 $clearedCount 个已完成任务')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+
   void _showDownloadTaskList(
     BuildContext context,
     String groupId,
@@ -89,150 +151,19 @@ class DownloadListView extends ConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      builder: (context) {
-        final asyncTasks = ref.watch(downloadTasksProvider);
-
-        return asyncTasks.when(
-          loading: () => const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (e, st) => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: Text(
-                "加载任务失败",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            ),
-          ),
-          data: (groups) {
-            final tasks = groups
-                .where((g) => g.downloadGroupBo.id == groupId)
-                .expand((g) => g.downloadItemBoList)
-                .toList();
-
-            if (tasks.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(
-                  child: Text(
-                    "处理中",
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ),
-              );
-            }
-
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    "下载任务详情",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ListView.separated(
-                      itemCount: tasks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final task = tasks[index];
-                        return TaskItemWidget(
-                          title: task.url,
-                          coverUrl: task.url,
-                          status: task.status.description,
-                          progress: task.progress,
-                          trailing: task.status == DownloadStatus.failed
-                              ? IconButton(
-                                  onPressed: () {
-                                    ref
-                                        .read(downloadServiceProvider)
-                                        .retryTask(task.id);
-                                  },
-                                  icon: const Icon(Icons.refresh),
-                                )
-                              : null,
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => DownloadTaskSheetWidget(groupId: groupId),
     );
   }
 
   Future<void> _showDownloadForm(BuildContext context) async {
-    final TextEditingController urlController = TextEditingController();
     final url = await showModalBottomSheet<String>(
       isScrollControlled: true,
       enableDrag: true,
       context: context,
       builder: (sheetContext) {
-        final bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
-        return AnimatedPadding(
-          duration: const Duration(milliseconds: 100),
-          curve: Curves.easeOut,
-          padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "添加下载任务",
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: urlController,
-                  decoration: InputDecoration(
-                    labelText: "下载链接",
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.link),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        Clipboard.getData(Clipboard.kTextPlain).then((
-                          clipData,
-                        ) {
-                          if (clipData != null && clipData.text != null) {
-                            urlController.text = clipData.text!;
-                          }
-                        });
-                      },
-                      icon: const Icon(Icons.paste),
-                    ),
-                  ),
-                  keyboardType: TextInputType.url,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () {
-                      final inputUrl = urlController.text.trim();
-                      Navigator.of(sheetContext).pop(inputUrl);
-                    },
-                    child: const Text("添加"),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
+        return DownloadFormBottomSheetWidget();
       },
     );
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      urlController.dispose();
-    });
 
     if (url == null || url.isEmpty || !context.mounted) return;
     context.push(AppRoute.parseWeb, extra: url);

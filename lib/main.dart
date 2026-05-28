@@ -41,7 +41,7 @@ Future<void> _init() async {
 
   appProviders = ProviderScope(
     child: MaterialApp.router(
-      title: 'TeleBook',
+      title: 'tele_book',
       routerConfig: AppRoute.router,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,

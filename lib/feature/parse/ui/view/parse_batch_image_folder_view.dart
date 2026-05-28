@@ -6,6 +6,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/error_widget.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
+import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/feature/parse/ui/provider/parse_batch_image_folder.dart';
 
 class ParseBatchImageFolderView extends ConsumerWidget {
@@ -46,7 +47,7 @@ class ParseBatchImageFolderView extends ConsumerWidget {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("保存成功！")));
-        context.pop();
+        context.go(AppRoute.main);
       }
     });
 
@@ -72,8 +73,6 @@ class ParseBatchImageFolderView extends ConsumerWidget {
                   Text("正在处理：${current.completeCount}/${current.totalCount}"),
                   if (current.currentFileName.isNotEmpty)
                     Text("当前文件：${current.currentFileName}"),
-                  if (current.currentFileProgressText.isNotEmpty)
-                    Text(current.currentFileProgressText),
                 ],
               ),
             );

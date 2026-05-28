@@ -25,6 +25,10 @@ class DownloadRepository {
     return _downloadRuntimeDatasource.getGroup(groupId);
   }
 
+  List<DownloadGroupBo> getDownloadGroups() {
+    return _downloadRuntimeDatasource.getGroups();
+  }
+
   List<DownloadItemBo> getDownloadItemsByGroup(String groupId) {
     return _downloadRuntimeDatasource.getItemsByGroup(groupId);
   }

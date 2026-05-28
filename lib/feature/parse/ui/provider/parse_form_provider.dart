@@ -129,7 +129,7 @@ class ParseForm extends _$ParseForm {
 
   Future<void> pickerArchive() async {
     final result = await FilePicker.platform.pickFiles(
-      dialogTitle: '选择 TeleBook 导出的书籍归档文件',
+      dialogTitle: '选择 tele_book 导出的书籍归档文件',
       type: FileType.custom,
       allowedExtensions: ['zip'],
     );
@@ -158,7 +158,7 @@ class ParseForm extends _$ParseForm {
     }
 
     final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '选择 TeleBook 导出��书籍归档文件夹',
+      dialogTitle: '选择 tele_book 导出��书籍归档文件夹',
     );
     if (result != null) {
       batchArchivePathController.text = result;

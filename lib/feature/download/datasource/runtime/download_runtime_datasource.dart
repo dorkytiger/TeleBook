@@ -37,6 +37,8 @@ class DownloadRuntimeDatasource {
 
   DownloadGroupBo? getGroup(String groupId) => _groupMap[groupId];
 
+  List<DownloadGroupBo> getGroups() => _groupMap.values.toList();
+
   List<DownloadItemBo> getItemsByGroup(String groupId) {
     return _itemMap.values.where((item) => item.groupId == groupId).toList();
   }

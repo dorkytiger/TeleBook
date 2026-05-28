@@ -33,7 +33,7 @@ final class BookListProvider
   BookList create() => BookList();
 }
 
-String _$bookListHash() => r'd582e10acb9b6a19e0a98a36ae1456008a03e235';
+String _$bookListHash() => r'8cc7188f30e463cd9d76918cd02c58d4cbbd98e0';
 
 abstract class _$BookList extends $AsyncNotifier<BookListState> {
   FutureOr<BookListState> build();
