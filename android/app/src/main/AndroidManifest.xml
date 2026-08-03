@@ -13,7 +13,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
-        android:label="tele_book"
+        android:label="TeleBook"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

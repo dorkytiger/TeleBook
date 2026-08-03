@@ -1,6 +1,6 @@
 {
-    "name": "tele_book",
-    "short_name": "tele_book",
+    "name": "TeleBook",
+    "short_name": "TeleBook",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
