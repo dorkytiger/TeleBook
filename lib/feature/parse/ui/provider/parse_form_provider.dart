@@ -152,7 +152,10 @@ class ParseForm extends _$ParseForm {
         final paths = result.paths.whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 个 ZIP 文件';
         batchArchivePathController.text = text;
-        state = state.copyWith(batchArchivePaths: paths, batchArchivePath: text);
+        state = state.copyWith(
+          batchArchivePaths: paths,
+          batchArchivePath: text,
+        );
       }
       return;
     }
@@ -162,7 +165,10 @@ class ParseForm extends _$ParseForm {
     );
     if (result != null) {
       batchArchivePathController.text = result;
-      state = state.copyWith(batchArchivePaths: const [], batchArchivePath: result);
+      state = state.copyWith(
+        batchArchivePaths: const [],
+        batchArchivePath: result,
+      );
     }
   }
 
@@ -204,7 +210,10 @@ class ParseForm extends _$ParseForm {
         final paths = result.paths.whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 张图片（按所在文件夹分组）';
         batchImageFolderPathController.text = text;
-        state = state.copyWith(batchImagePaths: paths, batchImageFolderPath: text);
+        state = state.copyWith(
+          batchImagePaths: paths,
+          batchImageFolderPath: text,
+        );
       }
       return;
     }
@@ -214,7 +223,10 @@ class ParseForm extends _$ParseForm {
     );
     if (result != null) {
       batchImageFolderPathController.text = result;
-      state = state.copyWith(batchImagePaths: const [], batchImageFolderPath: result);
+      state = state.copyWith(
+        batchImagePaths: const [],
+        batchImageFolderPath: result,
+      );
     }
   }
 
@@ -259,12 +271,15 @@ class ParseForm extends _$ParseForm {
 }
 
 enum ParseFormType {
-  web,
-  archive,
-  batchArchive,
-  imageFolder,
-  batchImageFolder,
-  pdf,
-  batchPdf,
-}
+  web("网页"),
+  archive("压缩包"),
+  batchArchive("批量压缩包"),
+  imageFolder("图片文件夹"),
+  batchImageFolder("批量图片文件夹"),
+  pdf("PDF"),
+  batchPdf("批量PDF");
 
+  final String description;
+
+  const ParseFormType(this.description);
+}

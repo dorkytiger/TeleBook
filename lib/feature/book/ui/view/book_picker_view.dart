@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/common/config/global_config.dart';
@@ -10,17 +11,14 @@ import 'package:tele_book/feature/book/ui/provider/book_provider.dart';
 class BookPickerView extends ConsumerStatefulWidget {
   final Set<int> disabledBookIds;
 
-  const BookPickerView({
-    super.key,
-    this.disabledBookIds = const <int>{},
-  });
+  const BookPickerView({super.key, this.disabledBookIds = const <int>{}});
 
   @override
   ConsumerState<BookPickerView> createState() => _BookPickerViewState();
 }
 
 class _BookPickerViewState extends ConsumerState<BookPickerView> {
-  final Set<int> _selectedBookIds = <int>{};
+  Set<int> _selectedBookIds = <int>{};
   final TextEditingController _searchController = TextEditingController();
   String _keyword = '';
 
@@ -41,18 +39,28 @@ class _BookPickerViewState extends ConsumerState<BookPickerView> {
     });
   }
 
+  void _selectBooks(Set<int> bookIds) {
+    setState(() {
+      _selectedBookIds = bookIds;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(booksProvider);
 
-    return Scaffold(
-      appBar: AppBar(title: Text("选择书籍")),
-      body: asyncState.when(
+    return FScaffold(
+      header: FHeader.nested(title: Text("选择书籍")),
+      child: asyncState.when(
         data: (books) {
           final filteredBooks = books.where((book) {
             if (_keyword.isEmpty) return true;
             return book.name.toLowerCase().contains(_keyword.toLowerCase());
           }).toList();
+
+          final selectedBooks = books
+              .where((book) => _selectedBookIds.contains(book.id))
+              .toList();
 
           if (filteredBooks.isEmpty) {
             return Column(
@@ -79,39 +87,57 @@ class _BookPickerViewState extends ConsumerState<BookPickerView> {
           }
 
           return Column(
+            crossAxisAlignment: .start,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                child: TextField(
+              FTextField(
+                control: FTextFieldControl.managed(
                   controller: _searchController,
-                  decoration: const InputDecoration(
-                    hintText: '搜索书名',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (value) {
+                  onChange: (value) {
                     setState(() {
-                      _keyword = value.trim();
+                      _keyword = value.text.trim();
                     });
                   },
                 ),
+                label: Text('搜索书名'),
+                hint: "请输入要搜索的书名",
+                prefixBuilder: (context, style, variant) {
+                  return FButton.icon(
+                    style: style.obscureButtonStyle,
+                    child: Icon(Icons.search),
+                    onPress: () {},
+                  );
+                },
               ),
+              SizedBox(height: 8),
+              Text(
+                "书籍列表",
+                style: context.theme.typography.body.xs.copyWith(
+                  fontWeight: .w500,
+                ),
+              ),
+              SizedBox(height: 8),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: filteredBooks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
+                child: FSelectTileGroup.builder(
+                  count: filteredBooks.length,
+                  control: FMultiValueControl.managed(
+                    initial: _selectedBookIds,
+                    onChange: (value) {
+                      _selectBooks(value);
+                    },
+                  ),
+                  tileBuilder: (context, index) {
                     final book = filteredBooks[index];
                     final isDisabled = widget.disabledBookIds.contains(book.id);
-                    final isSelected = isDisabled || _selectedBookIds.contains(book.id);
-                    final coverPath = book.localSubPaths.isNotEmpty
+                    final coverPath = book.coverSubPath != null
+                        ? GlobalConfig.resolveBookPath(book.coverSubPath!)
+                        : book.localSubPaths.isNotEmpty
                         ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
                         : '';
 
-                    return ListTile(
-                      onTap: () => _toggleBook(book.id),
-                      leading: coverPath.isEmpty
+                    return .suffix(
+                      value: book.id,
+                      enabled: !isDisabled,
+                      prefix: coverPath.isEmpty
                           ? Container(
                               width: 64,
                               height: 64,
@@ -132,12 +158,19 @@ class _BookPickerViewState extends ConsumerState<BookPickerView> {
                             ? '已在当前收藏夹中'
                             : '共 ${book.localSubPaths.length} 页',
                       ),
-                      trailing: Checkbox(
-                        value: isSelected,
-                        onChanged: isDisabled ? null : (_) => _toggleBook(book.id),
-                      ),
                     );
                   },
+                ),
+              ),
+              Padding(
+                padding: .symmetric(vertical: 16),
+                child: FButton(
+                  onPress: _selectedBookIds.isEmpty
+                      ? null
+                      : () {
+                          context.pop<List<BookTableData>>(selectedBooks);
+                        },
+                  child: Text('确认选择 (${selectedBooks.length})'),
                 ),
               ),
             ],
@@ -147,27 +180,6 @@ class _BookPickerViewState extends ConsumerState<BookPickerView> {
           child: CustomErrorWidget(errorMessage: e.toString(), stackTrace: st),
         ),
         loading: () => Center(child: CircularProgressIndicator()),
-      ),
-      bottomNavigationBar: asyncState.when(
-        data: (books) {
-          final selectedBooks = books
-              .where((book) => _selectedBookIds.contains(book.id))
-              .toList();
-
-          return SafeArea(
-            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: FilledButton(
-              onPressed: selectedBooks.isEmpty
-                  ? null
-                  : () {
-                      context.pop<List<BookTableData>>(selectedBooks);
-                    },
-              child: Text('确认选择 (${selectedBooks.length})'),
-            ),
-          );
-        },
-        error: (_, __) => const SizedBox.shrink(),
-        loading: () => const SizedBox.shrink(),
       ),
     );
   }

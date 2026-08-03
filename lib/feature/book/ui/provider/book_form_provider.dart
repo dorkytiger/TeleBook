@@ -3,6 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/feature/book/repository/book_repository.dart';
 
 part 'book_form_provider.freezed.dart';
 
@@ -119,6 +120,9 @@ class BookFormSubmit extends _$BookFormSubmit {
           .read(databaseProvider)
           .bookLocalDatasource
           .updateBook(updatedBook);
+
+      // 重新生成封面和预览图
+      await ref.read(bookRepositoryProvider).regenerateImages(updatedBook);
     });
 
     return !state.hasError;

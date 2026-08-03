@@ -72,7 +72,9 @@ AsyncValue<List<CollectionListItemVo>> collectionList(Ref ref) {
         .map((bookId) => bookById[bookId])
         .whereType<BookTableData>()
         .where((book) => book.localSubPaths.isNotEmpty)
-        .map((book) => GlobalConfig.resolveBookPath(book.localSubPaths.first))
+        .map((book) => book.coverSubPath != null
+            ? GlobalConfig.resolveBookPath(book.coverSubPath!)
+            : GlobalConfig.resolveBookPath(book.localSubPaths.first))
         .take(4)
         .toList();
 

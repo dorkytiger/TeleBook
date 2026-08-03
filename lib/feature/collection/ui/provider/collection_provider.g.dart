@@ -55,7 +55,7 @@ final class CollectionListProvider
   }
 }
 
-String _$collectionListHash() => r'5bfd649d7f9d74b075041ce8e4afa9c3535400f9';
+String _$collectionListHash() => r'b121eda013ea7f8b0fd9013e6ea4694967e302a1';
 
 @ProviderFor(CreateCollectionController)
 final createCollectionControllerProvider =

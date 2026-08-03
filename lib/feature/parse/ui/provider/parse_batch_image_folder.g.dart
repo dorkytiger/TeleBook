@@ -55,7 +55,7 @@ final class ParseBatchImageFolderProvider
 }
 
 String _$parseBatchImageFolderHash() =>
-    r'e1705d70a73923c87e96ca709fcfeb8903173595';
+    r'020c694ab8f1d17f99bf74075a61d1908039bb32';
 
 final class ParseBatchImageFolderFamily extends $Family
     with

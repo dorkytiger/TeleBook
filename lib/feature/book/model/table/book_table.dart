@@ -8,6 +8,11 @@ class BookTable extends Table {
 
   TextColumn get localSubPaths => text().map(const StringListConverter())();
 
+  TextColumn get coverSubPath => text().nullable()();
+
+  TextColumn get previewSubPaths =>
+      text().nullable().map(const StringListConverter())();
+
   IntColumn get readCount => integer().withDefault(const Constant(0))();
 
   IntColumn get currentPage => integer().withDefault(const Constant(0))();

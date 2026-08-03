@@ -1,199 +1,260 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/export/enum/export_format.dart';
-import 'package:tele_book/feature/export/ui/viewmodel/export_batch_viewmodel.dart';
+import 'package:tele_book/feature/export/model/export_item.dart';
+import 'package:tele_book/feature/export/ui/provider/export_batch_provider.dart';
 
-class ExportBatchFormView extends StatelessWidget {
+class ExportBatchFormView extends ConsumerStatefulWidget {
   final List<BookTableData> books;
+
 
   const ExportBatchFormView({super.key, required this.books});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ExportBatchViewmodel(books: books),
-      child: const _ExportBatchFormContent(),
-    );
-  }
+  ConsumerState<ExportBatchFormView> createState() =>
+      _ExportBatchFormViewState();
 }
 
-class _ExportBatchFormContent extends StatelessWidget {
-  const _ExportBatchFormContent();
+class _ExportBatchFormViewState extends ConsumerState<ExportBatchFormView> {
+  final _formKey = GlobalKey<FormState>();
+  late final List<int> _bookIds;
+
+  @override
+  void initState() {
+    super.initState();
+    _bookIds = widget.books.map((b) => b.id).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ExportBatchViewmodel>();
+    final state = ref.watch(
+      exportBatchProvider(_bookIds),
+    );
+    final notifier = ref.read(
+      exportBatchProvider(_bookIds).notifier,
+    );
 
-    if (vm.isDone) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-            content: Text('全部导出成功！'),
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          ),
+    ref.listen(exportBatchProvider(_bookIds), (
+      prev,
+      next,
+    ) {
+      if (prev?.isDone == false && next.isDone) {
+        showFToast(
+          context: context,
+          icon: const Icon(FLucideIcons.check),
+          title: const Text('导出成功'),
+          description: Text('全部 ${next.items.length} 本书已导出'),
+          swipeToDismiss: const [.right],
+          duration: const Duration(seconds: 3),
         );
         Navigator.of(context).pop();
-      });
+      }
+    });
 
-    }
-
-    return Scaffold(
-      appBar: AppBar(title: Text('批量导出（${vm.items.length} 本）')),
-      body: Column(
-        children: [
-          // 顶部设置区
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 导出格式
-                LayoutBuilder(
-                  builder: (context, constraints) => DropdownMenu<ExportFormat>(
-                    width: constraints.maxWidth,
-                    initialSelection: vm.format,
-                    label: const Text('导出格式'),
-                    leadingIcon: const Icon(Icons.file_present),
-                    onSelected: (v) {
-                      if (v != null) vm.setFormat(v);
-                    },
-                    dropdownMenuEntries: ExportFormat.values
-                        .map((f) => DropdownMenuEntry(value: f, label: f.label))
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // 导出路径
-                TextField(
-                  readOnly: true,
-                  controller: TextEditingController(text: vm.outputPath ?? ''),
-                  decoration: InputDecoration(
-                    labelText: '导出路径',
-                    hintText: '请选择导出目录',
-                    prefixIcon: const Icon(Icons.folder_open),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.drive_folder_upload),
-                      onPressed: vm.isExporting ? null : vm.pickOutputDir,
-                    ),
-                  ),
-                ),
-
-                if (vm.errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      vm.errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-
-                // 进度条
-                if (vm.isExporting) ...[
-                  const SizedBox(height: 12),
-                  LinearProgressIndicator(
-                    value: vm.items.isNotEmpty
-                        ? vm.progress / vm.items.length
-                        : null,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '正在导出 ${vm.progress} / ${vm.items.length}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          const Divider(height: 1),
-
-          // 导出项列表
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemCount: vm.items.length,
-              itemBuilder: (context, index) {
-                final item = vm.items[index];
-                return Row(
-                  children: [
-                    LocalImageWidget(imagePath: item.coverPath),
-                    Expanded(
-                      child: ListTile(
-                        title: Text(
-                          item.book.name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text('${item.book.localSubPaths.length} 页'),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        showGeneralDialog(
-                          context: context,
-                          pageBuilder: (_, _, _) {
-                            return AlertDialog(
-                              title: Text('编辑导出文件名'),
-                              content: TextField(
-                                controller: item.nameController,
-                                decoration: const InputDecoration(
-                                  border: OutlineInputBorder(),
-                                  labelText: '导出文件名',
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: Text('取消'),
-                                ),
-                                ElevatedButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Text('确定'),
-                                ),
-                              ],
-                            );
-                          },
-                        );
+    return FScaffold(
+      header: FHeader.nested(
+        title: Text('批量导出（${state.items.length} 本）'),
+        prefixes: [FHeaderAction.back(onPress: () => context.pop())],
+      ),
+      child: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: Column(
+          children: [
+            // 顶部设置区
+            Padding(
+              padding: .all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 导出格式
+                  FSelect<ExportFormat>.rich(
+                    control: FSelectControl.managed(
+                      onChange: (value) {
+                        if (value != null) notifier.setFormat(value);
                       },
-                      icon: const Icon(Icons.edit),
+                      initial: state.format,
+                    ),
+                    label: Text("导出格式"),
+                    hint: "请选择导出格式",
+                    format: (s) => s.label,
+                    children: [
+                      for (final format in ExportFormat.values)
+                        .item(title: Text(format.label), value: format),
+                    ],
+                    validator: (v) => (v == null) ? '请选择导出格式' : null,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 导出路径
+                  FTextFormField(
+                    readOnly: true,
+                    control: FTextFieldControl.managed(
+                      controller: state.outputPathController,
+                    ),
+                    label: Text('导出路径'),
+                    hint: '请选择导出目录',
+                    suffixBuilder: (context, style, variants) {
+                      return FButton.icon(
+                        style: style.obscureButtonStyle,
+                        onPress: state.isExporting
+                            ? null
+                            : () => notifier.pickOutputDir(),
+                        child: Icon(FLucideIcons.folderOpen),
+                      );
+                    },
+                    validator: (v) => (v?.isEmpty ?? true) ? '请选择路径' : null,
+                    onTap: state.isExporting
+                        ? null
+                        : () => notifier.pickOutputDir(),
+                  ),
+                  // 进度条
+                  if (state.isExporting) ...[
+                    const SizedBox(height: 12),
+                    FDeterminateProgress(
+                      value: state.items.isNotEmpty
+                          ? state.progress / state.items.length
+                          : 0,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '正在导出 ${state.progress} / ${state.items.length}',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
-                );
-              },
-            ),
-          ),
-
-          // 底部导出按钮
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton.icon(
-                onPressed: vm.isExporting ? null : () => vm.export(),
-                icon: vm.isExporting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.upload),
-                label: Text(vm.isExporting ? '导出中...' : '开始批量导出'),
+                ],
               ),
             ),
+
+            const Divider(height: 1),
+
+            // 导出项列表
+            Expanded(
+              child: FItemGroup.builder(
+                count: state.items.length,
+                itemBuilder: (context, index) {
+                  final item = state.items[index];
+                  return FItem(
+                    prefix: LocalImageWidget(imagePath: item.coverPath),
+                    title: Text(
+                      item.book.name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text('${item.book.localSubPaths.length} 页'),
+                    suffix: FButton.icon(
+                      variant: .ghost,
+                      onPress: () => _editFileName(context, item),
+                      child: const Icon(FLucideIcons.pencil),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // 底部导出按钮
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FButton(
+                  onPress: state.isExporting
+                      ? null
+                      : () {
+                          if (_formKey.currentState!.validate()) {
+                            notifier.doExport();
+                          }
+                        },
+                  prefix: state.isExporting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.upload),
+                  child: Text(state.isExporting ? '导出中...' : '开始批量导出'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editFileName(BuildContext context, ExportItem item) {
+    showFDialog(
+      context: context,
+      builder: (dialogContext, style, animate) => FDialog.adaptive(
+        style: style,
+        animation: animate,
+        horizontalBuilder: (context, dStyle) => Padding(
+          padding: .all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('编辑导出文件名', style: dStyle.titleTextStyle),
+              const SizedBox(height: 12),
+              FTextFormField(
+                control: FTextFieldControl.managed(
+                  controller: item.nameController,
+                ),
+                label: Text('导出文件名'),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  FButton(
+                    variant: .outline,
+                    onPress: () => Navigator.of(dialogContext).pop(),
+                    child: Text('取消'),
+                  ),
+                  const SizedBox(width: 8),
+                  FButton(
+                    onPress: () => Navigator.of(dialogContext).pop(),
+                    child: Text('确定'),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
+        verticalBuilder: (context, dStyle) => Padding(
+          padding: .all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('编辑导出文件名', style: dStyle.titleTextStyle),
+              const SizedBox(height: 12),
+              FTextFormField(
+                control: FTextFieldControl.managed(
+                  controller: item.nameController,
+                ),
+                label: Text('导出文件名'),
+              ),
+              const SizedBox(height: 16),
+              FButton(
+                onPress: () => Navigator.of(dialogContext).pop(),
+                child: Text('确定'),
+              ),
+              const SizedBox(height: 8),
+              FButton(
+                variant: .outline,
+                onPress: () => Navigator.of(dialogContext).pop(),
+                child: Text('取消'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

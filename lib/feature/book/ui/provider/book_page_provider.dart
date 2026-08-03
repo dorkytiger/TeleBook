@@ -36,7 +36,7 @@ class BookPageState {
 
 @riverpod
 class BookPage extends _$BookPage {
-  late final PageController pageController;
+  late PageController pageController;
 
   @override
   BookPageState build(int bookId) {
@@ -50,14 +50,13 @@ class BookPage extends _$BookPage {
     if (book == null) {
       throw Exception("Book not found");
     }
-    pageController = PageController(initialPage: book.currentPage);
-    ref.onDispose(() {
-      pageController.dispose();
-    });
 
-    final fullPaths = book.localSubPaths
-        .map((e) => GlobalConfig.resolveBookPath(e))
-        .toList();
+    final previewPaths = book.previewSubPaths;
+    final fullPaths = (previewPaths != null && previewPaths.isNotEmpty)
+        ? previewPaths.map((e) => GlobalConfig.resolveBookPath(e)).toList()
+        : book.localSubPaths
+            .map((e) => GlobalConfig.resolveBookPath(e))
+            .toList();
     return BookPageState(
       book: book,
       paths: fullPaths,
@@ -66,16 +65,15 @@ class BookPage extends _$BookPage {
     );
   }
 
+  void initController(PageController controller) {
+    pageController = controller;
+  }
+
   void onPageChanged(int index) {
     state = state.copyWith(currentPage: index);
   }
 
   void toggleBar() {
     state = state.copyWith(isShowBar: !state.isShowBar);
-  }
-
-  void jumpToPage(int index) {
-    state = state.copyWith(currentPage: index);
-    pageController.jumpToPage(index);
   }
 }

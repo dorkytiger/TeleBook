@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
+import 'package:tele_book/common/widget/f_sheet_content.dart';
 import 'package:tele_book/common/widget/task_item_widget.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/service/download_service.dart';
@@ -7,8 +9,9 @@ import 'package:tele_book/feature/download/ui/provider/download_provider.dart';
 
 class DownloadTaskSheetWidget extends ConsumerWidget {
   final String groupId;
+  final String name;
 
-  const DownloadTaskSheetWidget({required this.groupId});
+  const DownloadTaskSheetWidget({required this.groupId, required this.name});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -17,7 +20,7 @@ class DownloadTaskSheetWidget extends ConsumerWidget {
     return asyncTasks.when(
       loading: () => const Padding(
         padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(child: FCircularProgress()),
       ),
       error: (e, st) => Padding(
         padding: const EdgeInsets.all(16),
@@ -46,19 +49,18 @@ class DownloadTaskSheetWidget extends ConsumerWidget {
           );
         }
 
-        return Padding(
-          padding: const EdgeInsets.all(16),
+        return FSheetContent(
+          side: .btt,
           child: Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .start,
             children: [
-              const Text(
-                "下载任务详情",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
+              FSheetContent.title(context, "下载任务详情"),
+              FSheetContent.subTitle(context,name),
+              const SizedBox(height: 12),
               Expanded(
-                child: ListView.separated(
-                  itemCount: tasks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                child: FItemGroup.builder(
+                  count: tasks.length,
                   itemBuilder: (context, index) {
                     final task = tasks[index];
                     return TaskItemWidget(
@@ -138,14 +140,14 @@ class DownloadTaskSheetWidget extends ConsumerWidget {
                                           .deleteTaskItem(task.id);
                                     } catch (e) {
                                       if (!context.mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text(e.toString())),
+                                      showFToast(
+                                        context: context,
+                                        title: Text("删除失败"),
+                                        description: Text(e.toString()),
                                       );
                                     }
                                   },
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(FLucideIcons.trash),
                           ),
                         ],
                       ),

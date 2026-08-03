@@ -54,6 +54,7 @@ class ParsePdf extends _$ParsePdf {
     ref.read(parsePdfProgressProvider(pdfPath).notifier).state = (0, 0);
 
     final hasPermission = await _requestStoragePermission();
+    if (!ref.mounted) return;
     if (!hasPermission) {
       state = AsyncValue.error('需要存储权限才能解析 PDF', StackTrace.current);
       return;
@@ -63,12 +64,14 @@ class ParsePdf extends _$ParsePdf {
     final result = await _service.parsePdf(
       pdfPath,
       onProgress: (current, total) {
+        if (!ref.mounted) return;
         ref.read(parsePdfProgressProvider(pdfPath).notifier).state = (
           current,
           total,
         );
       },
     );
+    if (!ref.mounted) return;
     result.fold(
       onSuccess: (data) {
         state = AsyncValue.data(
@@ -83,22 +86,34 @@ class ParsePdf extends _$ParsePdf {
 }
 
 final parsePdfSaveBookProgressProvider =
-    StateProvider<(int current, int total)>((_) => (0, 0));
+    StateProvider<(SaveStep step, int current, int total)>(
+      (_) => (SaveStep.generateCover, 0, 0),
+    );
+
+String saveBookStepText((SaveStep step, int current, int total) progress) {
+  final (step, current, total) = progress;
+  return switch (step) {
+    SaveStep.generateCover => '生成封面图...',
+    SaveStep.generatePreview => '生成预览图... ($current/$total)',
+    SaveStep.saveOriginal => '保存原图... ($current/$total)',
+    SaveStep.saveDatabase => '保存中...',
+  };
+}
 
 @riverpod
 class ParsePdfSaveBook extends _$ParsePdfSaveBook {
   BookRepository get _repository => ref.read(bookRepositoryProvider);
 
   @override
-  FutureOr<void> build() async {
-    return null;
-  }
+  FutureOr<void> build() => null;
+
 
   Future<void> onSave(List<String> tempPaths, String pdfName) async {
     DKLog.i('开始保存解析结果为书籍，tempPaths: $tempPaths, pdfName: $pdfName');
     state = AsyncValue.loading();
 
     ref.read(parsePdfSaveBookProgressProvider.notifier).state = (
+      SaveStep.generateCover,
       0,
       tempPaths.length,
     );
@@ -106,8 +121,9 @@ class ParsePdfSaveBook extends _$ParsePdfSaveBook {
     DKLog.i('调用 repository.saveAsBook，开始文件复制和 DB 写入');
     final result = await _repository.saveAsBook(
       SaveAsBookDto(title: pdfName, paths: tempPaths),
-      onProgress: (current, total) {
+      onStepProgress: (step, current, total) {
         ref.read(parsePdfSaveBookProgressProvider.notifier).state = (
+          step,
           current,
           total,
         );

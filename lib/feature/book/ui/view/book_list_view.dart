@@ -2,9 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:responsive_framework/responsive_framework.dart';
+import 'package:tele_book/common/widget/f_adaptive_dialog.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
+import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/feature/book/enum/book_menu_type.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
@@ -47,8 +50,9 @@ class _BookListViewState extends ConsumerState<BookListView> {
   @override
   Widget build(BuildContext context) {
     final bookState = ref.watch(bookListProvider);
-    final isSelectionMode = bookState.value?.isSelectionMode ?? false;
-    final layout = bookState.value?.layout ?? BookLayout.list;
+    final uiState = ref.watch(bookListUiProvider);
+    final isSelectionMode = uiState.isSelectionMode;
+    final layout = uiState.layout;
 
     return PopScope(
       canPop: !isSelectionMode,
@@ -57,11 +61,12 @@ class _BookListViewState extends ConsumerState<BookListView> {
           ref.read(bookListProvider.notifier).exitSelectionMode();
         }
       },
-      child: Scaffold(
-        appBar: isSelectionMode
+      child: FScaffold(
+        header: isSelectionMode
             ? _buildSelectionAppBar(context)
             : _buildNormalAppBar(context),
-        body: bookState.when(
+        footer: isSelectionMode ? _buildSelectionBottomBar(context) : null,
+        child: bookState.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('加载失败: $e')),
           data: (state) {
@@ -79,8 +84,6 @@ class _BookListViewState extends ConsumerState<BookListView> {
                   );
           },
         ),
-        bottomNavigationBar:
-            isSelectionMode ? _buildSelectionBottomBar(context) : null,
       ),
     );
   }
@@ -92,144 +95,183 @@ class _BookListViewState extends ConsumerState<BookListView> {
         children: [
           Icon(Icons.library_books_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
-          Text('暂无书籍',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+          Text('暂无书籍', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
         ],
       ),
     );
   }
 
-  AppBar _buildNormalAppBar(BuildContext context) {
-    final bookVos =
-        ref.watch(bookListProvider.select((s) => s.value?.bookVos ?? []));
+  FHeader _buildNormalAppBar(BuildContext context) {
+    final bookVos = ref.watch(
+      bookListProvider.select((s) => s.value?.bookVos ?? []),
+    );
     final state = ref.watch(bookListProvider).value;
 
-    return AppBar(
+    return FHeader(
       title: const Text('书籍'),
-      elevation: 0,
-      actions: [
+      suffixes: [
         SearchAnchor(
-          builder: (context, controller) => IconButton(
-            onPressed: controller.openView,
+          builder: (context, controller) => FHeaderAction(
+            onPress: controller.openView,
             icon: const Icon(Icons.search),
           ),
           suggestionsBuilder: (context, searchController) {
             final query = searchController.text.toLowerCase();
-            final results =
-                bookVos.where((vo) => vo.book.name.toLowerCase().contains(query));
+            final results = bookVos.where(
+              (vo) => vo.book.name.toLowerCase().contains(query),
+            );
             return results.map(
-              (vo) => Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child:
-                  ListTile(
-                    leading: LocalImageWidget(imagePath: vo.coverImagePath),
-                    title: Text(vo.book.name),
-                    onTap: () {
-                      searchController.closeView(vo.book.name);
-                      context.push(AppRoute.bookPage, extra: vo.book);
-                    },
-                  )
+              (vo) => FItem(
+                prefix: LocalImageWidget(imagePath: vo.coverImagePath),
+                title: Text(vo.book.name),
+                onPress: () {
+                  searchController.closeView(vo.book.name);
+                  context.push(AppRoute.bookPage, extra: vo.book);
+                },
               ),
             );
           },
         ),
-        IconButton(onPressed: (){
+        FHeaderAction(
+          onPress: () {
             context.push(AppRoute.parseForm);
-        }, icon: const Icon(Icons.add)),
+          },
+          icon: const Icon(Icons.add),
+        ),
         _buildTopMenuButton(context, state),
       ],
     );
   }
 
-  AppBar _buildSelectionAppBar(BuildContext context) {
+  FHeader _buildSelectionAppBar(BuildContext context) {
     final selectedCount = ref.watch(
-      bookListProvider.select((s) => s.value?.selectedBookIds.length ?? 0),
+      bookListUiProvider.select((s) => s.selectedBookIds.length),
     );
     final notifier = ref.read(bookListProvider.notifier);
 
-    return AppBar(
-      leading: IconButton(
-        icon: const Icon(Icons.close),
-        onPressed: notifier.exitSelectionMode,
-      ),
+    return FHeader.nested(
+      prefixes: [
+        FHeaderAction(
+          icon: const Icon(Icons.close),
+          onPress: notifier.exitSelectionMode,
+        ),
+      ],
       title: Text('已选 $selectedCount 本'),
-      actions: [
-        TextButton(onPressed: notifier.selectAll, child: const Text('全选')),
+      suffixes: [
+        FHeaderAction(onPress: notifier.selectAll, icon: const Text('全选')),
       ],
     );
   }
 
   Widget _buildSelectionBottomBar(BuildContext context) {
-    final selectedBooks = ref.watch(
-      bookListProvider.select((s) => s.value?.selectedBooks ?? []),
+    final selectedIds = ref.watch(
+      bookListUiProvider.select((s) => s.selectedBookIds),
     );
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: selectedBooks.isNotEmpty
-            ? Row(
-                children: [
-                  IconButton(
-                    tooltip: '导出选中',
-                    onPressed: () => _onExportSelected(context),
-                    icon: Icon(Icons.move_to_inbox,
-                        color: Theme.of(context).colorScheme.primary),
-                  ),
-                  IconButton(
-                    tooltip: '删除选中',
-                    onPressed: () => _deleteSelected(context),
-                    icon: Icon(Icons.delete,
-                        color: Theme.of(context).colorScheme.error),
-                  ),
-                ],
-              )
-            : const SizedBox.shrink(),
-      ),
+    return Padding(
+      padding: .all(8),
+      child: selectedIds.isNotEmpty
+          ? Row(
+              children: [
+                FButton(
+                  variant: .outline,
+                  onPress: () => _onExportSelected(context),
+                  prefix: Icon(FLucideIcons.move),
+                  child: Text("批量导出"),
+                ),
+                SizedBox(width: 8),
+                FButton(
+                  variant: .destructive,
+                  onPress: () => _deleteSelected(context),
+                  prefix: Icon(FLucideIcons.trash),
+                  child: Text("批量删除"),
+                ),
+              ],
+            )
+          : const SizedBox.shrink(),
     );
   }
 
   Widget _buildTopMenuButton(BuildContext context, BookListState? state) {
-    return PopupMenuButton<BookTopMenuType>(
-      onSelected: (type) => _onTopMenuSelected(type),
-      itemBuilder: (context) => BookTopMenuType.values.map((type) {
-        return PopupMenuItem<BookTopMenuType>(
-          value: type,
-          child: Row(
-            children: [
-              Icon(type.icon, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: 8),
-              Text(type.title),
-              const SizedBox(width: 8),
-              if (type == BookTopMenuType.asc &&
-                  state?.sort?.order == BookSortOrder.asc)
-                const Icon(Icons.check, size: 16),
-              if (type == BookTopMenuType.desc &&
-                  state?.sort?.order == BookSortOrder.desc)
-                const Icon(Icons.check, size: 16),
-              if (type == BookTopMenuType.name &&
-                  state?.sort?.type == BookSortType.title)
-                const Icon(Icons.check, size: 16),
-              if (type == BookTopMenuType.lastCreatedAt &&
-                  state?.sort?.type == BookSortType.lastCreatedAt)
-                const Icon(Icons.check, size: 16),
-              if (type == BookTopMenuType.list &&
-                  state?.layout == BookLayout.list)
-                const Icon(Icons.check, size: 16),
-              if (type == BookTopMenuType.grid &&
-                  state?.layout == BookLayout.grid)
-                const Icon(Icons.check, size: 16),
-            ],
-          ),
-        );
-      }).toList(),
+    return FPopoverMenu(
+      autofocus: true,
+      menuAnchor: .topRight,
+      childAnchor: .bottomRight,
+      menu: [
+        .group(
+          children: [
+            .item(
+              prefix: const Icon(FLucideIcons.arrowUp),
+              title: const Text('升序'),
+              suffix: state?.sort?.order == BookSortOrder.asc
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.asc),
+            ),
+            .item(
+              prefix: const Icon(FLucideIcons.arrowDown),
+              title: const Text('降序'),
+              suffix: state?.sort?.order == BookSortOrder.desc
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.desc),
+            ),
+          ],
+        ),
+        .group(
+          children: [
+            .item(
+              prefix: const Icon(FLucideIcons.type),
+              title: const Text('按书名'),
+              suffix: state?.sort?.type == BookSortType.title
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.name),
+            ),
+            .item(
+              prefix: const Icon(FLucideIcons.clock),
+              title: const Text('按添加时间'),
+              suffix: state?.sort?.type == BookSortType.lastCreatedAt
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.lastCreatedAt),
+            ),
+          ],
+        ),
+        .group(
+          children: [
+            .item(
+              prefix: const Icon(FLucideIcons.list),
+              title: const Text('列表视图'),
+              suffix: ref.watch(bookListUiProvider).layout == BookLayout.list
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.list),
+            ),
+            .item(
+              prefix: const Icon(FLucideIcons.layoutGrid),
+              title: const Text('网格视图'),
+              suffix: ref.watch(bookListUiProvider).layout == BookLayout.grid
+                  ? const Icon(FLucideIcons.check, size: 16)
+                  : null,
+              onPress: () => _onTopMenuSelected(BookTopMenuType.grid),
+            ),
+          ],
+        ),
+      ],
+      builder: (_, controller, _) => FHeaderAction(
+        icon: const Icon(FLucideIcons.ellipsis),
+        onPress: controller.toggle,
+      ),
     );
   }
 
   void _onTopMenuSelected(BookTopMenuType type) {
     final notifier = ref.read(bookListProvider.notifier);
     final current = ref.read(bookListProvider).value;
-    final currentSort = current?.sort ??
+    final currentLayout = ref.read(bookListUiProvider).layout;
+    final currentSort =
+        current?.sort ??
         BookSort(order: BookSortOrder.desc, type: BookSortType.lastCreatedAt);
 
     switch (type) {
@@ -240,48 +282,60 @@ class _BookListViewState extends ConsumerState<BookListView> {
       case BookTopMenuType.name:
         notifier.updateSort(currentSort.copyWith(type: BookSortType.title));
       case BookTopMenuType.lastCreatedAt:
-        notifier
-            .updateSort(currentSort.copyWith(type: BookSortType.lastCreatedAt));
+        notifier.updateSort(
+          currentSort.copyWith(type: BookSortType.lastCreatedAt),
+        );
       case BookTopMenuType.list:
-        if (current?.layout != BookLayout.list) notifier.toggleLayout();
+        if (currentLayout != BookLayout.list) notifier.toggleLayout();
       case BookTopMenuType.grid:
-        if (current?.layout != BookLayout.grid) notifier.toggleLayout();
+        if (currentLayout != BookLayout.grid) notifier.toggleLayout();
     }
   }
 
   void _onExportSelected(BuildContext context) {
-    final selectedBooks =
-        ref.read(bookListProvider).value?.selectedBooks ?? [];
+    final selectedIds = ref.read(bookListUiProvider).selectedBookIds;
+    final bookVos = ref.read(bookListProvider).value?.bookVos ?? [];
+    final selectedBooks = bookVos
+        .where((v) => selectedIds.contains(v.book.id))
+        .toList();
     if (selectedBooks.isEmpty) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          ExportBatchFormView(books: selectedBooks.map((v) => v.book).toList()),
-    ));
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ExportBatchFormView(
+          books: selectedBooks.map((v) => v.book).toList(),
+        ),
+      ),
+    );
   }
 
   Future<void> _deleteSelected(BuildContext context) async {
-    final count =
-        ref.read(bookListProvider).value?.selectedBookIds.length ?? 0;
-    final confirmed = await showDialog<bool>(
+    final count = ref.read(bookListUiProvider).selectedBookIds.length;
+    final confirmed = await showFDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (context, style, animate) => FAdaptiveDialog(
         title: const Text('确认删除'),
-        content: Text('将删除选中的 $count 本书籍，删除后不可恢复，是否继续？'),
+        body: Text('将删除选中的 $count 本书籍，删除后不可恢复，是否继续？'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          FButton(
+            variant: .destructive,
+            size: .sm,
+            onPress: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+          FButton(
+            variant: .outline,
+            size: .sm,
+            onPress: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
         ],
       ),
     );
+
+    final rootContext = Navigator.of(context).context;
     if (confirmed == true && context.mounted) {
       await ref.read(bookListProvider.notifier).deleteSelected();
+      showFToast(context: rootContext, title: Text("删除成功"));
     }
   }
 }
@@ -301,122 +355,151 @@ class _BookListContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemCount = bookVos.length + (isLoadingMore ? 1 : 0);
-    return ListView.separated(
-      controller: scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      separatorBuilder: (_, __) => const SizedBox(height: 4),
-      itemCount: itemCount,
+    final isSelectionMode = ref.watch(
+      bookListUiProvider.select((s) => s.isSelectionMode),
+    );
+    return isSelectionMode ? _selectList(ref) : _listView(ref);
+  }
+
+  Widget _listView(WidgetRef ref) {
+    final count = bookVos.length + (isLoadingMore ? 1 : 0);
+    final notifier = ref.read(bookListProvider.notifier);
+    return FItemGroup.builder(
+      scrollController: scrollController,
+      count: count,
       itemBuilder: (context, index) {
-        if (index == bookVos.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+        final bookVo = bookVos[index];
+        if (index >= bookVos.length) {
+          return const SizedBox(
+            height: 48,
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
-        return _BookListTile(book: bookVos[index]);
+        return FTile(
+          title: Text(bookVo.book.name),
+          prefix: LocalImageWidget(imagePath: bookVo.coverImagePath),
+          subtitle: Text('共 ${bookVo.book.localSubPaths.length} 页'),
+          suffix: FPopoverMenu.tiles(
+            style: .delta(),
+            menu: [
+              .group(
+                children: [
+                  for (var item in BookItemMenuType.values)
+                    .tile(
+                      variant: item == BookItemMenuType.delete
+                          ? .destructive
+                          : .primary,
+                      title: Text(item.title),
+                      prefix: Icon(item.icon),
+                      onPress: () {
+                        _onItemSelected(context, ref, item, bookVo);
+                      },
+                    ),
+                ],
+              ),
+            ],
+            builder: (context, controller, child) {
+              return FButton.icon(
+                variant: .ghost,
+                child: Icon(FLucideIcons.moreHorizontal),
+                onPress: () {
+                  controller.show();
+                },
+              );
+            },
+          ),
+          onPress: () {
+            context.push(AppRoute.bookPage, extra: bookVo.book);
+          },
+          onLongPress: () {
+            notifier.enterSelectionMode(bookVo.book);
+          },
+        );
       },
     );
   }
-}
 
-class _BookListTile extends ConsumerWidget {
-  final BookListItemVo book;
-
-  const _BookListTile({required this.book});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isSelectionMode = ref.watch(
-        bookListProvider.select((s) => s.value?.isSelectionMode ?? false));
-    final isSelected = ref.watch(bookListProvider.select(
-        (s) => s.value?.selectedBookIds.contains(book.book.id) ?? false));
+  Widget _selectList(WidgetRef ref) {
+    final count = bookVos.length + (isLoadingMore ? 1 : 0);
     final notifier = ref.read(bookListProvider.notifier);
-
-    return GestureDetector(
-      onTap: () => isSelectionMode
-          ? notifier.toggleSelection(book.book.id)
-          : context.push(AppRoute.bookPage, extra: book.book),
-      onLongPress: () {
-        if (!isSelectionMode) notifier.enterSelectionMode(book.book);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            if (isSelectionMode)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => notifier.toggleSelection(book.book.id),
-                ),
-              ),
-            LocalImageWidget(imagePath: book.coverImagePath),
-            Expanded(
-              child: ListTile(
-                title: Text(book.book.name,
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
-                subtitle: Text('共 ${book.book.localSubPaths.length} 页'),
-              ),
-            ),
-            if (!isSelectionMode) _buildItemMenu(context, ref),
-          ],
-        ),
-      ),
+    final selectedIds = ref.watch(
+      bookListUiProvider.select((s) => s.selectedBookIds),
     );
-  }
+    return FSelectTileGroup.builder(
+      control: FMultiValueControl<int>.managed(
+        initial: selectedIds,
+        onChange: (value) {
+          notifier.toggleSelections(value);
+        },
+      ),
+      scrollController: scrollController,
+      count: count,
+      tileBuilder: (context, index) {
+        final bookVo = bookVos[index];
+        if (index >= bookVos.length) {
+          return .tile(title: Text("加载中"), value: -1);
+        }
 
-  Widget _buildItemMenu(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<BookItemMenuType>(
-      onSelected: (type) => _onItemSelected(context, ref, type),
-      itemBuilder: (context) => BookItemMenuType.values
-          .map((type) => PopupMenuItem(
-                value: type,
-                child: Row(children: [
-                  Icon(type.icon, size: 16, color: Colors.grey[600]),
-                  const SizedBox(width: 8),
-                  Text(type.title),
-                ]),
-              ))
-          .toList(),
+        return .suffix(
+          title: Text(bookVo.book.name),
+          prefix: LocalImageWidget(imagePath: bookVo.coverImagePath),
+          value: bookVo.book.id,
+        );
+      },
     );
   }
 
   void _onItemSelected(
-      BuildContext context, WidgetRef ref, BookItemMenuType type) {
+    BuildContext context,
+    WidgetRef ref,
+    BookItemMenuType type,
+    BookListItemVo bookVo,
+  ) {
     switch (type) {
       case BookItemMenuType.edit:
-        context.push(AppRoute.bookForm, extra: book.book);
+        context.push(AppRoute.bookForm, extra: bookVo.book);
       case BookItemMenuType.export:
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ExportSingleFormView(book: book.book)));
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ExportSingleFormView(book: bookVo.book),
+          ),
+        );
       case BookItemMenuType.delete:
-        _confirmDelete(context, ref);
+        _confirmDelete(context, ref, bookVo);
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    BookListItemVo bookVo,
+  ) async {
+    final ok = await showFDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('删除《${book.book.name}》后不可恢复，是否继续？'),
+      builder: (context, style, animate) => FAdaptiveDialog(
+        title: Text('确认删除'),
+        body: Text('删除《${bookVo.book.name}》后不可恢复，是否继续？'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          FButton(
+            size: .sm,
+            variant: .destructive,
+            child: const Text('确定'),
+            onPress: () => Navigator.of(context).pop(true),
+          ),
+          FButton(
+            variant: .outline,
+            size: .sm,
+            child: const Text('取消'),
+            onPress: () => Navigator.of(context).pop(false),
           ),
         ],
       ),
     );
-    if (ok == true && context.mounted) {
-      await ref.read(bookListProvider.notifier).deleteBook(book.book.id);
+    final rootContext = Navigator.of(context).context;
+
+    if (ok == true) {
+      await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
+      showFToast(context: rootContext, title: Text("删除成功"));
     }
   }
 }
@@ -436,57 +519,50 @@ class _BookGridContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isTablet = ResponsiveBreakpoints.of(context).isTablet;
-    final gridDelegate = isTablet
-        ? const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 180,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.65,
-          )
-        : const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.65,
-          );
-
     final itemCount = bookVos.length + (isLoadingMore ? 1 : 0);
     return GridView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.all(12),
-      gridDelegate: gridDelegate,
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 180,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        mainAxisExtent: 240,
+      ),
       itemCount: itemCount,
       itemBuilder: (context, index) {
         if (index == bookVos.length) {
           return const Center(child: CircularProgressIndicator(strokeWidth: 2));
         }
-        return _BookGridTile(book: bookVos[index]);
+        return _BookGridTile(bookVo: bookVos[index]);
       },
     );
   }
 }
 
 class _BookGridTile extends ConsumerWidget {
-  final BookListItemVo book;
+  final BookListItemVo bookVo;
 
-  const _BookGridTile({required this.book});
+  const _BookGridTile({required this.bookVo});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isSelectionMode = ref.watch(
-        bookListProvider.select((s) => s.value?.isSelectionMode ?? false));
-    final isSelected = ref.watch(bookListProvider.select(
-        (s) => s.value?.selectedBookIds.contains(book.book.id) ?? false));
+      bookListUiProvider.select((s) => s.isSelectionMode),
+    );
+    final isSelected = ref.watch(
+      bookListUiProvider.select(
+        (s) => s.selectedBookIds.contains(bookVo.book.id),
+      ),
+    );
     final notifier = ref.read(bookListProvider.notifier);
 
     return GestureDetector(
       onTap: () => isSelectionMode
-          ? notifier.toggleSelection(book.book.id)
-          : context.push(AppRoute.bookPage, extra: book.book),
+          ? notifier.toggleSelection(bookVo.book.id)
+          : context.push(AppRoute.bookPage, extra: bookVo.book),
       onLongPress: () => isSelectionMode
           ? _showItemMenu(context, ref)
-          : notifier.enterSelectionMode(book.book),
+          : notifier.enterSelectionMode(bookVo.book),
       child: Stack(
         children: [
           Column(
@@ -495,9 +571,9 @@ class _BookGridTile extends ConsumerWidget {
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: book.coverImagePath.isNotEmpty
+                  child: bookVo.coverImagePath.isNotEmpty
                       ? Image.file(
-                          File(book.coverImagePath),
+                          File(bookVo.coverImagePath),
                           width: double.infinity,
                           fit: BoxFit.cover,
                           cacheWidth: 300,
@@ -507,12 +583,39 @@ class _BookGridTile extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(book.book.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12)),
-              Text('${book.book.localSubPaths.length} 页',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+              FItem(
+                title: Text(bookVo.book.name, maxLines: 2),
+                subtitle: Text('${bookVo.book.localSubPaths.length} 页'),
+                suffix: FPopoverMenu.tiles(
+                  style: .delta(),
+                  menu: [
+                    .group(
+                      children: [
+                        for (var item in BookItemMenuType.values)
+                          .tile(
+                            variant: item == BookItemMenuType.delete
+                                ? .destructive
+                                : .primary,
+                            title: Text(item.title),
+                            prefix: Icon(item.icon),
+                            onPress: () {
+                              _onItemSelected(context, ref, item);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                  builder: (context, controller, child) {
+                    return FButton.icon(
+                      variant: .ghost,
+                      child: Icon(FLucideIcons.moreHorizontal),
+                      onPress: () {
+                        controller.show();
+                      },
+                    );
+                  },
+                ),
+              ),
             ],
           ),
           if (isSelectionMode)
@@ -526,7 +629,9 @@ class _BookGridTile extends ConsumerWidget {
                       : Colors.white.withValues(alpha: 0.8),
                   shape: BoxShape.circle,
                   border: Border.all(
-                      color: Theme.of(context).colorScheme.primary, width: 2),
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
                 ),
                 child: isSelected
                     ? const Icon(Icons.check, color: Colors.white, size: 18)
@@ -539,11 +644,11 @@ class _BookGridTile extends ConsumerWidget {
   }
 
   Widget _placeholder() => Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Colors.grey[200],
-        child: Icon(Icons.book, color: Colors.grey[400], size: 40),
-      );
+    width: double.infinity,
+    height: double.infinity,
+    color: Colors.grey[200],
+    child: Icon(Icons.book, color: Colors.grey[400], size: 40),
+  );
 
   void _showItemMenu(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
@@ -552,14 +657,16 @@ class _BookGridTile extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: BookItemMenuType.values
-              .map((type) => ListTile(
-                    leading: Icon(type.icon),
-                    title: Text(type.title),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _onItemSelected(context, ref, type);
-                    },
-                  ))
+              .map(
+                (type) => ListTile(
+                  leading: Icon(type.icon),
+                  title: Text(type.title),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _onItemSelected(context, ref, type);
+                  },
+                ),
+              )
               .toList(),
         ),
       ),
@@ -567,39 +674,51 @@ class _BookGridTile extends ConsumerWidget {
   }
 
   void _onItemSelected(
-      BuildContext context, WidgetRef ref, BookItemMenuType type) {
+    BuildContext context,
+    WidgetRef ref,
+    BookItemMenuType type,
+  ) {
     switch (type) {
       case BookItemMenuType.edit:
-        context.push(AppRoute.bookForm, extra: book.book);
+        context.push(AppRoute.bookForm, extra: bookVo.book);
       case BookItemMenuType.export:
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => ExportSingleFormView(book: book.book)));
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ExportSingleFormView(book: bookVo.book),
+          ),
+        );
       case BookItemMenuType.delete:
         _confirmDelete(context, ref);
     }
   }
 
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
-    final ok = await showDialog<bool>(
+    final ok = await showFDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (context, style, animate) => FAdaptiveDialog(
         title: const Text('确认删除'),
-        content: Text('删除《${book.book.name}》后不可恢复，是否继续？'),
+        body: Text('删除《${bookVo.book.name}》后不可恢复，是否继续？'),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error),
-            child: const Text('删除', style: TextStyle(color: Colors.white)),
+          FButton(
+            variant: .destructive,
+            size: .sm,
+            onPress: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+          FButton(
+            size: .sm,
+            variant: .outline,
+            onPress: () => Navigator.pop(context, false),
+            child: const Text('取消'),
           ),
         ],
       ),
     );
+
+    final rootContext = Navigator.of(context).context;
     if (ok == true && context.mounted) {
-      await ref.read(bookListProvider.notifier).deleteBook(book.book.id);
+      await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
+      showFToast(context: rootContext, title: Text("删除成功"));
     }
   }
 }

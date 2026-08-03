@@ -23,6 +23,8 @@ class ParseWeb extends _$ParseWeb {
 
   DownloadService get _downloadService => ref.read(downloadServiceProvider);
 
+  bool get isInit => _webViewController != null;
+
   InAppWebViewController? _webViewController;
 
   @override
@@ -32,6 +34,7 @@ class ParseWeb extends _$ParseWeb {
   }
 
   Future<void> _initialize(String url) async {
+    if (!ref.mounted) return;
     state = state.copyWith(progress: 0);
     await Future.delayed(Duration.zero);
   }
@@ -56,6 +59,20 @@ class ParseWeb extends _$ParseWeb {
       },
     );
     state = state.copyWith(urls: urls, progress: progress);
+  }
+
+  Future<void> parseWeb() async {
+    if (_webViewController == null) {
+      return;
+    }
+
+    final urls = await _parseWebService.extractImagesFromWebView(
+      onExtractImages: (js) async {
+        final result = await _webViewController!.evaluateJavascript(source: js);
+        return result?.toString();
+      },
+    );
+    state = state.copyWith(urls: urls);
   }
 
   Future<void> startDownload() async {

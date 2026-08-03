@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/empty_widget.dart';
 import 'package:tele_book/common/widget/error_widget.dart';
@@ -19,14 +20,22 @@ class CollectionBookView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncState = ref.watch(collectionBookViewProvider(collectionId));
 
-    return Scaffold(
-      appBar: AppBar(
+    return FScaffold(
+      header: FHeader.nested(
         title: Text("书籍列表"),
-        actions: [
-          IconButton(
+        prefixes: [
+          FHeaderAction.back(
+            onPress: () {
+              context.pop();
+            },
+          ),
+        ],
+        suffixes: [
+          FHeaderAction(
             icon: Icon(Icons.add),
-            onPressed: () async {
-              final disabledBookIds = asyncState.value?.books
+            onPress: () async {
+              final disabledBookIds =
+                  asyncState.value?.books
                       .map((item) => item.book.id)
                       .toList() ??
                   <int>[];
@@ -42,78 +51,123 @@ class CollectionBookView extends ConsumerWidget {
                       collectionId: collectionId,
                       bookIds: result.map((e) => e.id).toList(),
                     );
+                showFToast(context: context, title: Text("添加书籍到收藏成功"));
               }
             },
           ),
         ],
       ),
-      body: asyncState.when(
+      child: asyncState.when(
         data: (data) {
           if (data.books.isEmpty) {
             return Center(
               child: CustomEmptyWidget(icon: CupertinoIcons.book, text: "暂无书籍"),
             );
           }
-          return ListView.builder(
-            itemCount: data.books.length,
+          return FItemGroup.builder(
+            count: data.books.length,
             itemBuilder: (context, index) {
               final item = data.books[index];
-              return GestureDetector(
-                onTap: () => context.push(AppRoute.bookPage, extra: item.book),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      LocalImageWidget(imagePath: item.coverImagePath),
-                      Expanded(
-                        child: ListTile(
-                          title: Text(
-                            item.book.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '共 ${item.book.localSubPaths.length} 页',
-                          ),
-                          trailing: IconButton(
-                            onPressed: () async {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: Text("确认删除吗？"),
-                                  content: Text("将从书架中移除该书籍，但不会删除本地文件"),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
+              return FItem(
+                title: Text(
+                  item.book.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                prefix: LocalImageWidget(imagePath: item.coverImagePath),
+                subtitle: Text('共 ${item.book.localSubPaths.length} 页'),
+                suffix: FButton.icon(
+                  variant: .ghost,
+                  onPress: () async {
+                    final confirm = await showFDialog<bool>(
+                      context: context,
+                      builder: (context, style, animate) => FDialog.adaptive(
+                        verticalBuilder: (context, style) {
+                          return Padding(
+                            padding: .all(16),
+                            child: Column(
+                              crossAxisAlignment: .start,
+                              mainAxisSize: .min,
+                              children: [
+                                Text("确认删除吗？", style: style.titleTextStyle),
+                                SizedBox(width: 8),
+                                Text(
+                                  "将从书架中移除该书籍，但不会删除本地文件",
+                                  style: style.bodyTextStyle,
+                                ),
+                                SizedBox(width: 8),
+                                Row(
+                                  mainAxisAlignment: .end,
+                                  children: [
+                                    FButton(
+                                      variant: .ghost,
+                                      onPress: () =>
                                           Navigator.pop(context, false),
                                       child: Text("取消"),
                                     ),
-                                    TextButton(
-                                      onPressed: () =>
+                                    SizedBox(width: 8),
+                                    FButton(
+                                      variant: .destructive,
+                                      onPress: () =>
                                           Navigator.pop(context, true),
                                       child: Text("确认"),
                                     ),
                                   ],
                                 ),
-                              );
-                              if (confirm == true) {
-                                await ref
-                                    .read(collectionRepositoryProvider)
-                                    .removeBookFromCollection(
-                                      collectionId: collectionId,
-                                      bookId: item.book.id,
-                                    );
-                              }
-                            },
-                            icon: Icon(Icons.delete),
-                          ),
-                        ),
+                              ],
+                            ),
+                          );
+                        },
+                        horizontalBuilder: (context, style) {
+                          return Padding(
+                            padding: .all(16),
+                            child: Column(
+                              crossAxisAlignment: .start,
+                              mainAxisSize: .min,
+                              children: [
+                                Text("确认删除吗？", style: style.titleTextStyle),
+                                SizedBox(width: 8),
+                                Text(
+                                  "将从书架中移除该书籍，但不会删除本地文件",
+                                  style: style.bodyTextStyle,
+                                ),
+                                SizedBox(width: 8),
+                                Row(
+                                  mainAxisAlignment: .end,
+                                  children: [
+                                    FButton(
+                                      variant: .ghost,
+                                      onPress: () =>
+                                          Navigator.pop(context, false),
+                                      child: Text("取消"),
+                                    ),
+                                    SizedBox(width: 8),
+                                    FButton(
+                                      variant: .destructive,
+                                      onPress: () {
+                                        Navigator.pop(context, true);
+                                      },
+                                      child: Text("确认"),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    );
+                    if (confirm == true) {
+                      await ref
+                          .read(collectionRepositoryProvider)
+                          .removeBookFromCollection(
+                            collectionId: collectionId,
+                            bookId: item.book.id,
+                          );
+                      showFToast(context: context, title: Text("删除收藏书籍成功"));
+                    }
+                  },
+                  child: Icon(FLucideIcons.trash),
                 ),
               );
             },

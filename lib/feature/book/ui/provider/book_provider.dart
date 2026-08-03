@@ -121,6 +121,14 @@ class _BookListUiNotifier extends Notifier<_BookListUiState> {
     );
   }
 
+  void toggleSelections(Set<int> bookIds) {
+    if (bookIds.isEmpty) {
+      state = state.copyWith(isSelectionMode: false, selectedBookIds: {});
+      return;
+    }
+    state = state.copyWith(selectedBookIds: bookIds);
+  }
+
   void toggleLayout() {
     final nextLayout =
         state.layout == BookLayout.list ? BookLayout.grid : BookLayout.list;
@@ -148,7 +156,6 @@ class BookList extends _$BookList {
   Future<BookListState> build() async {
     final booksAsync = ref.watch(booksProvider);
     final query = ref.watch(bookListQueryProvider);
-    final ui = ref.watch(bookListUiProvider);
 
     if (booksAsync.hasError) {
       throw booksAsync.error!;
@@ -180,14 +187,13 @@ class BookList extends _$BookList {
     final visibleBooks = filtered.take(visibleCount).toList();
 
     final bookVos = visibleBooks.map((book) {
-      final coverPath = book.localSubPaths.isNotEmpty
-          ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
-          : '';
+      final coverPath = book.coverSubPath != null
+          ? GlobalConfig.resolveBookPath(book.coverSubPath!)
+          : book.localSubPaths.isNotEmpty
+              ? GlobalConfig.resolveBookPath(book.localSubPaths.first)
+              : '';
       return BookListItemVo(book: book, coverImagePath: coverPath);
     }).toList();
-
-    final visibleIds = visibleBooks.map((e) => e.id).toSet();
-    final selectedIds = ui.selectedBookIds.where(visibleIds.contains).toSet();
 
     return BookListState(
       bookVos: bookVos,
@@ -195,9 +201,6 @@ class BookList extends _$BookList {
       name: query.name,
       sort: query.sort,
       isLoadingMore: false,
-      isSelectionMode: ui.isSelectionMode,
-      selectedBookIds: selectedIds,
-      layout: ui.layout,
     );
   }
 
@@ -231,6 +234,12 @@ class BookList extends _$BookList {
     ref.read(bookListUiProvider.notifier).toggleSelection(bookId);
   }
 
+  // 批量选择
+  void toggleSelections(Set<int> bookIds) {
+    ref.read(bookListUiProvider.notifier).toggleSelections(bookIds);
+
+  }
+
   // ➡️ 全选
   void selectAll() {
     final ids =
@@ -252,8 +261,9 @@ class BookList extends _$BookList {
 
   // ➡️ 批量删除选中书籍并刷新列表
   Future<void> deleteSelected() async {
-    if (!state.hasValue) return;
-    final selectedIds = Set<int>.from(state.requireValue.selectedBookIds);
+    final selectedIds = Set<int>.from(
+      ref.read(bookListUiProvider).selectedBookIds,
+    );
     final bookRepository = ref.read(bookRepositoryProvider);
 
     for (final id in selectedIds) {

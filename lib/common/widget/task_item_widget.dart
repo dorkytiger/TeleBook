@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:forui/forui.dart';
 import 'package:tele_book/common/widget/network_image_widget.dart';
 
 class TaskItemWidget extends StatelessWidget {
@@ -21,39 +22,12 @@ class TaskItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      contentPadding: EdgeInsets.zero,
-      leading: NetworkImageWidget(imageUrl: coverUrl),
-      title: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodyLarge,
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("状态: $status", style: Theme.of(context).textTheme.bodySmall),
-          SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: LinearProgressIndicator(
-                  value: progress,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              SizedBox(width: 8),
-              Text(
-                "${(progress * 100).toStringAsFixed(1)}%",
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ],
-      ),
-      trailing: trailing,
+    return FItem(
+      onPress: onTap,
+      prefix: NetworkImageWidget(imageUrl: coverUrl),
+      title: Text(title, maxLines: 2),
+      subtitle: Text("$status  ${(progress * 100).toStringAsFixed(1)}%"),
+      suffix: trailing,
     );
   }
 }

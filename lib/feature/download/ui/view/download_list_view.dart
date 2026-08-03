@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/error_widget.dart';
 import 'package:tele_book/common/widget/task_item_widget.dart';
@@ -8,7 +10,6 @@ import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/service/download_service.dart';
 import 'package:tele_book/feature/download/ui/provider/download_provider.dart';
-import 'package:tele_book/feature/download/ui/widget/download_form_bottom_sheet_widget.dart';
 import 'package:tele_book/feature/download/ui/widget/download_task_sheet_widget.dart';
 
 class DownloadListView extends ConsumerWidget {
@@ -23,28 +24,27 @@ class DownloadListView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(downloadTasksProvider);
-    return Scaffold(
-      appBar: AppBar(
+    return FScaffold(
+      header: FHeader(
         title: Text("下载任务"),
-        actions: [
-          IconButton(
-            tooltip: '清空已完成任务',
-            onPressed: () async {
+        suffixes: [
+          FHeaderAction(
+            onPress: () async {
               await _clearCompletedTasks(context, ref);
             },
-            icon: const Icon(Icons.delete_sweep),
+            icon: Icon(FLucideIcons.trash),
           ),
-          IconButton(
-            onPressed: () async {
+
+          FHeaderAction(
+            onPress: () async {
               await _showDownloadForm(context);
             },
-            icon: Icon(Icons.add),
+            icon: Icon(FLucideIcons.plus),
           ),
         ],
       ),
-
-      body: state.when(
-        loading: () => Center(child: CircularProgressIndicator()),
+      child: state.when(
+        loading: () => Center(child: FProgress()),
         error: (e, st) => Center(
           child: CustomErrorWidget(errorMessage: "加载下载任务失败", stackTrace: st),
         ),
@@ -63,9 +63,7 @@ class DownloadListView extends ConsumerWidget {
                     ],
                   ),
                 )
-              : ListView.separated(
-                  padding: EdgeInsets.all(16),
-                  separatorBuilder: (context, index) => SizedBox(height: 16),
+              : FItemGroup.builder(
                   itemBuilder: (context, index) {
                     final item = tasks[index];
                     final progressPercent = _groupProgressPercent(
@@ -79,11 +77,13 @@ class DownloadListView extends ConsumerWidget {
                       onTap: () => _showDownloadTaskList(
                         context,
                         item.downloadGroupBo.id,
+                        item.downloadGroupBo.name,
                         ref,
                       ),
+                      trailing: Icon(FLucideIcons.chevronRight),
                     );
                   },
-                  itemCount: tasks.length,
+                  count: tasks.length,
                 );
         },
       ),
@@ -97,33 +97,20 @@ class DownloadListView extends ConsumerWidget {
     );
     if (!hasCompleted) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('没有可清空的已完成任务')));
+      showFToast(context: context, title: Text('没有可清空的已完成任务'));
       return;
     }
 
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showFDialog<bool>(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('清空已完成任务'),
-          content: const Text('将移除所有已完成的下载任务组及其临时文件，是否继续？'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.error,
-              ),
-              child: const Text('清空', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      },
+      builder: (dialogContext, style, animate) => FDialog.adaptive(
+        style: style,
+        animation: animate,
+        horizontalBuilder: (context, style) =>
+            Text('清空已完成任务', style: style.titleTextStyle),
+        verticalBuilder: (context, style) =>
+            Text('将移除所有已完成的下载任务组及其临时文件，是否继续？', style: style.bodyTextStyle),
+      ),
     );
 
     if (confirmed != true || !context.mounted) return;
@@ -133,39 +120,104 @@ class DownloadListView extends ConsumerWidget {
           .read(downloadServiceProvider)
           .clearCompletedTasks();
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('已清空 $clearedCount 个已完成任务')));
+      showFToast(context: context, title: Text('已清空 $clearedCount 个已完成任务'));
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      showFToast(
+        context: context,
+        title: Text("清楚失败"),
+        description: Text(e.toString()),
+      );
     }
   }
 
   void _showDownloadTaskList(
     BuildContext context,
     String groupId,
+    String name,
     WidgetRef ref,
   ) {
-    showModalBottomSheet(
+    showFSheet(
       context: context,
-      builder: (_) => DownloadTaskSheetWidget(groupId: groupId),
+      side: .btt,
+      builder: (_) => DownloadTaskSheetWidget(groupId: groupId,name: name,),
     );
   }
 
   Future<void> _showDownloadForm(BuildContext context) async {
-    final url = await showModalBottomSheet<String>(
-      isScrollControlled: true,
-      enableDrag: true,
+    final urlController = TextEditingController();
+    final url = await showFSheet<String>(
       context: context,
-      builder: (sheetContext) {
-        return DownloadFormBottomSheetWidget();
+      side: .btt,
+      style: const .delta(flingVelocity: 700),
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: context.theme.colors.background,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            border: .symmetric(
+              horizontal: BorderSide(color: context.theme.colors.border),
+            ),
+          ),
+          child: Padding(
+            padding: .all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  "下载链接",
+                  style: context.theme.typography.display.xl2.copyWith(
+                    fontWeight: .w600,
+                    color: context.theme.colors.foreground,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  '要下载的网页图片链接，如https://www.google.com',
+                  style: context.theme.typography.body.sm.copyWith(
+                    color: context.theme.colors.mutedForeground,
+                  ),
+                ),
+                SizedBox(height: 16),
+                FTextFormField(
+                  control: FTextFieldControl.managed(controller: urlController),
+                  label: Text("URL"),
+                  hint: "请输入网址URL",
+                  suffixBuilder: (context, style, _) {
+                    return FButton.icon(
+                      onPress: () async {
+                        final clipData = await Clipboard.getData(
+                          Clipboard.kTextPlain,
+                        );
+                        if (clipData?.text != null) {
+                          urlController.text = clipData!.text!;
+                        }
+                      },
+                      child: Icon(FLucideIcons.clipboardPaste),
+                      style: style.obscureButtonStyle,
+                    );
+                  },
+                ),
+                Padding(
+                  padding: .symmetric(vertical: 16),
+                  child: FButton(
+                    onPress: () {
+                      context.pop<String>(urlController.text);
+                    },
+                    child: Text("解析"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
 
-    if (url == null || url.isEmpty || !context.mounted) return;
-    context.push(AppRoute.parseWeb, extra: url);
+    if (url != null && url.isNotEmpty) {
+      await context.push(AppRoute.parseWeb, extra: urlController.text);
+    }
   }
 }

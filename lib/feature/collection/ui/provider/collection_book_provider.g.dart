@@ -75,7 +75,7 @@ final class CollectionBookViewProvider
 }
 
 String _$collectionBookViewHash() =>
-    r'35e6922990efcd8afaa6ab1d59d5da989122b2fa';
+    r'c03f3388df2a89f51a6a06a98d302c2dd9f4402b';
 
 final class CollectionBookViewFamily extends $Family
     with $FunctionalFamilyOverride<AsyncValue<CollectionBookState>, int> {

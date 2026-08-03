@@ -814,7 +814,7 @@ as List<String>,
 /// @nodoc
 mixin _$ParseImageFolderSaveBookProgress {
 
- int get current; int get total;
+ SaveStep get step; int get current; int get total;
 /// Create a copy of ParseImageFolderSaveBookProgress
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -825,16 +825,16 @@ $ParseImageFolderSaveBookProgressCopyWith<ParseImageFolderSaveBookProgress> get 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ParseImageFolderSaveBookProgress&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ParseImageFolderSaveBookProgress&&(identical(other.step, step) || other.step == step)&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,total);
+int get hashCode => Object.hash(runtimeType,step,current,total);
 
 @override
 String toString() {
-  return 'ParseImageFolderSaveBookProgress(current: $current, total: $total)';
+  return 'ParseImageFolderSaveBookProgress(step: $step, current: $current, total: $total)';
 }
 
 
@@ -845,7 +845,7 @@ abstract mixin class $ParseImageFolderSaveBookProgressCopyWith<$Res>  {
   factory $ParseImageFolderSaveBookProgressCopyWith(ParseImageFolderSaveBookProgress value, $Res Function(ParseImageFolderSaveBookProgress) _then) = _$ParseImageFolderSaveBookProgressCopyWithImpl;
 @useResult
 $Res call({
- int current, int total
+ SaveStep step, int current, int total
 });
 
 
@@ -862,9 +862,10 @@ class _$ParseImageFolderSaveBookProgressCopyWithImpl<$Res>
 
 /// Create a copy of ParseImageFolderSaveBookProgress
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? current = null,Object? total = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? step = null,Object? current = null,Object? total = null,}) {
   return _then(_self.copyWith(
-current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
+step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,
   ));
@@ -951,10 +952,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int current,  int total)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( SaveStep step,  int current,  int total)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ParseImageFolderSaveBookProgress() when $default != null:
-return $default(_that.current,_that.total);case _:
+return $default(_that.step,_that.current,_that.total);case _:
   return orElse();
 
 }
@@ -972,10 +973,10 @@ return $default(_that.current,_that.total);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int current,  int total)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( SaveStep step,  int current,  int total)  $default,) {final _that = this;
 switch (_that) {
 case _ParseImageFolderSaveBookProgress():
-return $default(_that.current,_that.total);case _:
+return $default(_that.step,_that.current,_that.total);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -992,10 +993,10 @@ return $default(_that.current,_that.total);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int current,  int total)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( SaveStep step,  int current,  int total)?  $default,) {final _that = this;
 switch (_that) {
 case _ParseImageFolderSaveBookProgress() when $default != null:
-return $default(_that.current,_that.total);case _:
+return $default(_that.step,_that.current,_that.total);case _:
   return null;
 
 }
@@ -1006,10 +1007,11 @@ return $default(_that.current,_that.total);case _:
 /// @nodoc
 
 
-class _ParseImageFolderSaveBookProgress implements ParseImageFolderSaveBookProgress {
-  const _ParseImageFolderSaveBookProgress({this.current = 0, this.total = 0});
+class _ParseImageFolderSaveBookProgress extends ParseImageFolderSaveBookProgress {
+  const _ParseImageFolderSaveBookProgress({this.step = SaveStep.generateCover, this.current = 0, this.total = 0}): super._();
   
 
+@override@JsonKey() final  SaveStep step;
 @override@JsonKey() final  int current;
 @override@JsonKey() final  int total;
 
@@ -1023,16 +1025,16 @@ _$ParseImageFolderSaveBookProgressCopyWith<_ParseImageFolderSaveBookProgress> ge
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ParseImageFolderSaveBookProgress&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ParseImageFolderSaveBookProgress&&(identical(other.step, step) || other.step == step)&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,total);
+int get hashCode => Object.hash(runtimeType,step,current,total);
 
 @override
 String toString() {
-  return 'ParseImageFolderSaveBookProgress(current: $current, total: $total)';
+  return 'ParseImageFolderSaveBookProgress(step: $step, current: $current, total: $total)';
 }
 
 
@@ -1043,7 +1045,7 @@ abstract mixin class _$ParseImageFolderSaveBookProgressCopyWith<$Res> implements
   factory _$ParseImageFolderSaveBookProgressCopyWith(_ParseImageFolderSaveBookProgress value, $Res Function(_ParseImageFolderSaveBookProgress) _then) = __$ParseImageFolderSaveBookProgressCopyWithImpl;
 @override @useResult
 $Res call({
- int current, int total
+ SaveStep step, int current, int total
 });
 
 
@@ -1060,9 +1062,10 @@ class __$ParseImageFolderSaveBookProgressCopyWithImpl<$Res>
 
 /// Create a copy of ParseImageFolderSaveBookProgress
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? current = null,Object? total = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? step = null,Object? current = null,Object? total = null,}) {
   return _then(_ParseImageFolderSaveBookProgress(
-current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
+step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
 as int,
   ));

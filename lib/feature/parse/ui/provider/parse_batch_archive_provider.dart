@@ -54,19 +54,35 @@ abstract class ParseBatchArchiveSaveBookProgress
   const factory ParseBatchArchiveSaveBookProgress({
     @Default(0) int current,
     @Default(0) int total,
+    @Default(SaveStep.generateCover) SaveStep step,
+    @Default(0) int stepCurrent,
+    @Default(0) int stepTotal,
+    @Default(0) int bookIndex,
   }) = _ParseBatchArchiveSaveBookProgress;
+
+  const ParseBatchArchiveSaveBookProgress._();
+
+  String get stepText {
+    final bookInfo = total > 0 ? '(${bookIndex + 1}/$total) ' : '';
+    return switch (step) {
+      SaveStep.generateCover => '$bookInfo生成封面图...',
+      SaveStep.generatePreview => '$bookInfo生成预览图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveOriginal => '$bookInfo保存原图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveDatabase => '保存数据...',
+    };
+  }
 }
 
-final parseBatchArchiveProgressProvider = StateProvider<ParseBatchArchiveProgress>(
-  (_) =>
-      const ParseBatchArchiveProgress(
+final parseBatchArchiveProgressProvider =
+    StateProvider<ParseBatchArchiveProgress>(
+      (_) => const ParseBatchArchiveProgress(
         completeCount: 0,
         totalCount: 0,
         currentFileName: '',
         currentFileProgress: 0,
         currentFileTotal: 0,
       ),
-);
+    );
 
 final parseBatchArchiveSaveBookProgressProvider =
     StateProvider<ParseBatchArchiveSaveBookProgress>(
@@ -83,8 +99,7 @@ class ParseBatchArchive extends _$ParseBatchArchive {
   @override
   FutureOr<ParseBatchArchiveState> build(ParseBatchArchiveParam param) async {
     _param = param;
-    Future.microtask(_parseBatchArchive);
-    return const ParseBatchArchiveState(parseBatchArchiveList: []);
+    return _parseBatchArchive();
   }
 
   Future<bool> _requestStoragePermission() async {
@@ -98,28 +113,15 @@ class ParseBatchArchive extends _$ParseBatchArchive {
     return storageStatus.isGranted;
   }
 
-  Future<void> _parseBatchArchive() async {
+  Future<ParseBatchArchiveState> _parseBatchArchive() async {
     state = const AsyncLoading();
-    ref.read(parseBatchArchiveProgressProvider.notifier).state =
-        const ParseBatchArchiveProgress(
-          completeCount: 0,
-          totalCount: 0,
-          currentFileName: '',
-          currentFileProgress: 0,
-          currentFileTotal: 0,
-        );
-
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
-      state = AsyncError(
-        '需要「所有文件访问权限」才能读取外部目录，请在系统设置中授权后重试。',
-        StackTrace.current,
-      );
-      return;
+      throw Exception('需要「所有文件访问权限」才能读取外部目录，请在系统设置中授权后重试。');
     }
 
-    final parseResult = _param.archivePaths != null &&
-            _param.archivePaths!.isNotEmpty
+    final parseResult =
+        _param.archivePaths != null && _param.archivePaths!.isNotEmpty
         ? await _parseArchiveService.parseBatchArchivesFromPaths(
             _param.archivePaths!,
             _onStart,
@@ -135,32 +137,32 @@ class ParseBatchArchive extends _$ParseBatchArchive {
             onCurrentItemProgress: _onCurrentItemProgress,
           );
 
-    parseResult.fold(
-      onSuccess: (data) {
-        state = AsyncData(ParseBatchArchiveState(parseBatchArchiveList: data));
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
-    );
+    if (parseResult.isError) {
+      throw Exception(parseResult.error?.message);
+    }
+
+    return ParseBatchArchiveState(parseBatchArchiveList: parseResult.data!);
   }
 
   void _onStart(int total) {
+    if (!ref.mounted) return;
     final current = ref.read(parseBatchArchiveProgressProvider);
-    ref.read(parseBatchArchiveProgressProvider.notifier).state =
-        current.copyWith(totalCount: total);
+    ref.read(parseBatchArchiveProgressProvider.notifier).state = current
+        .copyWith(totalCount: total);
   }
 
   void _onProgress(int count) {
+    if (!ref.mounted) return;
     final current = ref.read(parseBatchArchiveProgressProvider);
-    ref.read(parseBatchArchiveProgressProvider.notifier).state =
-        current.copyWith(completeCount: count);
+    ref.read(parseBatchArchiveProgressProvider.notifier).state = current
+        .copyWith(completeCount: count);
   }
 
   void _onCurrentItemChanged(String fileName) {
+    if (!ref.mounted) return;
     final current = ref.read(parseBatchArchiveProgressProvider);
-    ref.read(parseBatchArchiveProgressProvider.notifier).state =
-        current.copyWith(
+    ref.read(parseBatchArchiveProgressProvider.notifier).state = current
+        .copyWith(
           currentFileName: fileName,
           currentFileProgress: 0,
           currentFileTotal: 0,
@@ -168,12 +170,10 @@ class ParseBatchArchive extends _$ParseBatchArchive {
   }
 
   void _onCurrentItemProgress(int currentCount, int total) {
+    if (!ref.mounted) return;
     final current = ref.read(parseBatchArchiveProgressProvider);
-    ref.read(parseBatchArchiveProgressProvider.notifier).state =
-        current.copyWith(
-          currentFileProgress: currentCount,
-          currentFileTotal: total,
-        );
+    ref.read(parseBatchArchiveProgressProvider.notifier).state = current
+        .copyWith(currentFileProgress: currentCount, currentFileTotal: total);
   }
 }
 
@@ -188,22 +188,24 @@ class ParseBatchArchiveSaveBook extends _$ParseBatchArchiveSaveBook {
     if (state.isLoading || parseBatchList.isEmpty) return;
 
     state = const AsyncLoading();
-    ref.read(parseBatchArchiveSaveBookProgressProvider.notifier).state =
-        ParseBatchArchiveSaveBookProgress(
-          current: 0,
-          total: parseBatchList.length,
-        );
+    ref
+        .read(parseBatchArchiveSaveBookProgressProvider.notifier)
+        .state = ParseBatchArchiveSaveBookProgress(
+      current: 0,
+      total: parseBatchList.length,
+    );
 
     final dos = parseBatchList
         .map((e) => SaveAsBookDto(title: e.name, paths: e.tempPaths))
         .toList();
 
     final result = await _bookRepository.saveBatchAsBooks(dos, (count) {
-      ref.read(parseBatchArchiveSaveBookProgressProvider.notifier).state =
-          ParseBatchArchiveSaveBookProgress(
-            current: count,
-            total: parseBatchList.length,
-          );
+      ref
+          .read(parseBatchArchiveSaveBookProgressProvider.notifier)
+          .state = ParseBatchArchiveSaveBookProgress(
+        current: count,
+        total: parseBatchList.length,
+      );
     });
 
     result.fold(
@@ -216,4 +218,3 @@ class ParseBatchArchiveSaveBook extends _$ParseBatchArchiveSaveBook {
     );
   }
 }
-

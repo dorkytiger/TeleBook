@@ -50,7 +50,7 @@ final class ParseArchiveProvider
   }
 }
 
-String _$parseArchiveHash() => r'15200f8f1b3d556233c5d24a6775874fe06071d7';
+String _$parseArchiveHash() => r'550d2a3343eafbb33bc33f18bb234ffd12ead4d7';
 
 final class ParseArchiveFamily extends $Family
     with
@@ -124,7 +124,7 @@ final class ParseArchiveSaveBookProvider
 }
 
 String _$parseArchiveSaveBookHash() =>
-    r'41bf64ce2c4064ea3a2d35995742e750a7d10c9e';
+    r'731cd951752090666be1330594b8248c21d50f2f';
 
 abstract class _$ParseArchiveSaveBook extends $AsyncNotifier<void> {
   FutureOr<void> build();

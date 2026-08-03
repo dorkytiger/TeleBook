@@ -50,7 +50,7 @@ final class ParseImageFolderProvider
   }
 }
 
-String _$parseImageFolderHash() => r'dcffb0f2ea9ae5610fe4b0de8fdb4a6e8c25e1dc';
+String _$parseImageFolderHash() => r'c8d88c1656f7fc63a7b09d86de108d637ef3e6bf';
 
 final class ParseImageFolderFamily extends $Family
     with
@@ -147,7 +147,7 @@ final class ParseImageFolderSaveBookProvider
 }
 
 String _$parseImageFolderSaveBookHash() =>
-    r'c95340ec81291d91a439c61940e0a656dfa47dae';
+    r'df6a4025c5d290269667cfd4e0ffb453ec0e4c1a';
 
 final class ParseImageFolderSaveBookFamily extends $Family
     with

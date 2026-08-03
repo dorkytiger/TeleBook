@@ -33,9 +33,19 @@ abstract class ParseArchiveSaveBookParam with _$ParseArchiveSaveBookParam {
 abstract class ParseArchiveSaveBookProgress
     with _$ParseArchiveSaveBookProgress {
   const factory ParseArchiveSaveBookProgress({
+    @Default(SaveStep.generateCover) SaveStep step,
     @Default(0) int current,
     @Default(0) int total,
   }) = _ParseArchiveSaveBookProgress;
+
+  const ParseArchiveSaveBookProgress._();
+
+  String get stepText => switch (step) {
+    SaveStep.generateCover => '生成封面图...',
+    SaveStep.generatePreview => '生成预览图... ($current/$total)',
+    SaveStep.saveOriginal => '保存原图... ($current/$total)',
+    SaveStep.saveDatabase => '保存中...',
+  };
 }
 
 final parseArchiveProgressProvider =
@@ -70,6 +80,7 @@ class ParseArchive extends _$ParseArchive {
 
   Future<void> _parseArchive(String archivePath) async {
     final hasPermission = await _requestStoragePermission();
+    if (!ref.mounted) return;
     if (!hasPermission) {
       state = AsyncError('需要存储权限才能解析压缩包', StackTrace.current);
       return;
@@ -90,6 +101,7 @@ class ParseArchive extends _$ParseArchive {
       },
     );
 
+    if (!ref.mounted) return;
     result.fold(
       onSuccess: (data) {
         state = AsyncData(
@@ -115,13 +127,21 @@ class ParseArchiveSaveBook extends _$ParseArchiveSaveBook {
 
     state = const AsyncLoading();
     ref.read(parseArchiveSaveBookProgressProvider.notifier).state =
-        ParseArchiveSaveBookProgress(current: 0, total: param.tempPaths.length);
+        ParseArchiveSaveBookProgress(
+          step: SaveStep.generateCover,
+          current: 0,
+          total: param.tempPaths.length,
+        );
 
     final result = await _bookRepository.saveAsBook(
       SaveAsBookDto(title: param.archiveName, paths: param.tempPaths),
-      onProgress: (current, total) {
+      onStepProgress: (step, current, total) {
         ref.read(parseArchiveSaveBookProgressProvider.notifier).state =
-            ParseArchiveSaveBookProgress(current: current, total: total);
+            ParseArchiveSaveBookProgress(
+              step: step,
+              current: current,
+              total: total,
+            );
       },
     );
 

@@ -39,8 +39,24 @@ abstract class SaveBatchAsBookState with _$SaveBatchAsBookState {
   const factory SaveBatchAsBookState({
     @Default(0) int saveAsBookCount,
     @Default(0) int totalCount,
+    @Default(SaveStep.generateCover) SaveStep step,
+    @Default(0) int stepCurrent,
+    @Default(0) int stepTotal,
+    @Default(0) int bookIndex,
     @Default(AsyncData<void>(null)) AsyncValue<void> submitState,
   }) = _SaveBatchAsBookState;
+
+  const SaveBatchAsBookState._();
+
+  String get stepText {
+    final bookInfo = totalCount > 0 ? '(${bookIndex + 1}/$totalCount) ' : '';
+    return switch (step) {
+      SaveStep.generateCover => '$bookInfo生成封面图...',
+      SaveStep.generatePreview => '$bookInfo生成预览图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveOriginal => '$bookInfo保存原图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveDatabase => '保存数据...',
+    };
+  }
 }
 
 @freezed
@@ -88,6 +104,7 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
     );
 
     final hasPermission = await _requestStoragePermission();
+    if (!ref.mounted) return;
     if (!hasPermission) {
       state = AsyncValue.error("需要存储权限才能读取图片文件夹", StackTrace.current);
       return;
@@ -101,10 +118,12 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
             param.imagePaths!,
             (total) {
               localState = localState.copyWith(totalCount: total);
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             (count) {
               localState = localState.copyWith(completeCount: count);
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             onCurrentItemChanged: (fileName) {
@@ -113,6 +132,7 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
                 currentFileProgress: 0,
                 currentFileTotal: 0,
               );
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             onCurrentItemProgress: (current, total) {
@@ -120,6 +140,7 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
                 currentFileProgress: current,
                 currentFileTotal: total,
               );
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
           )
@@ -127,10 +148,12 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
             param.parentDirPath ?? '',
             (total) {
               localState = localState.copyWith(totalCount: total);
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             (count) {
               localState = localState.copyWith(completeCount: count);
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             onCurrentItemChanged: (fileName) {
@@ -139,6 +162,7 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
                 currentFileProgress: 0,
                 currentFileTotal: 0,
               );
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
             onCurrentItemProgress: (current, total) {
@@ -146,10 +170,12 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
                 currentFileProgress: current,
                 currentFileTotal: total,
               );
+              if (!ref.mounted) return;
               state = AsyncData(localState);
             },
           );
 
+    if (!ref.mounted) return;
     result.fold(
       onSuccess: (data) {
         state = AsyncData(localState.copyWith(
@@ -189,9 +215,12 @@ class SaveBatchAsBook extends _$SaveBatchAsBook {
         .map((e) => SaveAsBookDto(title: e.name, paths: e.tempPaths))
         .toList();
 
-    final result = await _bookRepository.saveBatchAsBooks(dos, (count) {
-      state = state.copyWith(saveAsBookCount: count);
-    });
+    final result = await _bookRepository.saveBatchAsBooks(
+      dos,
+      (count) {
+        state = state.copyWith(saveAsBookCount: count);
+      },
+    );
 
     result.fold(
       onSuccess: (_) {

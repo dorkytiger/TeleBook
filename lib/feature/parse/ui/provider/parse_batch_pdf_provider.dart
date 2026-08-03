@@ -45,7 +45,23 @@ abstract class ParseBatchPdfSaveBookProgressState
   const factory ParseBatchPdfSaveBookProgressState({
     @Default(0) int current,
     @Default(0) int total,
+    @Default(SaveStep.generateCover) SaveStep step,
+    @Default(0) int stepCurrent,
+    @Default(0) int stepTotal,
+    @Default(0) int bookIndex,
   }) = _ParseBatchPdfSaveBookProgressState;
+
+  const ParseBatchPdfSaveBookProgressState._();
+
+  String get stepText {
+    final bookInfo = total > 0 ? '(${bookIndex + 1}/$total) ' : '';
+    return switch (step) {
+      SaveStep.generateCover => '$bookInfo生成封面图...',
+      SaveStep.generatePreview => '$bookInfo生成预览图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveOriginal => '$bookInfo保存原图... ($stepCurrent/$stepTotal)',
+      SaveStep.saveDatabase => '保存数据...',
+    };
+  }
 }
 
 final parseBatchProgressProvider = StateProvider<ParseBatchPdfProgress>((ref) {
@@ -67,8 +83,7 @@ class ParseBatchPdf extends _$ParseBatchPdf {
   @override
   FutureOr<ParseBatchPdfState> build(ParseBatchPdfParam param) async {
     _param = param;
-    Future.microtask(_parseBatch);
-    return const ParseBatchPdfState(parseBatchList: []);
+    return await _parseBatch();
   }
 
   Future<bool> _requestStoragePermission() async {
@@ -81,23 +96,11 @@ class ParseBatchPdf extends _$ParseBatchPdf {
     return storageStatus.isGranted;
   }
 
-  Future<void> _parseBatch() async {
-    final current = state.value ?? const ParseBatchPdfState(parseBatchList: []);
-    ref
-        .read(parseBatchProgressProvider.notifier)
-        .state = const ParseBatchPdfProgress(
-      completeCount: 0,
-      totalCount: 0,
-      currentFileName: '',
-      currentFileProgress: 0,
-      currentFileTotal: 0,
-    );
-
+  Future<ParseBatchPdfState> _parseBatch() async {
     state = const AsyncValue.loading();
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
-      state = AsyncValue.error("需要存储权限才能解析PDF", StackTrace.current);
-      return;
+      throw Exception("需要存储权限才能解析PDF");
     }
 
     final pdfPaths = _param.pdfPaths;
@@ -106,16 +109,19 @@ class ParseBatchPdf extends _$ParseBatchPdf {
         ? await _service.parseBatchPdfsFromPaths(
             pdfPaths,
             (total) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(totalCount: total);
             },
             (count) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(completeCount: count);
             },
             onCurrentFileChanged: (fileName) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(
@@ -125,6 +131,7 @@ class ParseBatchPdf extends _$ParseBatchPdf {
                   );
             },
             onCurrentFileProgress: (current, total) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(
@@ -136,16 +143,19 @@ class ParseBatchPdf extends _$ParseBatchPdf {
         : await _service.parseBatchPdfs(
             pdfDirPath ?? '',
             (total) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(totalCount: total);
             },
             (count) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(completeCount: count);
             },
             onCurrentFileChanged: (fileName) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(
@@ -155,6 +165,7 @@ class ParseBatchPdf extends _$ParseBatchPdf {
                   );
             },
             onCurrentFileProgress: (current, total) {
+              if (!ref.mounted) return;
               final progress = ref.read(parseBatchProgressProvider);
               ref.read(parseBatchProgressProvider.notifier).state = progress
                   .copyWith(
@@ -164,14 +175,11 @@ class ParseBatchPdf extends _$ParseBatchPdf {
             },
           );
 
-    parseResult.fold(
-      onSuccess: (data) {
-        state = AsyncValue.data(current.copyWith(parseBatchList: data));
-      },
-      onError: (error) {
-        state = AsyncValue.error(error.message, StackTrace.current);
-      },
-    );
+    if (parseResult.isError) {
+      throw Exception(parseResult.error);
+    }
+
+    return ParseBatchPdfState(parseBatchList: parseResult.data!);
   }
 }
 
@@ -195,6 +203,13 @@ class ParseBatchPdfSaveBook extends _$ParseBatchPdfSaveBook {
     final dos = parseBatchList
         .map((e) => SaveAsBookDto(title: e.name, paths: e.tempPaths))
         .toList();
+
+    ref.read(parseBatchPdfSaveBookProgressProvider.notifier).state =
+        ParseBatchPdfSaveBookProgressState(
+          current: 0,
+          total: parseBatchList.length,
+        );
+
 
     final result = await _repository.saveBatchAsBooks(dos, (count) {
       final progress = ref.read(parseBatchPdfSaveBookProgressProvider);

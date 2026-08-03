@@ -29,7 +29,21 @@ class AppDatabase extends _$AppDatabase {
     : super((executor ?? _openConnection()));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (migrator, from, to) async {
+      // 破坏性更新：删除所有表并重建
+      await customStatement('PRAGMA foreign_keys = OFF');
+      final tableNames = allTables.map((t) => t.actualTableName).toList();
+      for (final name in tableNames) {
+        await customStatement('DROP TABLE IF EXISTS "$name"');
+      }
+      await migrator.createAll();
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(

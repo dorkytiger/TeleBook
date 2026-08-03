@@ -50,7 +50,7 @@ final class ParseBatchPdfProvider
   }
 }
 
-String _$parseBatchPdfHash() => r'6523aa1d248e8d893e5e3700a7ab2b5b3bf62e62';
+String _$parseBatchPdfHash() => r'4528c3d2c95825540661e8230b492c74f4184a00';
 
 final class ParseBatchPdfFamily extends $Family
     with

@@ -295,7 +295,7 @@ as bool,
 /// @nodoc
 mixin _$SaveBatchAsBookState {
 
- int get saveAsBookCount; int get totalCount; AsyncValue<void> get submitState;
+ int get saveAsBookCount; int get totalCount; SaveStep get step; int get stepCurrent; int get stepTotal; int get bookIndex; AsyncValue<void> get submitState;
 /// Create a copy of SaveBatchAsBookState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -306,16 +306,16 @@ $SaveBatchAsBookStateCopyWith<SaveBatchAsBookState> get copyWith => _$SaveBatchA
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SaveBatchAsBookState&&(identical(other.saveAsBookCount, saveAsBookCount) || other.saveAsBookCount == saveAsBookCount)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.submitState, submitState) || other.submitState == submitState));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SaveBatchAsBookState&&(identical(other.saveAsBookCount, saveAsBookCount) || other.saveAsBookCount == saveAsBookCount)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.step, step) || other.step == step)&&(identical(other.stepCurrent, stepCurrent) || other.stepCurrent == stepCurrent)&&(identical(other.stepTotal, stepTotal) || other.stepTotal == stepTotal)&&(identical(other.bookIndex, bookIndex) || other.bookIndex == bookIndex)&&(identical(other.submitState, submitState) || other.submitState == submitState));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,saveAsBookCount,totalCount,submitState);
+int get hashCode => Object.hash(runtimeType,saveAsBookCount,totalCount,step,stepCurrent,stepTotal,bookIndex,submitState);
 
 @override
 String toString() {
-  return 'SaveBatchAsBookState(saveAsBookCount: $saveAsBookCount, totalCount: $totalCount, submitState: $submitState)';
+  return 'SaveBatchAsBookState(saveAsBookCount: $saveAsBookCount, totalCount: $totalCount, step: $step, stepCurrent: $stepCurrent, stepTotal: $stepTotal, bookIndex: $bookIndex, submitState: $submitState)';
 }
 
 
@@ -326,7 +326,7 @@ abstract mixin class $SaveBatchAsBookStateCopyWith<$Res>  {
   factory $SaveBatchAsBookStateCopyWith(SaveBatchAsBookState value, $Res Function(SaveBatchAsBookState) _then) = _$SaveBatchAsBookStateCopyWithImpl;
 @useResult
 $Res call({
- int saveAsBookCount, int totalCount, AsyncValue<void> submitState
+ int saveAsBookCount, int totalCount, SaveStep step, int stepCurrent, int stepTotal, int bookIndex, AsyncValue<void> submitState
 });
 
 
@@ -343,10 +343,14 @@ class _$SaveBatchAsBookStateCopyWithImpl<$Res>
 
 /// Create a copy of SaveBatchAsBookState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? saveAsBookCount = null,Object? totalCount = null,Object? submitState = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? saveAsBookCount = null,Object? totalCount = null,Object? step = null,Object? stepCurrent = null,Object? stepTotal = null,Object? bookIndex = null,Object? submitState = null,}) {
   return _then(_self.copyWith(
 saveAsBookCount: null == saveAsBookCount ? _self.saveAsBookCount : saveAsBookCount // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,stepCurrent: null == stepCurrent ? _self.stepCurrent : stepCurrent // ignore: cast_nullable_to_non_nullable
+as int,stepTotal: null == stepTotal ? _self.stepTotal : stepTotal // ignore: cast_nullable_to_non_nullable
+as int,bookIndex: null == bookIndex ? _self.bookIndex : bookIndex // ignore: cast_nullable_to_non_nullable
 as int,submitState: null == submitState ? _self.submitState : submitState // ignore: cast_nullable_to_non_nullable
 as AsyncValue<void>,
   ));
@@ -433,10 +437,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int saveAsBookCount,  int totalCount,  AsyncValue<void> submitState)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int saveAsBookCount,  int totalCount,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex,  AsyncValue<void> submitState)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SaveBatchAsBookState() when $default != null:
-return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _:
+return $default(_that.saveAsBookCount,_that.totalCount,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex,_that.submitState);case _:
   return orElse();
 
 }
@@ -454,10 +458,10 @@ return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int saveAsBookCount,  int totalCount,  AsyncValue<void> submitState)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int saveAsBookCount,  int totalCount,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex,  AsyncValue<void> submitState)  $default,) {final _that = this;
 switch (_that) {
 case _SaveBatchAsBookState():
-return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _:
+return $default(_that.saveAsBookCount,_that.totalCount,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex,_that.submitState);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -474,10 +478,10 @@ return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int saveAsBookCount,  int totalCount,  AsyncValue<void> submitState)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int saveAsBookCount,  int totalCount,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex,  AsyncValue<void> submitState)?  $default,) {final _that = this;
 switch (_that) {
 case _SaveBatchAsBookState() when $default != null:
-return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _:
+return $default(_that.saveAsBookCount,_that.totalCount,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex,_that.submitState);case _:
   return null;
 
 }
@@ -488,12 +492,16 @@ return $default(_that.saveAsBookCount,_that.totalCount,_that.submitState);case _
 /// @nodoc
 
 
-class _SaveBatchAsBookState implements SaveBatchAsBookState {
-  const _SaveBatchAsBookState({this.saveAsBookCount = 0, this.totalCount = 0, this.submitState = const AsyncData<void>(null)});
+class _SaveBatchAsBookState extends SaveBatchAsBookState {
+  const _SaveBatchAsBookState({this.saveAsBookCount = 0, this.totalCount = 0, this.step = SaveStep.generateCover, this.stepCurrent = 0, this.stepTotal = 0, this.bookIndex = 0, this.submitState = const AsyncData<void>(null)}): super._();
   
 
 @override@JsonKey() final  int saveAsBookCount;
 @override@JsonKey() final  int totalCount;
+@override@JsonKey() final  SaveStep step;
+@override@JsonKey() final  int stepCurrent;
+@override@JsonKey() final  int stepTotal;
+@override@JsonKey() final  int bookIndex;
 @override@JsonKey() final  AsyncValue<void> submitState;
 
 /// Create a copy of SaveBatchAsBookState
@@ -506,16 +514,16 @@ _$SaveBatchAsBookStateCopyWith<_SaveBatchAsBookState> get copyWith => __$SaveBat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SaveBatchAsBookState&&(identical(other.saveAsBookCount, saveAsBookCount) || other.saveAsBookCount == saveAsBookCount)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.submitState, submitState) || other.submitState == submitState));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SaveBatchAsBookState&&(identical(other.saveAsBookCount, saveAsBookCount) || other.saveAsBookCount == saveAsBookCount)&&(identical(other.totalCount, totalCount) || other.totalCount == totalCount)&&(identical(other.step, step) || other.step == step)&&(identical(other.stepCurrent, stepCurrent) || other.stepCurrent == stepCurrent)&&(identical(other.stepTotal, stepTotal) || other.stepTotal == stepTotal)&&(identical(other.bookIndex, bookIndex) || other.bookIndex == bookIndex)&&(identical(other.submitState, submitState) || other.submitState == submitState));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,saveAsBookCount,totalCount,submitState);
+int get hashCode => Object.hash(runtimeType,saveAsBookCount,totalCount,step,stepCurrent,stepTotal,bookIndex,submitState);
 
 @override
 String toString() {
-  return 'SaveBatchAsBookState(saveAsBookCount: $saveAsBookCount, totalCount: $totalCount, submitState: $submitState)';
+  return 'SaveBatchAsBookState(saveAsBookCount: $saveAsBookCount, totalCount: $totalCount, step: $step, stepCurrent: $stepCurrent, stepTotal: $stepTotal, bookIndex: $bookIndex, submitState: $submitState)';
 }
 
 
@@ -526,7 +534,7 @@ abstract mixin class _$SaveBatchAsBookStateCopyWith<$Res> implements $SaveBatchA
   factory _$SaveBatchAsBookStateCopyWith(_SaveBatchAsBookState value, $Res Function(_SaveBatchAsBookState) _then) = __$SaveBatchAsBookStateCopyWithImpl;
 @override @useResult
 $Res call({
- int saveAsBookCount, int totalCount, AsyncValue<void> submitState
+ int saveAsBookCount, int totalCount, SaveStep step, int stepCurrent, int stepTotal, int bookIndex, AsyncValue<void> submitState
 });
 
 
@@ -543,10 +551,14 @@ class __$SaveBatchAsBookStateCopyWithImpl<$Res>
 
 /// Create a copy of SaveBatchAsBookState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? saveAsBookCount = null,Object? totalCount = null,Object? submitState = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? saveAsBookCount = null,Object? totalCount = null,Object? step = null,Object? stepCurrent = null,Object? stepTotal = null,Object? bookIndex = null,Object? submitState = null,}) {
   return _then(_SaveBatchAsBookState(
 saveAsBookCount: null == saveAsBookCount ? _self.saveAsBookCount : saveAsBookCount // ignore: cast_nullable_to_non_nullable
 as int,totalCount: null == totalCount ? _self.totalCount : totalCount // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,stepCurrent: null == stepCurrent ? _self.stepCurrent : stepCurrent // ignore: cast_nullable_to_non_nullable
+as int,stepTotal: null == stepTotal ? _self.stepTotal : stepTotal // ignore: cast_nullable_to_non_nullable
+as int,bookIndex: null == bookIndex ? _self.bookIndex : bookIndex // ignore: cast_nullable_to_non_nullable
 as int,submitState: null == submitState ? _self.submitState : submitState // ignore: cast_nullable_to_non_nullable
 as AsyncValue<void>,
   ));

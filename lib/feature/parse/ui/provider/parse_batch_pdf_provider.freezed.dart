@@ -814,7 +814,7 @@ as List<String>?,
 /// @nodoc
 mixin _$ParseBatchPdfSaveBookProgressState {
 
- int get current; int get total;
+ int get current; int get total; SaveStep get step; int get stepCurrent; int get stepTotal; int get bookIndex;
 /// Create a copy of ParseBatchPdfSaveBookProgressState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -825,16 +825,16 @@ $ParseBatchPdfSaveBookProgressStateCopyWith<ParseBatchPdfSaveBookProgressState> 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ParseBatchPdfSaveBookProgressState&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ParseBatchPdfSaveBookProgressState&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total)&&(identical(other.step, step) || other.step == step)&&(identical(other.stepCurrent, stepCurrent) || other.stepCurrent == stepCurrent)&&(identical(other.stepTotal, stepTotal) || other.stepTotal == stepTotal)&&(identical(other.bookIndex, bookIndex) || other.bookIndex == bookIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,total);
+int get hashCode => Object.hash(runtimeType,current,total,step,stepCurrent,stepTotal,bookIndex);
 
 @override
 String toString() {
-  return 'ParseBatchPdfSaveBookProgressState(current: $current, total: $total)';
+  return 'ParseBatchPdfSaveBookProgressState(current: $current, total: $total, step: $step, stepCurrent: $stepCurrent, stepTotal: $stepTotal, bookIndex: $bookIndex)';
 }
 
 
@@ -845,7 +845,7 @@ abstract mixin class $ParseBatchPdfSaveBookProgressStateCopyWith<$Res>  {
   factory $ParseBatchPdfSaveBookProgressStateCopyWith(ParseBatchPdfSaveBookProgressState value, $Res Function(ParseBatchPdfSaveBookProgressState) _then) = _$ParseBatchPdfSaveBookProgressStateCopyWithImpl;
 @useResult
 $Res call({
- int current, int total
+ int current, int total, SaveStep step, int stepCurrent, int stepTotal, int bookIndex
 });
 
 
@@ -862,10 +862,14 @@ class _$ParseBatchPdfSaveBookProgressStateCopyWithImpl<$Res>
 
 /// Create a copy of ParseBatchPdfSaveBookProgressState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? current = null,Object? total = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? current = null,Object? total = null,Object? step = null,Object? stepCurrent = null,Object? stepTotal = null,Object? bookIndex = null,}) {
   return _then(_self.copyWith(
 current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,stepCurrent: null == stepCurrent ? _self.stepCurrent : stepCurrent // ignore: cast_nullable_to_non_nullable
+as int,stepTotal: null == stepTotal ? _self.stepTotal : stepTotal // ignore: cast_nullable_to_non_nullable
+as int,bookIndex: null == bookIndex ? _self.bookIndex : bookIndex // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -951,10 +955,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int current,  int total)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int current,  int total,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ParseBatchPdfSaveBookProgressState() when $default != null:
-return $default(_that.current,_that.total);case _:
+return $default(_that.current,_that.total,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex);case _:
   return orElse();
 
 }
@@ -972,10 +976,10 @@ return $default(_that.current,_that.total);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int current,  int total)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int current,  int total,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex)  $default,) {final _that = this;
 switch (_that) {
 case _ParseBatchPdfSaveBookProgressState():
-return $default(_that.current,_that.total);case _:
+return $default(_that.current,_that.total,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -992,10 +996,10 @@ return $default(_that.current,_that.total);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int current,  int total)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int current,  int total,  SaveStep step,  int stepCurrent,  int stepTotal,  int bookIndex)?  $default,) {final _that = this;
 switch (_that) {
 case _ParseBatchPdfSaveBookProgressState() when $default != null:
-return $default(_that.current,_that.total);case _:
+return $default(_that.current,_that.total,_that.step,_that.stepCurrent,_that.stepTotal,_that.bookIndex);case _:
   return null;
 
 }
@@ -1006,12 +1010,16 @@ return $default(_that.current,_that.total);case _:
 /// @nodoc
 
 
-class _ParseBatchPdfSaveBookProgressState implements ParseBatchPdfSaveBookProgressState {
-  const _ParseBatchPdfSaveBookProgressState({this.current = 0, this.total = 0});
+class _ParseBatchPdfSaveBookProgressState extends ParseBatchPdfSaveBookProgressState {
+  const _ParseBatchPdfSaveBookProgressState({this.current = 0, this.total = 0, this.step = SaveStep.generateCover, this.stepCurrent = 0, this.stepTotal = 0, this.bookIndex = 0}): super._();
   
 
 @override@JsonKey() final  int current;
 @override@JsonKey() final  int total;
+@override@JsonKey() final  SaveStep step;
+@override@JsonKey() final  int stepCurrent;
+@override@JsonKey() final  int stepTotal;
+@override@JsonKey() final  int bookIndex;
 
 /// Create a copy of ParseBatchPdfSaveBookProgressState
 /// with the given fields replaced by the non-null parameter values.
@@ -1023,16 +1031,16 @@ _$ParseBatchPdfSaveBookProgressStateCopyWith<_ParseBatchPdfSaveBookProgressState
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ParseBatchPdfSaveBookProgressState&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ParseBatchPdfSaveBookProgressState&&(identical(other.current, current) || other.current == current)&&(identical(other.total, total) || other.total == total)&&(identical(other.step, step) || other.step == step)&&(identical(other.stepCurrent, stepCurrent) || other.stepCurrent == stepCurrent)&&(identical(other.stepTotal, stepTotal) || other.stepTotal == stepTotal)&&(identical(other.bookIndex, bookIndex) || other.bookIndex == bookIndex));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,total);
+int get hashCode => Object.hash(runtimeType,current,total,step,stepCurrent,stepTotal,bookIndex);
 
 @override
 String toString() {
-  return 'ParseBatchPdfSaveBookProgressState(current: $current, total: $total)';
+  return 'ParseBatchPdfSaveBookProgressState(current: $current, total: $total, step: $step, stepCurrent: $stepCurrent, stepTotal: $stepTotal, bookIndex: $bookIndex)';
 }
 
 
@@ -1043,7 +1051,7 @@ abstract mixin class _$ParseBatchPdfSaveBookProgressStateCopyWith<$Res> implemen
   factory _$ParseBatchPdfSaveBookProgressStateCopyWith(_ParseBatchPdfSaveBookProgressState value, $Res Function(_ParseBatchPdfSaveBookProgressState) _then) = __$ParseBatchPdfSaveBookProgressStateCopyWithImpl;
 @override @useResult
 $Res call({
- int current, int total
+ int current, int total, SaveStep step, int stepCurrent, int stepTotal, int bookIndex
 });
 
 
@@ -1060,10 +1068,14 @@ class __$ParseBatchPdfSaveBookProgressStateCopyWithImpl<$Res>
 
 /// Create a copy of ParseBatchPdfSaveBookProgressState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? current = null,Object? total = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? current = null,Object? total = null,Object? step = null,Object? stepCurrent = null,Object? stepTotal = null,Object? bookIndex = null,}) {
   return _then(_ParseBatchPdfSaveBookProgressState(
 current: null == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as int,total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,step: null == step ? _self.step : step // ignore: cast_nullable_to_non_nullable
+as SaveStep,stepCurrent: null == stepCurrent ? _self.stepCurrent : stepCurrent // ignore: cast_nullable_to_non_nullable
+as int,stepTotal: null == stepTotal ? _self.stepTotal : stepTotal // ignore: cast_nullable_to_non_nullable
+as int,bookIndex: null == bookIndex ? _self.bookIndex : bookIndex // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

@@ -36,6 +36,26 @@ class $BookTableTable extends BookTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   ).withConverter<List<String>>($BookTableTable.$converterlocalSubPaths);
+  static const VerificationMeta _coverSubPathMeta = const VerificationMeta(
+    'coverSubPath',
+  );
+  @override
+  late final GeneratedColumn<String> coverSubPath = GeneratedColumn<String>(
+    'cover_sub_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>?, String>
+  previewSubPaths = GeneratedColumn<String>(
+    'preview_sub_paths',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  ).withConverter<List<String>?>($BookTableTable.$converterpreviewSubPathsn);
   static const VerificationMeta _readCountMeta = const VerificationMeta(
     'readCount',
   );
@@ -77,6 +97,8 @@ class $BookTableTable extends BookTable
     id,
     name,
     localSubPaths,
+    coverSubPath,
+    previewSubPaths,
     readCount,
     currentPage,
     createdAt,
@@ -103,6 +125,15 @@ class $BookTableTable extends BookTable
       );
     } else if (isInserting) {
       context.missing(_nameMeta);
+    }
+    if (data.containsKey('cover_sub_path')) {
+      context.handle(
+        _coverSubPathMeta,
+        coverSubPath.isAcceptableOrUnknown(
+          data['cover_sub_path']!,
+          _coverSubPathMeta,
+        ),
+      );
     }
     if (data.containsKey('read_count')) {
       context.handle(
@@ -148,6 +179,16 @@ class $BookTableTable extends BookTable
           data['${effectivePrefix}local_sub_paths'],
         )!,
       ),
+      coverSubPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_sub_path'],
+      ),
+      previewSubPaths: $BookTableTable.$converterpreviewSubPathsn.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}preview_sub_paths'],
+        ),
+      ),
       readCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}read_count'],
@@ -170,12 +211,20 @@ class $BookTableTable extends BookTable
 
   static JsonTypeConverter2<List<String>, String, List<dynamic>>
   $converterlocalSubPaths = const StringListConverter();
+  static JsonTypeConverter2<List<String>, String, List<dynamic>>
+  $converterpreviewSubPaths = const StringListConverter();
+  static JsonTypeConverter2<List<String>?, String?, List<dynamic>?>
+  $converterpreviewSubPathsn = JsonTypeConverter2.asNullable(
+    $converterpreviewSubPaths,
+  );
 }
 
 class BookTableData extends DataClass implements Insertable<BookTableData> {
   final int id;
   final String name;
   final List<String> localSubPaths;
+  final String? coverSubPath;
+  final List<String>? previewSubPaths;
   final int readCount;
   final int currentPage;
   final DateTime createdAt;
@@ -183,6 +232,8 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
     required this.id,
     required this.name,
     required this.localSubPaths,
+    this.coverSubPath,
+    this.previewSubPaths,
     required this.readCount,
     required this.currentPage,
     required this.createdAt,
@@ -197,6 +248,14 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
         $BookTableTable.$converterlocalSubPaths.toSql(localSubPaths),
       );
     }
+    if (!nullToAbsent || coverSubPath != null) {
+      map['cover_sub_path'] = Variable<String>(coverSubPath);
+    }
+    if (!nullToAbsent || previewSubPaths != null) {
+      map['preview_sub_paths'] = Variable<String>(
+        $BookTableTable.$converterpreviewSubPathsn.toSql(previewSubPaths),
+      );
+    }
     map['read_count'] = Variable<int>(readCount);
     map['current_page'] = Variable<int>(currentPage);
     map['created_at'] = Variable<DateTime>(createdAt);
@@ -208,6 +267,12 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       id: Value(id),
       name: Value(name),
       localSubPaths: Value(localSubPaths),
+      coverSubPath: coverSubPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverSubPath),
+      previewSubPaths: previewSubPaths == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previewSubPaths),
       readCount: Value(readCount),
       currentPage: Value(currentPage),
       createdAt: Value(createdAt),
@@ -225,6 +290,10 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       localSubPaths: $BookTableTable.$converterlocalSubPaths.fromJson(
         serializer.fromJson<List<dynamic>>(json['localSubPaths']),
       ),
+      coverSubPath: serializer.fromJson<String?>(json['coverSubPath']),
+      previewSubPaths: $BookTableTable.$converterpreviewSubPathsn.fromJson(
+        serializer.fromJson<List<dynamic>?>(json['previewSubPaths']),
+      ),
       readCount: serializer.fromJson<int>(json['readCount']),
       currentPage: serializer.fromJson<int>(json['currentPage']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -239,6 +308,10 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       'localSubPaths': serializer.toJson<List<dynamic>>(
         $BookTableTable.$converterlocalSubPaths.toJson(localSubPaths),
       ),
+      'coverSubPath': serializer.toJson<String?>(coverSubPath),
+      'previewSubPaths': serializer.toJson<List<dynamic>?>(
+        $BookTableTable.$converterpreviewSubPathsn.toJson(previewSubPaths),
+      ),
       'readCount': serializer.toJson<int>(readCount),
       'currentPage': serializer.toJson<int>(currentPage),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -249,6 +322,8 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
     int? id,
     String? name,
     List<String>? localSubPaths,
+    Value<String?> coverSubPath = const Value.absent(),
+    Value<List<String>?> previewSubPaths = const Value.absent(),
     int? readCount,
     int? currentPage,
     DateTime? createdAt,
@@ -256,6 +331,10 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
     id: id ?? this.id,
     name: name ?? this.name,
     localSubPaths: localSubPaths ?? this.localSubPaths,
+    coverSubPath: coverSubPath.present ? coverSubPath.value : this.coverSubPath,
+    previewSubPaths: previewSubPaths.present
+        ? previewSubPaths.value
+        : this.previewSubPaths,
     readCount: readCount ?? this.readCount,
     currentPage: currentPage ?? this.currentPage,
     createdAt: createdAt ?? this.createdAt,
@@ -267,6 +346,12 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
       localSubPaths: data.localSubPaths.present
           ? data.localSubPaths.value
           : this.localSubPaths,
+      coverSubPath: data.coverSubPath.present
+          ? data.coverSubPath.value
+          : this.coverSubPath,
+      previewSubPaths: data.previewSubPaths.present
+          ? data.previewSubPaths.value
+          : this.previewSubPaths,
       readCount: data.readCount.present ? data.readCount.value : this.readCount,
       currentPage: data.currentPage.present
           ? data.currentPage.value
@@ -281,6 +366,8 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('localSubPaths: $localSubPaths, ')
+          ..write('coverSubPath: $coverSubPath, ')
+          ..write('previewSubPaths: $previewSubPaths, ')
           ..write('readCount: $readCount, ')
           ..write('currentPage: $currentPage, ')
           ..write('createdAt: $createdAt')
@@ -289,8 +376,16 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, localSubPaths, readCount, currentPage, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    localSubPaths,
+    coverSubPath,
+    previewSubPaths,
+    readCount,
+    currentPage,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -298,6 +393,8 @@ class BookTableData extends DataClass implements Insertable<BookTableData> {
           other.id == this.id &&
           other.name == this.name &&
           other.localSubPaths == this.localSubPaths &&
+          other.coverSubPath == this.coverSubPath &&
+          other.previewSubPaths == this.previewSubPaths &&
           other.readCount == this.readCount &&
           other.currentPage == this.currentPage &&
           other.createdAt == this.createdAt);
@@ -307,6 +404,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
   final Value<int> id;
   final Value<String> name;
   final Value<List<String>> localSubPaths;
+  final Value<String?> coverSubPath;
+  final Value<List<String>?> previewSubPaths;
   final Value<int> readCount;
   final Value<int> currentPage;
   final Value<DateTime> createdAt;
@@ -314,6 +413,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.localSubPaths = const Value.absent(),
+    this.coverSubPath = const Value.absent(),
+    this.previewSubPaths = const Value.absent(),
     this.readCount = const Value.absent(),
     this.currentPage = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -322,6 +423,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     this.id = const Value.absent(),
     required String name,
     required List<String> localSubPaths,
+    this.coverSubPath = const Value.absent(),
+    this.previewSubPaths = const Value.absent(),
     this.readCount = const Value.absent(),
     this.currentPage = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -331,6 +434,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? localSubPaths,
+    Expression<String>? coverSubPath,
+    Expression<String>? previewSubPaths,
     Expression<int>? readCount,
     Expression<int>? currentPage,
     Expression<DateTime>? createdAt,
@@ -339,6 +444,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (localSubPaths != null) 'local_sub_paths': localSubPaths,
+      if (coverSubPath != null) 'cover_sub_path': coverSubPath,
+      if (previewSubPaths != null) 'preview_sub_paths': previewSubPaths,
       if (readCount != null) 'read_count': readCount,
       if (currentPage != null) 'current_page': currentPage,
       if (createdAt != null) 'created_at': createdAt,
@@ -349,6 +456,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
     Value<int>? id,
     Value<String>? name,
     Value<List<String>>? localSubPaths,
+    Value<String?>? coverSubPath,
+    Value<List<String>?>? previewSubPaths,
     Value<int>? readCount,
     Value<int>? currentPage,
     Value<DateTime>? createdAt,
@@ -357,6 +466,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
       id: id ?? this.id,
       name: name ?? this.name,
       localSubPaths: localSubPaths ?? this.localSubPaths,
+      coverSubPath: coverSubPath ?? this.coverSubPath,
+      previewSubPaths: previewSubPaths ?? this.previewSubPaths,
       readCount: readCount ?? this.readCount,
       currentPage: currentPage ?? this.currentPage,
       createdAt: createdAt ?? this.createdAt,
@@ -377,6 +488,14 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
         $BookTableTable.$converterlocalSubPaths.toSql(localSubPaths.value),
       );
     }
+    if (coverSubPath.present) {
+      map['cover_sub_path'] = Variable<String>(coverSubPath.value);
+    }
+    if (previewSubPaths.present) {
+      map['preview_sub_paths'] = Variable<String>(
+        $BookTableTable.$converterpreviewSubPathsn.toSql(previewSubPaths.value),
+      );
+    }
     if (readCount.present) {
       map['read_count'] = Variable<int>(readCount.value);
     }
@@ -395,6 +514,8 @@ class BookTableCompanion extends UpdateCompanion<BookTableData> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('localSubPaths: $localSubPaths, ')
+          ..write('coverSubPath: $coverSubPath, ')
+          ..write('previewSubPaths: $previewSubPaths, ')
           ..write('readCount: $readCount, ')
           ..write('currentPage: $currentPage, ')
           ..write('createdAt: $createdAt')
@@ -1015,6 +1136,8 @@ typedef $$BookTableTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       required List<String> localSubPaths,
+      Value<String?> coverSubPath,
+      Value<List<String>?> previewSubPaths,
       Value<int> readCount,
       Value<int> currentPage,
       Value<DateTime> createdAt,
@@ -1024,6 +1147,8 @@ typedef $$BookTableTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<List<String>> localSubPaths,
+      Value<String?> coverSubPath,
+      Value<List<String>?> previewSubPaths,
       Value<int> readCount,
       Value<int> currentPage,
       Value<DateTime> createdAt,
@@ -1051,6 +1176,17 @@ class $$BookTableTableFilterComposer
   ColumnWithTypeConverterFilters<List<String>, List<String>, String>
   get localSubPaths => $composableBuilder(
     column: $table.localSubPaths,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get coverSubPath => $composableBuilder(
+    column: $table.coverSubPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>?, List<String>, String>
+  get previewSubPaths => $composableBuilder(
+    column: $table.previewSubPaths,
     builder: (column) => ColumnWithTypeConverterFilters(column),
   );
 
@@ -1094,6 +1230,16 @@ class $$BookTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get coverSubPath => $composableBuilder(
+    column: $table.coverSubPath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get previewSubPaths => $composableBuilder(
+    column: $table.previewSubPaths,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get readCount => $composableBuilder(
     column: $table.readCount,
     builder: (column) => ColumnOrderings(column),
@@ -1128,6 +1274,17 @@ class $$BookTableTableAnnotationComposer
   GeneratedColumnWithTypeConverter<List<String>, String> get localSubPaths =>
       $composableBuilder(
         column: $table.localSubPaths,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get coverSubPath => $composableBuilder(
+    column: $table.coverSubPath,
+    builder: (column) => column,
+  );
+
+  GeneratedColumnWithTypeConverter<List<String>?, String> get previewSubPaths =>
+      $composableBuilder(
+        column: $table.previewSubPaths,
         builder: (column) => column,
       );
 
@@ -1177,6 +1334,8 @@ class $$BookTableTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<List<String>> localSubPaths = const Value.absent(),
+                Value<String?> coverSubPath = const Value.absent(),
+                Value<List<String>?> previewSubPaths = const Value.absent(),
                 Value<int> readCount = const Value.absent(),
                 Value<int> currentPage = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -1184,6 +1343,8 @@ class $$BookTableTableTableManager
                 id: id,
                 name: name,
                 localSubPaths: localSubPaths,
+                coverSubPath: coverSubPath,
+                previewSubPaths: previewSubPaths,
                 readCount: readCount,
                 currentPage: currentPage,
                 createdAt: createdAt,
@@ -1193,6 +1354,8 @@ class $$BookTableTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 required List<String> localSubPaths,
+                Value<String?> coverSubPath = const Value.absent(),
+                Value<List<String>?> previewSubPaths = const Value.absent(),
                 Value<int> readCount = const Value.absent(),
                 Value<int> currentPage = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -1200,6 +1363,8 @@ class $$BookTableTableTableManager
                 id: id,
                 name: name,
                 localSubPaths: localSubPaths,
+                coverSubPath: coverSubPath,
+                previewSubPaths: previewSubPaths,
                 readCount: readCount,
                 currentPage: currentPage,
                 createdAt: createdAt,

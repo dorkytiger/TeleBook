@@ -41,9 +41,9 @@ AsyncValue<CollectionBookState> collectionBookView(Ref ref,int collectionId) {
       .toList();
 
   final items = collectionBooks.map((book) {
-    final coverImagePath = GlobalConfig.resolveBookPath(
-      book.localSubPaths.first,
-    );
+    final coverImagePath = book.coverSubPath != null
+        ? GlobalConfig.resolveBookPath(book.coverSubPath!)
+        : GlobalConfig.resolveBookPath(book.localSubPaths.first);
     return BookListItemVo(book: book, coverImagePath: coverImagePath);
   }).toList();
 

@@ -122,7 +122,7 @@ final class BookFormSubmitProvider
   BookFormSubmit create() => BookFormSubmit();
 }
 
-String _$bookFormSubmitHash() => r'6e1d62948fc4e5a71a99ddc07525ba1aa5e47a86';
+String _$bookFormSubmitHash() => r'fd7d09a1cb4d7435ae908d34fbb02868792da325';
 
 abstract class _$BookFormSubmit extends $AsyncNotifier<void> {
   FutureOr<void> build();

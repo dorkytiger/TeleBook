@@ -50,7 +50,7 @@ final class ParseBatchArchiveProvider
   }
 }
 
-String _$parseBatchArchiveHash() => r'4c2d0a3ec18de530d0397b1453fe0bbdaf5e5639';
+String _$parseBatchArchiveHash() => r'd0ea0561ebb2ca43ab7f2fae08254bf67582edfe';
 
 final class ParseBatchArchiveFamily extends $Family
     with

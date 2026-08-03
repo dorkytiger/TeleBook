@@ -58,7 +58,7 @@ final class BookPageProvider
   }
 }
 
-String _$bookPageHash() => r'a1503c3304f4c51ee417945992ed4de071a27061';
+String _$bookPageHash() => r'74e8ded41f495fbfaf78d9cdbda58fa537da26a7';
 
 final class BookPageFamily extends $Family
     with

@@ -42,15 +42,26 @@ abstract class ParseImageFolderSaveBookParam
 abstract class ParseImageFolderSaveBookProgress
     with _$ParseImageFolderSaveBookProgress {
   const factory ParseImageFolderSaveBookProgress({
+    @Default(SaveStep.generateCover) SaveStep step,
     @Default(0) int current,
     @Default(0) int total,
   }) = _ParseImageFolderSaveBookProgress;
+
+  const ParseImageFolderSaveBookProgress._();
+
+  String get stepText => switch (step) {
+    SaveStep.generateCover => '生成封面图...',
+    SaveStep.generatePreview => '生成预览图... ($current/$total)',
+    SaveStep.saveOriginal => '保存原图... ($current/$total)',
+    SaveStep.saveDatabase => '保存中...',
+  };
 }
 
 final parseImageFolderSaveBookProgressProvider =
-    StateProvider.family<ParseImageFolderSaveBookProgress, ParseImageFolderParam>(
-      (_, __) => const ParseImageFolderSaveBookProgress(),
-    );
+    StateProvider.family<
+      ParseImageFolderSaveBookProgress,
+      ParseImageFolderParam
+    >((_, __) => const ParseImageFolderSaveBookProgress());
 
 @riverpod
 class ParseImageFolder extends _$ParseImageFolder {
@@ -59,9 +70,7 @@ class ParseImageFolder extends _$ParseImageFolder {
 
   @override
   FutureOr<ParseImageFolderState> build(ParseImageFolderParam param) async {
-    final folderName = _resolveFolderName(param);
-    Future.microtask(() => _parseImageFolder(param));
-    return ParseImageFolderState(folderName: folderName, imagePaths: const []);
+    return await _parseImageFolder(param);
   }
 
   String _resolveFolderName(ParseImageFolderParam param) {
@@ -90,13 +99,14 @@ class ParseImageFolder extends _$ParseImageFolder {
     return storageStatus.isGranted;
   }
 
-  Future<void> _parseImageFolder(ParseImageFolderParam param) async {
+  Future<ParseImageFolderState> _parseImageFolder(
+    ParseImageFolderParam param,
+  ) async {
     state = const AsyncLoading();
 
     final hasPermission = await _requestStoragePermission();
     if (!hasPermission) {
-      state = AsyncError('需要存储权限才能读取图片文件夹', StackTrace.current);
-      return;
+      throw Exception('需要存储权限才能读取图片文件夹');
     }
 
     final folderName = _resolveFolderName(param);
@@ -105,15 +115,13 @@ class ParseImageFolder extends _$ParseImageFolder {
         ? await _parseArchiveService.parseImagePaths(param.imagePathsInput!)
         : await _parseArchiveService.parseImageFolder(param.folderPath ?? '');
 
-    result.fold(
-      onSuccess: (data) {
-        state = AsyncData(
-          ParseImageFolderState(folderName: folderName, imagePaths: data),
-        );
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
+    if (result.isError) {
+      throw Exception(result.error?.message);
+    }
+
+    return ParseImageFolderState(
+      folderName: folderName,
+      imagePaths: result.data!,
     );
   }
 }
@@ -129,17 +137,27 @@ class ParseImageFolderSaveBook extends _$ParseImageFolderSaveBook {
     if (state.isLoading || submitParam.imagePaths.isEmpty) return;
 
     state = const AsyncLoading();
-    ref.read(parseImageFolderSaveBookProgressProvider(param).notifier).state =
-        ParseImageFolderSaveBookProgress(
-          current: 0,
-          total: submitParam.imagePaths.length,
-        );
+    ref
+        .read(parseImageFolderSaveBookProgressProvider(param).notifier)
+        .state = ParseImageFolderSaveBookProgress(
+      step: SaveStep.generateCover,
+      current: 0,
+      total: submitParam.imagePaths.length,
+    );
 
     final result = await _bookRepository.saveAsBook(
-      SaveAsBookDto(title: submitParam.folderName, paths: submitParam.imagePaths),
-      onProgress: (current, total) {
-        ref.read(parseImageFolderSaveBookProgressProvider(param).notifier).state =
-            ParseImageFolderSaveBookProgress(current: current, total: total);
+      SaveAsBookDto(
+        title: submitParam.folderName,
+        paths: submitParam.imagePaths,
+      ),
+      onStepProgress: (step, current, total) {
+        ref
+            .read(parseImageFolderSaveBookProgressProvider(param).notifier)
+            .state = ParseImageFolderSaveBookProgress(
+          step: step,
+          current: current,
+          total: total,
+        );
       },
     );
 
@@ -153,4 +171,3 @@ class ParseImageFolderSaveBook extends _$ParseImageFolderSaveBook {
     );
   }
 }
-
