@@ -23,7 +23,9 @@ class ExportBatchViewmodel extends ChangeNotifier {
         .map(
           (b) => ExportItem(
             book: b,
-            coverPath: "${GlobalConfig.booksDir.path}/${b.localSubPaths.first}",
+            coverPath: b.coverSubPath != null
+                ? '${GlobalConfig.booksDir.path}/${b.coverSubPath}'
+                : '${GlobalConfig.booksDir.path}/${b.localSubPaths.first}',
           ),
         )
         .toList();

@@ -1,22 +1,14 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(TeleBook LANGUAGES CXX)
-
-# Suppress CMP0175 warning from third-party plugins (e.g. flutter_inappwebview_windows)
-if(POLICY CMP0175)
-  cmake_policy(SET CMP0175 OLD)
-endif()
+project(tele_book LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "TeleBook")
+set(BINARY_NAME "tele_book")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
-
-# 保证 CMake 允许 add_custom_command(TARGET) 使用 DEPENDS，消除 flutter 插件的警告
-cmake_policy(SET CMP0175 NEW)
 
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -69,12 +61,13 @@ include(flutter/generated_plugins.cmake)
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
 # run in place. This is done instead of making a separate bundle (as on Linux)
-# so that building and running form within Visual Studio will work.
+# so that building and running from within Visual Studio will work.
 set(BUILD_BUNDLE_DIR "$<TARGET_FILE_DIR:${BINARY_NAME}>")
 # Make the "install" step default, as it's required to run.
 set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
-
-set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${BUILD_BUNDLE_DIR}" CACHE PATH "..." FORCE)
+endif()
 
 set(INSTALL_BUNDLE_DATA_DIR "${CMAKE_INSTALL_PREFIX}/data")
 set(INSTALL_BUNDLE_LIB_DIR "${CMAKE_INSTALL_PREFIX}")
@@ -94,14 +87,14 @@ if(PLUGIN_BUNDLED_LIBRARIES)
     COMPONENT Runtime)
 endif()
 
-# Copy the native assets provided by the build.dart form all packages.
+# Copy the native assets provided by the build.dart from all packages.
 set(NATIVE_ASSETS_DIR "${PROJECT_BUILD_DIR}native_assets/windows/")
 install(DIRECTORY "${NATIVE_ASSETS_DIR}"
    DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
    COMPONENT Runtime)
 
 # Fully re-copy the assets directory on each build to avoid having stale files
-# form a previous install.
+# from a previous install.
 set(FLUTTER_ASSET_DIR_NAME "flutter_assets")
 install(CODE "
   file(REMOVE_RECURSE \"${INSTALL_BUNDLE_DATA_DIR}/${FLUTTER_ASSET_DIR_NAME}\")
@@ -113,21 +106,3 @@ install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
 install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
   CONFIGURATIONS Profile;Release
   COMPONENT Runtime)
-
-# 检查 NuGet 可执行文件（允许在项目 tools/nuget 目录或系统 PATH 中查找）
-find_program(NUGET_EXECUTABLE
-  NAMES nuget.exe nuget
-  HINTS
-    "${CMAKE_SOURCE_DIR}/tools/nuget"
-  PATHS
-    ENV PATH
-)
-
-if(NOT NUGET_EXECUTABLE)
-  message(FATAL_ERROR
-    "\nNuGet 未找到！flutter_inappwebview_windows 插件需要 NuGet。\n\
-请运行 D:\\StudioProjects\\TeleBook\\tools\\install_nuget.ps1 以下载 nuget.exe，\n\
-或按照 https://inappwebview.dev/docs/intro#setup-windows 进行手动安装。\n\n\
-下载后请将 nuget.exe 所在目录加入系统 PATH，或在环境变量中设置 NUGET_EXECUTABLE 指向 nuget.exe 的完整路径。\n"
-  )
-endif()

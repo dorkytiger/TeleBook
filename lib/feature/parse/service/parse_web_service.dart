@@ -1,6 +1,11 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:riverpod/riverpod.dart';
+
+final parseWebServiceProvider = Provider<ParseWebService>((ref) {
+  return ParseWebService();
+});
 
 class ParseWebService {
   Future<String> extractTitleFromWebView({
@@ -29,7 +34,7 @@ class ParseWebService {
     return title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '').trim();
   }
 
-   Future<List<String>> extractImagesFromWebView({
+  Future<List<String>> extractImagesFromWebView({
     required Future<String?> Function(String) onExtractImages,
   }) async {
     final js = r"""
@@ -80,7 +85,7 @@ class ParseWebService {
     }
   }
 
-   Future<String> downloadImageToFile(String url, String saveDir) async {
+  Future<String> downloadImageToFile(String url, String saveDir) async {
     final filePath =
         '$saveDir/${DateTime.now().microsecondsSinceEpoch}_${url.split('/').last}.jpg';
     final dio = Dio();

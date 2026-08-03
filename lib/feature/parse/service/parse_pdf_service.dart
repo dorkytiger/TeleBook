@@ -3,13 +3,16 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:path/path.dart' as p;
-import 'package:pdfrx/pdfrx.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/util/failure_util.dart';
 import 'package:tele_book/core/util/result_util.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:pdfrx/pdfrx.dart';
 import 'package:uuid/uuid.dart';
+
+final parsePdfServiceProvider = Provider((ref) => ParsePdfService());
 
 class ParsePdfService {
   static bool _pdfrxInitialized = false;
@@ -44,6 +47,13 @@ class ParsePdfService {
     String pdfPath, {
     void Function(int current, int total)? onProgress,
   }) async {
+    final sourceFile = File(pdfPath);
+    if (!await sourceFile.exists()) {
+      return Result.failure(
+        BusinessFailure(message: 'PDF 文件不存在或无访问权限: $pdfPath'),
+      );
+    }
+
     final tempDir = p.join(GlobalConfig.appTempDir.path, const Uuid().v4());
     await Directory(tempDir).create(recursive: true);
 
@@ -106,29 +116,36 @@ class ParsePdfService {
   Future<Result<List<ParseBatchArchiveVo>>> parseBatchPdfs(
     String pdfDirPath,
     void Function(int total) onStart,
-    void Function(int count) onProgress,
-  ) async {
+    void Function(int count) onProgress, {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }) async {
     try {
       final dir = Directory(pdfDirPath);
       if (!await dir.exists()) {
         throw FileSystemException('目录不存在', pdfDirPath);
       }
 
-      final pdfPaths = await dir
-          .list()
-          .where((e) => e is File && e.path.toLowerCase().endsWith('.pdf'))
-          .map((e) => e.path)
-          .toList()
-        ..sort();
+      final pdfPaths =
+          await dir
+                .list()
+                .where(
+                  (e) => e is File && e.path.toLowerCase().endsWith('.pdf'),
+                )
+                .map((e) => e.path)
+                .toList()
+            ..sort();
 
-      return _parseBatchPdfsByPaths(pdfPaths, onStart, onProgress);
+      return _parseBatchPdfsByPaths(
+        pdfPaths,
+        onStart,
+        onProgress,
+        onCurrentFileChanged: onCurrentFileChanged,
+        onCurrentFileProgress: onCurrentFileProgress,
+      );
     } catch (e, st) {
       return Result.failure(
-        BusinessFailure(
-          message: '批量解析 PDF 失败',
-          details: e,
-          stackTrace: st,
-        ),
+        BusinessFailure(message: '批量解析 PDF 失败', details: e, stackTrace: st),
       );
     }
   }
@@ -136,19 +153,29 @@ class ParsePdfService {
   Future<Result<List<ParseBatchArchiveVo>>> parseBatchPdfsFromPaths(
     List<String> pdfPaths,
     void Function(int total) onStart,
-    void Function(int count) onProgress,
-  ) {
+    void Function(int count) onProgress, {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }) {
     final filtered = pdfPaths
         .where((path) => path.toLowerCase().endsWith('.pdf'))
         .toList();
-    return _parseBatchPdfsByPaths(filtered, onStart, onProgress);
+    return _parseBatchPdfsByPaths(
+      filtered,
+      onStart,
+      onProgress,
+      onCurrentFileChanged: onCurrentFileChanged,
+      onCurrentFileProgress: onCurrentFileProgress,
+    );
   }
 
   Future<Result<List<ParseBatchArchiveVo>>> _parseBatchPdfsByPaths(
     List<String> pdfPaths,
     void Function(int total) onStart,
-    void Function(int count) onProgress,
-  ) async {
+    void Function(int count) onProgress, {
+    void Function(String fileName)? onCurrentFileChanged,
+    void Function(int current, int total)? onCurrentFileProgress,
+  }) async {
     try {
       pdfPaths.sort();
 
@@ -158,8 +185,15 @@ class ParsePdfService {
       for (var i = 0; i < pdfPaths.length; i++) {
         await Future.delayed(Duration.zero);
         final path = pdfPaths[i];
+        onCurrentFileChanged?.call(p.basename(path));
+        onCurrentFileProgress?.call(0, 0);
 
-        final result = await parsePdf(path);
+        final result = await parsePdf(
+          path,
+          onProgress: (current, total) {
+            onCurrentFileProgress?.call(current, total);
+          },
+        );
         if (result.isSuccess) {
           results.add(
             ParseBatchArchiveVo(
@@ -176,13 +210,8 @@ class ParsePdfService {
       return Result.success(results);
     } catch (e, st) {
       return Result.failure(
-        BusinessFailure(
-          message: '批量解析 PDF 失败',
-          details: e,
-          stackTrace: st,
-        ),
+        BusinessFailure(message: '批量解析 PDF 失败', details: e, stackTrace: st),
       );
     }
   }
 }
-

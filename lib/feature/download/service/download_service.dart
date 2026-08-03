@@ -2,10 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:background_downloader/background_downloader.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tele_book/common/config/global_config.dart';
-import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
@@ -13,6 +12,13 @@ import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
 import 'package:tele_book/feature/download/repository/download_repository.dart';
 import 'package:uuid/uuid.dart';
+
+final downloadServiceProvider = Provider<DownloadService>((ref) {
+  return DownloadService(
+    ref.watch(downloadRepositoryProvider),
+    ref.watch(bookRepositoryProvider),
+  );
+});
 
 class DownloadService {
   final FileDownloader _downloader = FileDownloader();
@@ -197,7 +203,6 @@ class DownloadService {
         });
       },
       onStatus: (status) async {
-        String? groupIdToUpdate;
         await _stateLock.synchronized(() {
           switch (status) {
             case TaskStatus.failed:
@@ -206,8 +211,6 @@ class DownloadService {
               );
               currentItem = failedItem;
               _downloadRepository.upsertItem(failedItem);
-
-              groupIdToUpdate = item.groupId;
               break;
             case TaskStatus.complete:
               final completedItem = currentItem.copyWith(
@@ -216,7 +219,6 @@ class DownloadService {
               );
               currentItem = completedItem;
               _downloadRepository.upsertItem(completedItem);
-              groupIdToUpdate = item.groupId;
               break;
             case TaskStatus.running || TaskStatus.enqueued:
               final downloadingItem = currentItem.copyWith(
@@ -228,23 +230,72 @@ class DownloadService {
             default:
           }
         });
-        // 在 lock 外更新组状态和检查自动保存条件
-        if (groupIdToUpdate != null) {
-          await _updateGroupStatus(groupIdToUpdate!);
-        }
-        await _checkAndAutoSave(item.groupId);
+        // 在 lock 外统一刷新组状态并检查自动保存条件
+        await _refreshGroupState(item.groupId);
       },
     );
   }
 
+  /// 删除单个下载项：会同步清理临时文件、重算组状态，并在满足条件时自动保存为书籍
+  Future<void> deleteTaskItem(String itemId) async {
+    final item = _downloadRepository.getDownloadTask(itemId);
+    if (item == null) return;
+
+    // 删除进行中的任务会和后台回调打架，先不支持，避免状态回写冲突
+    if (item.status == DownloadStatus.pending ||
+        item.status == DownloadStatus.downloading ||
+        item.status == DownloadStatus.paused) {
+      throw StateError('下载中的任务暂不支持删除，请稍后再试');
+    }
+
+    final group = _downloadRepository.getDownloadGroup(item.groupId);
+    if (group == null) return;
+
+    final file = File('${group.saveParentPath}/${item.saveSubPath}');
+    if (await file.exists()) {
+      await file.delete();
+    }
+
+    _downloadRepository.deleteItem(itemId);
+    await _refreshGroupState(group.id);
+  }
+
+  /// 清空所有已完成的下载组
+  Future<int> clearCompletedTasks() async {
+    final completedGroups = <DownloadGroupBo>[];
+
+    await _stateLock.synchronized(() async {
+      final groups = _downloadRepository.getDownloadGroups();
+      for (final group in groups) {
+        if (group.status != DownloadStatus.completed) continue;
+        completedGroups.add(group);
+        _autoSavedGroups.remove(group.id);
+        _downloadRepository.deleteGroup(group.id);
+      }
+    });
+
+    for (final group in completedGroups) {
+      final dir = Directory(group.saveParentPath);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    }
+
+    return completedGroups.length;
+  }
+
   /// 根据组内所有项的状态更新组状态
-  Future<void> _updateGroupStatus(String groupId) async {
+  Future<void> _refreshGroupState(String groupId) async {
     final group = _downloadRepository.getDownloadGroup(groupId);
     if (group == null) return;
 
     // 直接读取仓库中的当前快照，避免 stream.first 时序带来的状态回读延迟
     final items = _downloadRepository.getDownloadItemsByGroup(groupId);
-    if (items.isEmpty) return;
+    if (items.isEmpty) {
+      _autoSavedGroups.remove(groupId);
+      _downloadRepository.deleteGroup(groupId);
+      return;
+    }
 
     // 统计各状态的任务数
     final completedCount = items
@@ -281,6 +332,8 @@ class DownloadService {
         status: newStatus,
       ),
     );
+
+    await _checkAndAutoSave(groupId);
   }
 
   /// 检查组是否已完成且无失败，若满足则自动保存为书籍

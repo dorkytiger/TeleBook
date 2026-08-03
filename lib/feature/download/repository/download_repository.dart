@@ -1,6 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/feature/download/datasource/runtime/download_runtime_datasource.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
+
+final downloadRepositoryProvider = Provider<DownloadRepository>((ref) {
+  return DownloadRepository(ref.watch(downloadRuntimeDatasourceProvider));
+});
+
 
 class DownloadRepository {
   final DownloadRuntimeDatasource _downloadRuntimeDatasource;
@@ -17,6 +23,10 @@ class DownloadRepository {
 
   DownloadGroupBo ? getDownloadGroup(String groupId) {
     return _downloadRuntimeDatasource.getGroup(groupId);
+  }
+
+  List<DownloadGroupBo> getDownloadGroups() {
+    return _downloadRuntimeDatasource.getGroups();
   }
 
   List<DownloadItemBo> getDownloadItemsByGroup(String groupId) {

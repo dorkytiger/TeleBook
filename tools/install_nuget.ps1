@@ -19,7 +19,7 @@ if (Test-Path $targetPath) {
     Write-Host ""
     Write-Host "请将该目录加入系统 PATH，或在系统环境变量中设置 NUGET_EXECUTABLE 指向完整路径："
     Write-Host "  例如（PowerShell 临时）：$env:NUGET_EXECUTABLE = '$targetPath'"
-    Write-Host "  或永久在 系统 属性 -> 环境变量 中添加：D:\\StudioProjects\\TeleBook\\tools\\nuget"
+    Write-Host "  或永久在 系统 属性 -> 环境变量 中添加：D:\\StudioProjects\\tele_book\\tools\\nuget"
     Write-Host ""
     Write-Host "然后重新运行 Flutter 构建（例如：flutter build windows 或 flutter run -d windows）。"
 } else {

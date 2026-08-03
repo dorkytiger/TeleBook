@@ -6,7 +6,7 @@
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated form the TEXTINCLUDE 2 resource.
+// Generated from the TEXTINCLUDE 2 resource.
 //
 #include "winres.h"
 
@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.dorkytiger" "\0"
+            VALUE "CompanyName", "com.example" "\0"
             VALUE "FileDescription", "tele_book" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tele_book" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2023 com.dorkytiger. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
             VALUE "OriginalFilename", "tele_book.exe" "\0"
             VALUE "ProductName", "tele_book" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
@@ -113,7 +113,7 @@ END
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
 //
-// Generated form the TEXTINCLUDE 3 resource.
+// Generated from the TEXTINCLUDE 3 resource.
 //
 
 

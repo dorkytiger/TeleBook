@@ -1,138 +1,146 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:forui/forui.dart';
+import 'package:go_router/go_router.dart';
+import 'package:tele_book/common/config/global_config.dart';
+import 'package:tele_book/common/widget/local_image_widget.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/export/enum/export_format.dart';
-import 'package:tele_book/feature/export/ui/viewmodel/export_single_viewmodel.dart';
+import 'package:tele_book/feature/export/ui/provider/export_single_provider.dart';
 
-class ExportSingleFormView extends StatelessWidget {
+class ExportSingleFormView extends ConsumerStatefulWidget {
   final BookTableData book;
 
   const ExportSingleFormView({super.key, required this.book});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ExportSingleViewmodel(book: book),
-      child: const _ExportSingleFormContent(),
-    );
-  }
+  ConsumerState<ExportSingleFormView> createState() =>
+      _ExportSingleFormViewState();
 }
 
-class _ExportSingleFormContent extends StatelessWidget {
-  const _ExportSingleFormContent();
+class _ExportSingleFormViewState extends ConsumerState<ExportSingleFormView> {
+  final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<ExportSingleViewmodel>();
+    final bookId = widget.book.id;
+    final state = ref.watch(exportSingleProvider(bookId));
+    final notifier = ref.read(exportSingleProvider(bookId).notifier);
 
-    // 成功后弹提示并返回
-    if (vm.isDone) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('导出成功！'),
-            backgroundColor: Theme.of(
-              context,
-            ).colorScheme.surfaceContainerHighest,
-          ),
+    ref.listen(exportSingleProvider(bookId), (prev, next) {
+      if (prev?.isDone == false && next.isDone) {
+        showFToast(
+          context: context,
+          icon: const Icon(FLucideIcons.check),
+          title: const Text('导出成功'),
+          description: Text('${state.book.name} 已导出'),
+          swipeToDismiss: const [.right],
+          duration: const Duration(seconds: 3),
         );
         Navigator.of(context).pop();
-      });
-    }
+      }
+    });
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('导出书籍')),
-      body: Padding(
+    return FScaffold(
+      header: FHeader.nested(
+        title: const Text('导出书籍'),
+        prefixes: [FHeaderAction.back(onPress: () => context.pop())],
+      ),
+      child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 书籍名提示
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.book),
-              title: Text(vm.book.name),
-              subtitle: Text('共 ${vm.book.localSubPaths.length} 页'),
-            ),
-            const Divider(),
-            const SizedBox(height: 8),
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FLabel(
+                layout: .horizontalTrailing,
+                label: Text(state.book.name),
+                description: Text('共 ${state.book.localSubPaths.length} 页'),
+                child: LocalImageWidget(
+                  imagePath: GlobalConfig.resolveBookPath(
+                    state.book.coverSubPath!,
+                  ),
+                ),
+              ),
+              const Divider(),
+              const SizedBox(height: 8),
 
-            // 导出格式
-            LayoutBuilder(
-              builder: (context, constraints) => DropdownMenu<ExportFormat>(
-                width: constraints.maxWidth,
-                initialSelection: vm.format,
-                label: const Text('导出格式'),
-                leadingIcon: const Icon(Icons.file_present),
-                onSelected: (v) {
-                  if (v != null) vm.setFormat(v);
+              // 导出格式
+              FSelect<ExportFormat>.rich(
+                control: FSelectControl.managed(
+                  onChange: (value) {
+                    if (value != null) notifier.setFormat(value);
+                  },
+                ),
+                label: Text("导出格式"),
+                hint: "请选择导出格式",
+                format: (s) => s.label,
+                children: [
+                  for (final format in ExportFormat.values)
+                    .item(title: Text(format.label), value: format),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // 导出路径
+              FTextFormField(
+                readOnly: true,
+                control: FTextFieldControl.managed(
+                  controller: state.outputPathCrl,
+                ),
+                validator: (v) => (v == null || v.isEmpty) ? '请选择导出目录' : null,
+                label: Text('导出路径'),
+                hint: '请选择导出目录',
+                suffixBuilder: (context, style, variants) {
+                  return FButton.icon(
+                    style: style.obscureButtonStyle,
+                    onPress: () => notifier.pickOutputDir(),
+                    child: Icon(FLucideIcons.fileOutput),
+                  );
                 },
-                dropdownMenuEntries: ExportFormat.values
-                    .map((f) => DropdownMenuEntry(value: f, label: f.label))
-                    .toList(),
+                onTap: () => notifier.pickOutputDir(),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // 导出路径
-            TextField(
-              readOnly: true,
-              controller: TextEditingController(text: vm.outputPath ?? ''),
-              decoration: InputDecoration(
-                labelText: '导出路径',
-                hintText: '请选择导出目录',
-                prefixIcon: const Icon(Icons.folder_open),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.drive_folder_upload),
-                  onPressed: vm.isExporting ? null : vm.pickOutputDir,
+              // 导出文件名
+              FTextFormField(
+                control: FTextFieldControl.managed(
+                  controller: state.fileNameCrl,
                 ),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? '请输入文件名' : null,
+                enabled: !state.isExporting,
+                label: Text('导出文件名'),
+                hint: "请输入导出文件名",
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-            // 导出文件名
-            TextField(
-              controller: vm.fileNameController,
-              enabled: !vm.isExporting,
-              decoration: const InputDecoration(
-                labelText: '导出文件名',
-                prefixIcon: Icon(Icons.drive_file_rename_outline),
-                border: OutlineInputBorder(),
+              const Spacer(),
+
+              // 导出按钮
+              FButton(
+                onPress: () {
+                  if (_formKey.currentState!.validate()) {
+                    notifier.doExport();
+                  }
+                },
+                prefix: state.isExporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.upload),
+                child: Text(state.isExporting ? '导出中...' : '开始导出'),
               ),
-            ),
-            const SizedBox(height: 8),
-
-            // 错误提示
-            if (vm.errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  vm.errorMessage!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-
-            const Spacer(),
-
-            // 导出按钮
-            FilledButton.icon(
-              onPressed: vm.isExporting ? null : () => vm.export(),
-              icon: vm.isExporting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.upload),
-              label: Text(vm.isExporting ? '导出中...' : '开始导出'),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

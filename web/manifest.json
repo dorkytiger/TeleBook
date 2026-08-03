@@ -1,6 +1,6 @@
 {
-    "name": "wo_nas",
-    "short_name": "wo_nas",
+    "name": "tele_book",
+    "short_name": "tele_book",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
