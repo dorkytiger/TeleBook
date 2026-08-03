@@ -11,7 +11,7 @@ on:
 
 env:
   APP_NAME: 'TeleBook'
-  FLUTTER_VERSION: '3.41.9'  # 匹配本地开发版本
+  FLUTTER_VERSION: '3.44.8'
 
 jobs:
   build-android:
@@ -241,12 +241,12 @@ jobs:
           prerelease: false
           generate_release_notes: true
           body: |
-            ## 🎉 tele_book ${{ steps.version.outputs.VERSION }}
+            ## 🎉 TeleBook ${{ steps.version.outputs.VERSION }}
             
             ### 📦 下载
-            - **Android**: [tele_book-android-${{ steps.version.outputs.VERSION }}.apk]
-            - **Windows**: [tele_book-windows-${{ steps.version.outputs.VERSION }}.zip]
-            - **iOS**: [tele_book-ios-${{ steps.version.outputs.VERSION }}.ipa]
+            - **Android**: [TeleBook-android-${{ steps.version.outputs.VERSION }}.apk]
+            - **Windows**: [TeleBook-windows-${{ steps.version.outputs.VERSION }}.zip]
+            - **iOS**: [TeleBook-ios-${{ steps.version.outputs.VERSION }}.ipa]
             
             ### 📝 更新内容
             详见下方自动生成的更新日志。
