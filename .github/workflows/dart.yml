@@ -66,62 +66,17 @@ jobs:
       - name: Run code generation
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
-      - name: Build Android APK
-        run: flutter build apk --release
+      - name: Build Android APK (split per ABI)
+        run: flutter build apk --release --split-per-abi
 
-      - name: Upload APK Artifact
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 7
-
-  build-windows:
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Read version from properties
-        id: version
-        shell: powershell
-        run: |
-          $versionName = (Get-Content version.properties | Select-String '^VERSION_NAME=').ToString().Split('=')[1]
-          $versionCode = (Get-Content version.properties | Select-String '^VERSION_CODE=').ToString().Split('=')[1]
-          echo "VERSION=v$versionName" >> $env:GITHUB_OUTPUT
-          echo "VERSION_NAME=$versionName" >> $env:GITHUB_OUTPUT
-          echo "VERSION_CODE=$versionCode" >> $env:GITHUB_OUTPUT
-          echo "Version: v$versionName ($versionCode)"
-
-      - name: Update pubspec.yaml version
-        shell: powershell
-        run: .\scripts\update_version.ps1
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: 'stable'
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Run code generation
-        run: flutter pub run build_runner build --delete-conflicting-outputs
-
-      - name: Build Windows
-        run: flutter build windows --release
-
-      - name: Create Windows ZIP
-        shell: powershell
-        run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath ${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip
-
-      - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-zip
-          path: ${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip
+          name: android-apks
+          path: |
+            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
+            build/app/outputs/flutter-apk/app-x86_64-release.apk
           retention-days: 7
 
   build-ios:
@@ -173,7 +128,7 @@ jobs:
           retention-days: 7
 
   release:
-    needs: [build-android, build-windows, build-ios]
+    needs: [build-android, build-ios]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -201,18 +156,11 @@ jobs:
             echo "Tag ${{ steps.version.outputs.VERSION }} does not exist"
           fi
 
-      - name: Download Android APK
+      - name: Download Android APKs
         if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         uses: actions/download-artifact@v4
         with:
-          name: android-apk
-          path: ./artifacts
-
-      - name: Download Windows ZIP
-        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-zip
+          name: android-apks
           path: ./artifacts
 
       - name: Download iOS IPA
@@ -222,18 +170,21 @@ jobs:
           name: ios-ipa
           path: ./artifacts
 
-      - name: Rename APK with version
+      - name: Rename APKs with version
         if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         run: |
-          mv artifacts/app-release.apk artifacts/${{ env.APP_NAME }}-android-${{ steps.version.outputs.VERSION }}.apk
+          mv artifacts/app-arm64-v8a-release.apk artifacts/${{ env.APP_NAME }}-android-arm64-${{ steps.version.outputs.VERSION }}.apk
+          mv artifacts/app-armeabi-v7a-release.apk artifacts/${{ env.APP_NAME }}-android-arm32-${{ steps.version.outputs.VERSION }}.apk
+          mv artifacts/app-x86_64-release.apk artifacts/${{ env.APP_NAME }}-android-x86_64-${{ steps.version.outputs.VERSION }}.apk
 
       - name: Create Release
         if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/${{ env.APP_NAME }}-android-${{ steps.version.outputs.VERSION }}.apk
-            artifacts/${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip
+            artifacts/${{ env.APP_NAME }}-android-arm64-${{ steps.version.outputs.VERSION }}.apk
+            artifacts/${{ env.APP_NAME }}-android-arm32-${{ steps.version.outputs.VERSION }}.apk
+            artifacts/${{ env.APP_NAME }}-android-x86_64-${{ steps.version.outputs.VERSION }}.apk
             artifacts/${{ env.APP_NAME }}-ios-${{ steps.version.outputs.VERSION }}.ipa
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: Release ${{ steps.version.outputs.VERSION }}
@@ -244,8 +195,9 @@ jobs:
             ## 🎉 TeleBook ${{ steps.version.outputs.VERSION }}
             
             ### 📦 下载
-            - **Android**: [TeleBook-android-${{ steps.version.outputs.VERSION }}.apk]
-            - **Windows**: [TeleBook-windows-${{ steps.version.outputs.VERSION }}.zip]
+            - **Android (arm64)**: [TeleBook-android-arm64-${{ steps.version.outputs.VERSION }}.apk]
+            - **Android (arm32)**: [TeleBook-android-arm32-${{ steps.version.outputs.VERSION }}.apk]
+            - **Android (x86_64)**: [TeleBook-android-x86_64-${{ steps.version.outputs.VERSION }}.apk]
             - **iOS**: [TeleBook-ios-${{ steps.version.outputs.VERSION }}.ipa]
             
             ### 📝 更新内容

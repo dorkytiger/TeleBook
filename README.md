@@ -15,9 +15,6 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
-![badge-mac](http://img.shields.io/badge/platform-macos-111111.svg?style=flat)
-![badge-linux](http://img.shields.io/badge/platform-linux-2D3F6C.svg?style=flat)
-![badge-windows](http://img.shields.io/badge/platform-windows-4D76CD.svg?style=flat)
 
 </div>
 
@@ -63,8 +60,11 @@
 **[GitHub Releases](https://github.com/dorkytiger/TeleBook/releases)**
 
 - **Android**: APK
-- **Windows**: ZIP
 - **iOS**: IPA (requires self-signing / 需自签名)
+
+> **Note**: The desktop version will be re-implemented with **Qt** in the future. Currently only **iOS** and **Android** are supported.
+> 
+> **注意**：桌面端计划使用 **Qt** 重新实现，目前仅支持 **iOS** 和 **Android**。
 
 ---
 

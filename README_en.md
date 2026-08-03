@@ -4,9 +4,6 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
-![badge-mac](http://img.shields.io/badge/platform-macos-111111.svg?style=flat)
-![badge-linux](http://img.shields.io/badge/platform-linux-2D3F6C.svg?style=flat)
-![badge-windows](http://img.shields.io/badge/platform-windows-4D76CD.svg?style=flat)
 
 _**Note: Version 3.0 is a major update with numerous new features and optimizations. It's recommended to backup your data before upgrading.**_
 
@@ -89,8 +86,9 @@ _**Note: Version 3.0 is a major update with numerous new features and optimizati
 Visit [GitHub Releases](https://github.com/dorkytiger/TeleBook/releases) to download the latest version
 
 - **Android**: Download APK file and install directly
-- **Windows**: Download ZIP file, extract and run
 - **iOS**: Download IPA file (requires self-signing)
+
+> **Note**: The desktop version will be re-implemented with **Qt** in the future. Currently only **iOS** and **Android** are supported.
 
 ### Method 2: Manual Compilation
 
@@ -108,9 +106,6 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # Build
 flutter build apk        # Android
 flutter build ios        # iOS
-flutter build windows    # Windows
-flutter build macos      # macOS
-flutter build linux      # Linux
 ```
 
 ## 🚀 Quick Start
@@ -249,6 +244,7 @@ flutter build linux      # Linux
 
 ### Long-term Vision
 
+- [ ] Desktop client re-implemented with Qt
 - [ ] Cloud sync feature
 - [ ] Community sharing
 - [ ] Plugin system

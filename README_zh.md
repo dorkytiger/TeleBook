@@ -4,9 +4,6 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
-![badge-mac](http://img.shields.io/badge/platform-macos-111111.svg?style=flat)
-![badge-linux](http://img.shields.io/badge/platform-linux-2D3F6C.svg?style=flat)
-![badge-windows](http://img.shields.io/badge/platform-windows-4D76CD.svg?style=flat)
 
 _**注意：3.0 版本为重大更新，包含大量新功能和优化，建议备份数据后升级。**_
 
@@ -89,8 +86,9 @@ _**注意：3.0 版本为重大更新，包含大量新功能和优化，建议�
 访问 [GitHub Releases](https://github.com/dorkytiger/TeleBook/releases) 下载最新版本
 
 - **Android**: 下载 APK 文件直接安装
-- **Windows**: 下载 ZIP 文件解压运行
 - **iOS**: 下载 IPA 文件（需自签名）
+
+> **注意**：桌面端计划使用 **Qt** 重新实现，目前仅支持 **iOS** 和 **Android** 平台。
 
 ### 方式二：手动编译
 
@@ -108,9 +106,6 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # 编译
 flutter build apk        # Android
 flutter build ios        # iOS
-flutter build windows    # Windows
-flutter build macos      # macOS
-flutter build linux      # Linux
 ```
 
 ## 🚀 快速开始
@@ -249,6 +244,7 @@ flutter build linux      # Linux
 
 ### 长期愿景
 
+- [ ] 桌面端使用 Qt 重新实现
 - [ ] 云同步功能
 - [ ] 社区分享
 - [ ] 插件系统
