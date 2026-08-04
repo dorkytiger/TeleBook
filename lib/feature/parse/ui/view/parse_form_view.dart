@@ -25,88 +25,91 @@ class ParseFormView extends ConsumerWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: .min,
-        crossAxisAlignment: .stretch,
-        children: [
-          Text(
-            "导入书籍",
-            style: context.theme.typography.display.xl2.copyWith(
-              fontWeight: .w600,
-              color: context.theme.colors.foreground,
-              height: 1.5,
+      child: Padding(
+        padding: .all(16),
+        child: Column(
+          mainAxisSize: .min,
+          crossAxisAlignment: .stretch,
+          children: [
+            Text(
+              "导入书籍",
+              style: context.theme.typography.display.xl2.copyWith(
+                fontWeight: .w600,
+                color: context.theme.colors.foreground,
+                height: 1.5,
+              ),
             ),
-          ),
-          SizedBox(height: 2),
-          Text(
-            "请选择导入方式，然后输入导入网站/文件路径/文件夹路径",
-            style: context.theme.typography.body.sm.copyWith(
-              color: context.theme.colors.mutedForeground,
+            SizedBox(height: 2),
+            Text(
+              "请选择导入方式，然后输入导入网站/文件路径/文件夹路径",
+              style: context.theme.typography.body.sm.copyWith(
+                color: context.theme.colors.mutedForeground,
+              ),
             ),
-          ),
-          SizedBox(height: 16),
-          FSelect<ParseFormType>.rich(
-            control: FSelectControl.managed(
-              initial: ParseFormType.web,
-              onChange: (value) {
-                notifier.setType(value);
-              },
+            SizedBox(height: 16),
+            FSelect<ParseFormType>.rich(
+              control: FSelectControl.managed(
+                initial: ParseFormType.web,
+                onChange: (value) {
+                  notifier.setType(value);
+                },
+              ),
+              hint: "请选择导入方式",
+              label: Text("导入方式"),
+              format: (s) => s.description,
+              children: [
+                .item(
+                  value: ParseFormType.web,
+                  title: Text("网页"),
+                  prefix: Icon(Icons.web),
+                ),
+                .item(
+                  value: ParseFormType.archive,
+                  title: Text("压缩包"),
+                  prefix: Icon(Icons.archive),
+                ),
+                .item(
+                  value: ParseFormType.batchArchive,
+                  title: Text("批量压缩包"),
+                  prefix: Icon(Icons.batch_prediction),
+                ),
+                .item(
+                  value: ParseFormType.imageFolder,
+                  title: Text("文件夹"),
+                  prefix: Icon(Icons.photo_library),
+                ),
+                .item(
+                  value: ParseFormType.batchImageFolder,
+                  title: Text("批量文件夹"),
+                  prefix: Icon(Icons.folder_copy),
+                ),
+                .item(
+                  value: ParseFormType.pdf,
+                  title: Text("PDF"),
+                  prefix: Icon(Icons.picture_as_pdf),
+                ),
+                .item(
+                  value: ParseFormType.batchPdf,
+                  title: Text("批量 PDF"),
+                  prefix: Icon(Icons.folder_special),
+                ),
+              ],
             ),
-            hint: "请选择导入方式",
-            label: Text("导入方式"),
-            format: (s) => s.description,
-            children: [
-              .item(
-                value: ParseFormType.web,
-                title: Text("网页"),
-                prefix: Icon(Icons.web),
+            const SizedBox(height: 16),
+            _buildSubForm(context, notifier, state.type),
+            const SizedBox(height: 16),
+            Spacer(),
+            Padding(
+              padding: .symmetric(vertical: 16),
+              child: FButton(
+                onPress: () {
+                  notifier.onParse(context);
+                },
+                child: const Text("解析"),
               ),
-              .item(
-                value: ParseFormType.archive,
-                title: Text("压缩包"),
-                prefix: Icon(Icons.archive),
-              ),
-              .item(
-                value: ParseFormType.batchArchive,
-                title: Text("批量压缩包"),
-                prefix: Icon(Icons.batch_prediction),
-              ),
-              .item(
-                value: ParseFormType.imageFolder,
-                title: Text("文件夹"),
-                prefix: Icon(Icons.photo_library),
-              ),
-              .item(
-                value: ParseFormType.batchImageFolder,
-                title: Text("批量文件夹"),
-                prefix: Icon(Icons.folder_copy),
-              ),
-              .item(
-                value: ParseFormType.pdf,
-                title: Text("PDF"),
-                prefix: Icon(Icons.picture_as_pdf),
-              ),
-              .item(
-                value: ParseFormType.batchPdf,
-                title: Text("批量 PDF"),
-                prefix: Icon(Icons.folder_special),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildSubForm(context, notifier, state.type),
-          const SizedBox(height: 16),
-          Spacer(),
-          Padding(
-            padding: .symmetric(vertical: 16),
-            child: FButton(
-              onPress: () {
-                notifier.onParse(context);
-              },
-              child: const Text("解析"),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

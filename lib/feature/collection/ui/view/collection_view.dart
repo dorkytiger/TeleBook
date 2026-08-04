@@ -261,7 +261,7 @@ class _CollectionViewState extends ConsumerState<CollectionView>
               ),
             ),
             child: Padding(
-              padding: .all(16),
+              padding: .all(24),
               child: Column(
                 mainAxisAlignment: .center,
                 mainAxisSize: .min,

@@ -160,7 +160,7 @@ class DownloadListView extends ConsumerWidget {
             ),
           ),
           child: Padding(
-            padding: .all(16),
+            padding: .all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
