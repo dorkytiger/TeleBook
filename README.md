@@ -62,9 +62,9 @@
 - **Android**: APK
 - **iOS**: IPA (requires self-signing / 需自签名)
 
-> **Note**: The desktop version will be re-implemented with **Qt** in the future. Currently only **iOS** and **Android** are supported.
+> **Note**: The desktop version in here [Desktop Version](https://github.com/dorkytiger/TelebookDesktop)
 > 
-> **注意**：桌面端计划使用 **Qt** 重新实现，目前仅支持 **iOS** 和 **Android**。
+> **注意**：桌面端在这里 [桌面版](https://github.com/dorkytiger/TelebookDesktop)
 
 ---
 
