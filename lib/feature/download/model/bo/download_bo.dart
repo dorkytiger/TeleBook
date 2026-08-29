@@ -9,6 +9,9 @@ class DownloadGroupBo {
   final String saveParentPath;
   final DownloadStatus status;
 
+  /// 是否已全部下载成功并自动保存为书籍。
+  final bool savedToBook;
+
   DownloadGroupBo({
     required this.id,
     required this.name,
@@ -17,6 +20,7 @@ class DownloadGroupBo {
     required this.successCount,
     required this.saveParentPath,
     required this.status,
+    this.savedToBook = false,
   });
 
   int completeCount() => errorCount + successCount;
@@ -29,6 +33,7 @@ class DownloadGroupBo {
     int? successCount,
     String? saveParentPath,
     DownloadStatus? status,
+    bool? savedToBook,
   }) {
     return DownloadGroupBo(
       id: id ?? this.id,
@@ -38,6 +43,7 @@ class DownloadGroupBo {
       successCount: successCount ?? this.successCount,
       saveParentPath: saveParentPath ?? this.saveParentPath,
       status: status ?? this.status,
+      savedToBook: savedToBook ?? this.savedToBook,
     );
   }
 }

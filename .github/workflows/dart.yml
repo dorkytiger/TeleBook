@@ -2,11 +2,11 @@ name: Build and Release
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
   workflow_dispatch:
 
 env:
@@ -127,8 +127,102 @@ jobs:
           path: ${{ env.APP_NAME }}-ios-${{ steps.version.outputs.VERSION }}.ipa
           retention-days: 7
 
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from properties
+        id: version
+        shell: bash
+        run: |
+          VERSION_NAME=$(grep '^VERSION_NAME=' version.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^VERSION_CODE=' version.properties | cut -d'=' -f2)
+          echo "VERSION=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Package Windows build
+        shell: bash
+        run: |
+          cd build/windows/x64/runner/Release
+          tar -a -c -f "$GITHUB_WORKSPACE/${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip" .
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: ${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip
+          retention-days: 7
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version from properties
+        id: version
+        run: |
+          VERSION_NAME=$(grep '^VERSION_NAME=' version.properties | cut -d'=' -f2)
+          VERSION_CODE=$(grep '^VERSION_CODE=' version.properties | cut -d'=' -f2)
+          echo "VERSION=v${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_NAME=${VERSION_NAME}" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=${VERSION_CODE}" >> $GITHUB_OUTPUT
+          echo "Version: v${VERSION_NAME} (${VERSION_CODE})"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Update pubspec.yaml version
+        run: dart run scripts/update_version.dart
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run code generation
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Package macOS app
+        run: |
+          cd build/macos/Build/Products/Release
+          ditto -c -k --sequesterRsrc --keepParent "${{ env.APP_NAME }}.app" "$GITHUB_WORKSPACE/${{ env.APP_NAME }}-macos-${{ steps.version.outputs.VERSION }}.zip"
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: ${{ env.APP_NAME }}-macos-${{ steps.version.outputs.VERSION }}.zip
+          retention-days: 7
+
   release:
-    needs: [build-android, build-ios]
+    needs: [build-android, build-ios, build-windows, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
@@ -170,6 +264,20 @@ jobs:
           name: ios-ipa
           path: ./artifacts
 
+      - name: Download Windows build
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: ./artifacts
+
+      - name: Download macOS build
+        if: steps.check_tag.outputs.TAG_EXISTS == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: ./artifacts
+
       - name: Rename APKs with version
         if: steps.check_tag.outputs.TAG_EXISTS == 'false'
         run: |
@@ -186,6 +294,8 @@ jobs:
             artifacts/${{ env.APP_NAME }}-android-arm32-${{ steps.version.outputs.VERSION }}.apk
             artifacts/${{ env.APP_NAME }}-android-x86_64-${{ steps.version.outputs.VERSION }}.apk
             artifacts/${{ env.APP_NAME }}-ios-${{ steps.version.outputs.VERSION }}.ipa
+            artifacts/${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip
+            artifacts/${{ env.APP_NAME }}-macos-${{ steps.version.outputs.VERSION }}.zip
           tag_name: ${{ steps.version.outputs.VERSION }}
           name: Release ${{ steps.version.outputs.VERSION }}
           draft: false
@@ -199,6 +309,8 @@ jobs:
             - **Android (arm32)**: [TeleBook-android-arm32-${{ steps.version.outputs.VERSION }}.apk]
             - **Android (x86_64)**: [TeleBook-android-x86_64-${{ steps.version.outputs.VERSION }}.apk]
             - **iOS**: [TeleBook-ios-${{ steps.version.outputs.VERSION }}.ipa]
+            - **Windows**: [TeleBook-windows-${{ steps.version.outputs.VERSION }}.zip]
+            - **macOS**: [TeleBook-macos-${{ steps.version.outputs.VERSION }}.zip]
             
             ### 📝 更新内容
             详见下方自动生成的更新日志。

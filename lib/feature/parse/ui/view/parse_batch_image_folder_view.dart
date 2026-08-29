@@ -3,7 +3,6 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/error_widget.dart';
@@ -205,11 +204,15 @@ class _ParseBatchImageFolderViewState
 
                 const SizedBox(height: 8),
                 Expanded(
-                  child: MasonryGridView.count(
+                  child: GridView.builder(
                     controller: scrollController,
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 4,
-                    crossAxisSpacing: 4,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisExtent: 200,
+                          mainAxisSpacing: 4,
+                          crossAxisSpacing: 4,
+                        ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
                       vertical: 4,

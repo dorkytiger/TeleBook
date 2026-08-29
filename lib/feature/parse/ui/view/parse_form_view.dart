@@ -141,7 +141,11 @@ class ParseFormView extends ConsumerWidget {
     return FTextFormField(
       label: const Text('URL'),
       hint: '请输入URL',
-      control: FTextFieldControl.managed(controller: notifier.urlController),
+      control: FTextFieldControl.managed(
+        controller: notifier.urlController,
+        // 将输入内容同步到 state.url，onParse 时才能读到
+        onChange: (value) => notifier.onUrlChanged(value.text),
+      ),
       suffixBuilder: (context, style, variants) => FButton.icon(
         style: style.obscureButtonStyle,
         onPress: notifier.getClipboardUrl,
