@@ -141,6 +141,9 @@ class ParseFormView extends ConsumerWidget {
     return FTextFormField(
       label: const Text('URL'),
       hint: '请输入URL',
+      // 不监听 onChange 同步 provider：每次按键触发重建会导致
+      // Flutter 语义树断言（node.parent?._dirty），URL 在 onParse 时
+      // 直接从 controller 读取即可
       control: FTextFieldControl.managed(controller: notifier.urlController),
       suffixBuilder: (context, style, variants) => FButton.icon(
         style: style.obscureButtonStyle,

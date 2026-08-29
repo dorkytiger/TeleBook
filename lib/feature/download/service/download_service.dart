@@ -4,14 +4,14 @@ import 'dart:io';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:synchronized/synchronized.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
 import 'package:tele_book/feature/download/repository/download_repository.dart';
-import 'package:uuid/uuid.dart';
+import 'package:tele_book/core/util/async_lock.dart';
+import 'package:tele_book/core/util/uuid_util.dart';
 
 final downloadServiceProvider = Provider<DownloadService>((ref) {
   return DownloadService(
@@ -24,7 +24,7 @@ class DownloadService {
   final FileDownloader _downloader = FileDownloader();
   final DownloadRepository _downloadRepository;
   final BookRepository _bookRepository;
-  final Lock _stateLock = Lock();
+  final AsyncLock _stateLock = AsyncLock();
   final Set<String> _autoSavedGroups = {};
 
   DownloadService(this._downloadRepository, this._bookRepository);
@@ -36,7 +36,7 @@ class DownloadService {
   Future<void> startDownload(List<String> urls, String title) async {
     try {
       final tempDir = await getTemporaryDirectory();
-      final groupId = Uuid().v4();
+      final groupId = Uuid.v4();
       var successCount = 0;
       var errorCount = 0;
       final downloadGroup = DownloadGroupBo(
@@ -56,7 +56,7 @@ class DownloadService {
         final url = urls[index];
         final saveSubPath = index.toString().padLeft(7, '0');
         final item = DownloadItemBo(
-          id: Uuid().v4(),
+          id: Uuid.v4(),
           groupId: groupId,
           url: url,
           progress: 0,
@@ -153,16 +153,19 @@ class DownloadService {
     }
   }
 
+  /// 重试整个下载组：重置组内所有下载项并重新发起下载。
   Future<void> retryGroup(String groupId) async {
     final group = _downloadRepository.getDownloadGroup(groupId);
     if (group == null) return;
     final items = _downloadRepository.getDownloadItemsByGroup(groupId);
     if (items.isEmpty) return;
 
-    for (var item in items) {
-      if (item.status == DownloadStatus.failed) {
-        await retryTask(item.id);
-      }
+    // 重试后允许再次自动保存为书籍，同时撤销"已保存"标记
+    _autoSavedGroups.remove(groupId);
+    _downloadRepository.upsertGroup(group.copyWith(savedToBook: false));
+
+    for (final item in items) {
+      await retryTask(item.id);
     }
   }
 
@@ -258,6 +261,32 @@ class DownloadService {
 
     _downloadRepository.deleteItem(itemId);
     await _refreshGroupState(group.id);
+  }
+
+  /// 删除整个下载组：清理数据库记录与临时文件。
+  ///
+  /// 若组内存在进行中的任务会抛出 [StateError]，避免与后台回调冲突。
+  Future<void> deleteGroup(String groupId) async {
+    final group = _downloadRepository.getDownloadGroup(groupId);
+    if (group == null) return;
+
+    final items = _downloadRepository.getDownloadItemsByGroup(groupId);
+    if (items.any(
+      (item) =>
+          item.status == DownloadStatus.pending ||
+          item.status == DownloadStatus.downloading ||
+          item.status == DownloadStatus.paused,
+    )) {
+      throw StateError('下载中的任务暂不支持删除，请稍后再试');
+    }
+
+    _autoSavedGroups.remove(groupId);
+    _downloadRepository.deleteGroup(groupId);
+
+    final dir = Directory(group.saveParentPath);
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
   }
 
   /// 清空所有已完成的下载组
@@ -363,6 +392,8 @@ class DownloadService {
               .toList(),
         ),
       );
+      // 保存成功后标记并推送，UI 据此显示"已保存"状态
+      _downloadRepository.upsertGroup(group.copyWith(savedToBook: true));
     }
   }
 }

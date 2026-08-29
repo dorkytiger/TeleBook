@@ -10,7 +10,7 @@ import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
-import 'package:uuid/uuid.dart';
+import 'package:tele_book/core/util/uuid_util.dart';
 
 final parsePdfServiceProvider = Provider((ref) => ParsePdfService());
 
@@ -54,7 +54,7 @@ class ParsePdfService {
       );
     }
 
-    final tempDir = p.join(GlobalConfig.appTempDir.path, const Uuid().v4());
+    final tempDir = p.join(GlobalConfig.appTempDir.path, Uuid.v4());
     await Directory(tempDir).create(recursive: true);
 
     _ensurePdfrxInitialized();

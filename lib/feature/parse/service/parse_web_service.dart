@@ -1,6 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:riverpod/riverpod.dart';
 
 final parseWebServiceProvider = Provider<ParseWebService>((ref) {
@@ -88,8 +88,31 @@ class ParseWebService {
   Future<String> downloadImageToFile(String url, String saveDir) async {
     final filePath =
         '$saveDir/${DateTime.now().microsecondsSinceEpoch}_${url.split('/').last}.jpg';
-    final dio = Dio();
-    await dio.download(url, filePath);
+    await downloadToFile(url, filePath);
     return filePath;
+  }
+}
+
+/// 使用 dart:io 原生下载文件到本地，替代 dio.download。
+Future<void> downloadToFile(String url, String filePath) async {
+  final client = HttpClient();
+  try {
+    final request = await client.getUrl(Uri.parse(url));
+    final response = await request.close();
+    if (response.statusCode != HttpStatus.ok) {
+      throw HttpException(
+        '下载失败: HTTP ${response.statusCode}',
+        uri: Uri.parse(url),
+      );
+    }
+    await File(filePath).create(recursive: true);
+    final sink = File(filePath).openWrite();
+    try {
+      await response.pipe(sink);
+    } finally {
+      await sink.close();
+    }
+  } finally {
+    client.close(force: true);
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shimmer/shimmer.dart';
+import 'package:tele_book/common/widget/shimmer.dart';
 
 class NetworkImageWidget extends StatelessWidget {
   final String imageUrl;
@@ -24,7 +24,7 @@ class NetworkImageWidget extends StatelessWidget {
         cacheWidth: 100,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
-          return Shimmer.fromColors(
+          return Shimmer(
             baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             // 高亮颜色：使用较浅的表面容器色或基础表面色
             highlightColor: Theme.of(context).colorScheme.surfaceContainerLow,

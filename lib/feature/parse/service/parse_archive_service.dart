@@ -6,7 +6,7 @@ import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/util/failure_util.dart';
 import 'package:tele_book/core/util/result_util.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
-import 'package:uuid/uuid.dart';
+import 'package:tele_book/core/util/uuid_util.dart';
 import 'package:archive/archive_io.dart';
 
 final parseArchiveServiceProvider = Provider((ref) => ParseArchiveService());
@@ -99,7 +99,7 @@ class ParseArchiveService {
   }) async {
     try {
       final tempOutputDir =
-          "${GlobalConfig.appTempDir.path}/${const Uuid().v4()}";
+          "${GlobalConfig.appTempDir.path}/${Uuid.v4()}";
       onProgress?.call(0, 2);
 
       // ① 解压放后台 Isolate（最重，可能 OOM，独立内存空间更安全）

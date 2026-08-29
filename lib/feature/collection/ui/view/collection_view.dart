@@ -112,7 +112,7 @@ class _CollectionViewState extends ConsumerState<CollectionView>
               maxCrossAxisExtent: 200,
               mainAxisSpacing: 8,
               crossAxisSpacing: 8,
-              mainAxisExtent: 230,
+              mainAxisExtent: 260,
             ),
             itemCount: list.length,
             itemBuilder: (listContext, index) {

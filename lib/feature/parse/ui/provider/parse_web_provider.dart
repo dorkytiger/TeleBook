@@ -1,8 +1,9 @@
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/download/service/download_service.dart';
 import 'package:tele_book/feature/parse/service/parse_web_service.dart';
+import 'package:webview_all/webview_all.dart';
 
 part 'parse_web_provider.g.dart';
 
@@ -25,7 +26,7 @@ class ParseWeb extends _$ParseWeb {
 
   bool get isInit => _webViewController != null;
 
-  InAppWebViewController? _webViewController;
+  WebViewController? _webViewController;
 
   @override
   ParseWebState build(String url) {
@@ -39,40 +40,53 @@ class ParseWeb extends _$ParseWeb {
     await Future.delayed(Duration.zero);
   }
 
-  void onLoadStart(InAppWebViewController controller) {
+  void onLoadStart(WebViewController controller) {
     _webViewController = controller;
   }
 
-  void onTitleChanged(InAppWebViewController controller, String? title) {
+  void onTitleChanged(WebViewController controller, String? title) {
     state = state.copyWith(title: title ?? '未知标题');
   }
 
-  Future<void> onProgressChange(
-    InAppWebViewController controller,
-    int progress,
-  ) async {
+  /// 页面加载进度变化：仅更新进度条。
+  ///
+  /// 不在此处执行 JS——加载过程中 WKWebView 的 evaluateJavaScript 会失败。
+  void onProgressChange(WebViewController controller, int progress) {
     _webViewController = controller;
-    final urls = await _parseWebService.extractImagesFromWebView(
-      onExtractImages: (js) async {
-        final result = await controller.evaluateJavascript(source: js);
-        return result?.toString();
-      },
-    );
-    state = state.copyWith(urls: urls, progress: progress);
+    state = state.copyWith(progress: progress);
+  }
+
+  /// 页面加载完成后提取图片链接。
+  Future<void> onPageFinished(WebViewController controller) async {
+    _webViewController = controller;
+    final urls = await _extractUrls(controller);
+    if (!ref.mounted) return;
+    state = state.copyWith(urls: urls);
   }
 
   Future<void> parseWeb() async {
-    if (_webViewController == null) {
-      return;
-    }
+    final controller = _webViewController;
+    if (controller == null) return;
 
-    final urls = await _parseWebService.extractImagesFromWebView(
-      onExtractImages: (js) async {
-        final result = await _webViewController!.evaluateJavascript(source: js);
-        return result?.toString();
-      },
-    );
+    final urls = await _extractUrls(controller);
+    if (!ref.mounted) return;
     state = state.copyWith(urls: urls);
+  }
+
+  /// 执行 JS 提取图片链接；失败时返回空列表而非抛异常。
+  Future<List<String>> _extractUrls(WebViewController controller) async {
+    try {
+      return await _parseWebService.extractImagesFromWebView(
+        onExtractImages: (js) async {
+          final result = await controller.runJavaScriptReturningResult(js);
+          return result.toString();
+        },
+      );
+    } catch (e) {
+      // 页面未就绪或 JS 执行失败时静默返回空列表，避免崩溃
+      debugPrint('[ParseWeb] 提取图片链接失败: $e');
+      return const [];
+    }
   }
 
   Future<void> startDownload() async {

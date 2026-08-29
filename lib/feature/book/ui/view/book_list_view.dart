@@ -4,10 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
-import 'package:responsive_framework/responsive_framework.dart';
 import 'package:tele_book/common/widget/f_adaptive_dialog.dart';
 import 'package:tele_book/common/widget/local_image_widget.dart';
-import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/feature/book/enum/book_menu_type.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
@@ -62,6 +60,7 @@ class _BookListViewState extends ConsumerState<BookListView> {
         }
       },
       child: FScaffold(
+        childPad: false,
         header: isSelectionMode
             ? _buildSelectionAppBar(context)
             : _buildNormalAppBar(context),
