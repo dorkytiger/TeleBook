@@ -12,7 +12,7 @@ import 'package:tele_book/feature/book/datasource/local/book_local_datasource.da
 import 'package:tele_book/feature/book/enum/book_sort.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/service/book_image_service.dart';
-import 'package:uuid/uuid.dart';
+import 'package:tele_book/core/util/uuid_util.dart';
 
 /// 保存步骤枚举，用于 UI 分步展示进度
 enum SaveStep {
@@ -109,7 +109,7 @@ class BookRepository {
     SaveAsBookDto dto, {
     void Function(SaveStep step, int current, int total)? onStepProgress,
   }) async {
-    final bookId = const Uuid().v4();
+    final bookId = Uuid.v4();
     final bookDir = '${GlobalConfig.booksDir.path}/$bookId';
     final originalDir = '$bookDir/original';
     final previewDir = '$bookDir/preview';
@@ -182,7 +182,7 @@ class BookRepository {
     try {
       for (var i = 0; i < dos.length; i++) {
         final dto = dos[i];
-        final bookId = const Uuid().v4();
+        final bookId = Uuid.v4();
         final bookDir = '${GlobalConfig.booksDir.path}/$bookId';
         final originalDir = '$bookDir/original';
         final previewDir = '$bookDir/preview';

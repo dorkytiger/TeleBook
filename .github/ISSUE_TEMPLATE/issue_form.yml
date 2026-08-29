@@ -1,0 +1,66 @@
+name: 问题 / 需求 / 维护
+description: 提交 Bug 修复（fix）、新功能（feat）、维护（chore）等事项
+title: "[<type>]: 简述"
+labels: ["triage"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: 类型（Type）
+      description: 选择本条 issue 的类型
+      options:
+        - fix - Bug 修复
+        - feat - 新功能
+        - chore - 维护 / 杂项（依赖、配置等）
+        - refactor - 重构
+        - docs - 文档
+        - test - 测试
+        - perf - 性能优化
+        - other - 其他
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## 环境信息
+  - type: input
+    id: version
+    attributes:
+      label: 版本 / 平台 / 环境
+      description: 应用版本、操作系统、Flutter 版本等
+      placeholder: "例如: v3.1.6 / Windows 11 / Flutter 3.47.1"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 描述（Description）
+      description: 详细描述问题现象或功能需求
+      placeholder: "发生了什么 / 希望实现什么"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤（Steps to Reproduce）
+      description: fix / bug 类必填
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 观察到...
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为（Expected）
+      placeholder: "期望应该发生什么"
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / 日志（Actual / Logs）
+      description: 实际发生什么，如有报错日志请粘贴
+      render: shell
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他信息
+      description: 截图、相关代码、建议方案等（可选）

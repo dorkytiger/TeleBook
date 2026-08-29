@@ -1,15 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/common/widget/network_image_widget.dart';
 import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/core/util/url_util.dart';
 import 'package:tele_book/feature/main/provider/main_provider.dart';
 import 'package:tele_book/feature/parse/ui/provider/parse_web_provider.dart';
+import 'package:webview_all/webview_all.dart';
 
 class ParseWebView extends ConsumerStatefulWidget {
   final String url;
@@ -21,15 +21,81 @@ class ParseWebView extends ConsumerStatefulWidget {
 }
 
 class _ParseWebViewState extends ConsumerState<ParseWebView> {
+  late final WebViewController _controller;
+
+  /// URL 无效时为 true，build 时显示错误提示而非构建 WebView。
+  bool _invalidUrl = false;
+
+  /// 防止 onProgress(100) 与 onPageFinished 重复执行页面完成逻辑。
+  bool _handledFinished = false;
+
   @override
-  void dispose() {
-    super.dispose();
+  void initState() {
+    super.initState();
+    final uri = normalizeWebUrl(widget.url);
+    if (uri == null) {
+      _invalidUrl = true;
+      debugPrint('[ParseWeb] 无效 URL: ${widget.url}');
+      return;
+    }
+
+    final notifier = ref.read(parseWebProvider(widget.url).notifier);
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (url) {
+            debugPrint('[ParseWeb] 页面开始加载: $url');
+            _handledFinished = false;
+          },
+          onProgress: (progress) {
+            notifier.onProgressChange(_controller, progress);
+            // 部分平台 onPageFinished 可能不触发，progress 到 100 时兜底
+            if (progress >= 100) {
+              _handlePageFinished(notifier);
+            }
+          },
+          onPageFinished: (url) {
+            debugPrint('[ParseWeb] 页面加载完成: $url');
+            _handlePageFinished(notifier);
+          },
+          onWebResourceError: (error) {
+            debugPrint(
+              '[ParseWeb] 资源加载错误: ${error.errorCode} '
+              '${error.description} ${error.url}',
+            );
+          },
+        ),
+      )
+      ..loadRequest(uri);
+    // 注册 controller，供解析图片使用
+    notifier.onLoadStart(_controller);
+  }
+
+  /// 页面加载完成后的处理：更新标题 + 提取图片链接。
+  ///
+  /// 标题获取失败不阻塞图片提取；进度与 finished 双触发只执行一次。
+  Future<void> _handlePageFinished(ParseWeb notifier) async {
+    if (_handledFinished) return;
+    _handledFinished = true;
+
+    String? title;
+    try {
+      title = await _controller.getTitle();
+    } catch (e) {
+      debugPrint('[ParseWeb] 获取标题失败: $e');
+    }
+    if (!mounted) return;
+    notifier.onTitleChanged(
+      _controller,
+      (title == null || title.isEmpty) ? widget.url : title,
+    );
+    await notifier.onPageFinished(_controller);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(parseWebProvider(widget.url));
-    final notifier = ref.read(parseWebProvider(widget.url).notifier);
 
     return FScaffold(
       header: FHeader.nested(
@@ -49,25 +115,27 @@ class _ParseWebViewState extends ConsumerState<ParseWebView> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          FDeterminateProgress(value: (state.progress) / 100),
-          Expanded(
-            child: InAppWebView(
-              initialUrlRequest: URLRequest(url: WebUri(widget.url)),
-              onLoadStart: (controller, url) {
-                notifier.onLoadStart(controller);
-              },
-              onTitleChanged: (controller, title) {
-                notifier.onTitleChanged(controller, title);
-              },
-              onProgressChanged: (controller, progress) {
-                notifier.onProgressChange(controller, progress);
-              },
+      child: _invalidUrl
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  '无效的网址：${widget.url}',
+                  textAlign: TextAlign.center,
+                  style: context.theme.typography.body.lg.copyWith(
+                    color: context.theme.colors.mutedForeground,
+                  ),
+                ),
+              ),
+            )
+          : Column(
+              children: [
+                FDeterminateProgress(value: (state.progress) / 100),
+                Expanded(
+                  child: WebViewWidget(controller: _controller),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

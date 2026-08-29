@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/core/util/url_util.dart';
 
 part 'parse_form_provider.freezed.dart';
 
@@ -71,7 +73,12 @@ class ParseForm extends _$ParseForm {
   void onParse(BuildContext context) {
     switch (state.type) {
       case ParseFormType.web:
-        context.push(AppRoute.parseWeb, extra: state.url);
+        final uri = normalizeWebUrl(state.url);
+        if (uri == null) {
+          showFToast(context: context, title: Text('网址无效，请检查格式'));
+          return;
+        }
+        context.push(AppRoute.parseWeb, extra: uri.toString());
         break;
       case ParseFormType.archive:
         context.push(AppRoute.parseArchiveSingle, extra: state.archivePath);

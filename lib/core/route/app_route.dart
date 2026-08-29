@@ -143,7 +143,7 @@ class AppRoute {
         path: parseWeb,
         pageBuilder: (context, state) {
           final url = state.extra as String?;
-          if (url == null) {
+          if (url == null || url.isEmpty) {
             return MaterialPage(child: ErrorRoutePage(message: "缺少URL参数"));
           }
           return MaterialPage(child: ParseWebView(url: url));

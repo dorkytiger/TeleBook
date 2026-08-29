@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:dk_util/dk_util.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -109,7 +109,7 @@ class ParsePdfSaveBook extends _$ParsePdfSaveBook {
 
 
   Future<void> onSave(List<String> tempPaths, String pdfName) async {
-    DKLog.i('开始保存解析结果为书籍，tempPaths: $tempPaths, pdfName: $pdfName');
+    AppLog.i('开始保存解析结果为书籍，tempPaths: $tempPaths, pdfName: $pdfName');
     state = AsyncValue.loading();
 
     ref.read(parsePdfSaveBookProgressProvider.notifier).state = (
@@ -118,7 +118,7 @@ class ParsePdfSaveBook extends _$ParsePdfSaveBook {
       tempPaths.length,
     );
 
-    DKLog.i('调用 repository.saveAsBook，开始文件复制和 DB 写入');
+    AppLog.i('调用 repository.saveAsBook，开始文件复制和 DB 写入');
     final result = await _repository.saveAsBook(
       SaveAsBookDto(title: pdfName, paths: tempPaths),
       onStepProgress: (step, current, total) {
@@ -132,11 +132,11 @@ class ParsePdfSaveBook extends _$ParsePdfSaveBook {
 
     result.fold(
       onSuccess: (_) {
-        DKLog.i('保存书籍成功');
+        AppLog.i('保存书籍成功');
         state = AsyncValue.data(null);
       },
       onError: (e) {
-        DKLog.e('保存书籍失败，错误信息：${e.message}');
+        AppLog.e('保存书籍失败，错误信息：${e.message}');
         state = AsyncValue.error(e.message, StackTrace.current);
       },
     );

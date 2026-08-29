@@ -1,0 +1,29 @@
+# <type>(<scope>): <subject>
+#
+# 提交信息格式（Conventional Commits）：
+#   <type>(<scope>): <subject>
+#   （空行）
+#   <body>        说明为什么做这个改动、怎么改的
+#   （空行）
+#   BREAKING CHANGE: <描述>   （如有破坏性变更）
+#
+# 类型说明（Type）：
+#   feat     - 新功能
+#   fix      - Bug 修复
+#   chore    - 维护 / 杂项（依赖、配置、清理等）
+#   refactor - 重构（不改变行为）
+#   docs     - 文档
+#   test     - 测试
+#   perf     - 性能优化
+#   style    - 代码风格（不影响逻辑）
+#   build    - 构建系统 / 外部依赖
+#   ci       - CI 配置
+#   revert   - 回滚
+#
+# scope 可选，表示影响范围，例如：feat(download): xxx、fix(webview): xxx
+#
+# 示例：
+#   feat(download): 下载组支持重试与删除
+#   fix(webview): 修复 macOS 沙箱导致网页无法加载
+#   chore: 清理未使用的依赖
+#   refactor(theme): 抽取品牌色配置
