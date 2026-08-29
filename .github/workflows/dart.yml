@@ -212,7 +212,12 @@ jobs:
       - name: Package macOS app
         run: |
           cd build/macos/Build/Products/Release
-          ditto -c -k --sequesterRsrc --keepParent "${{ env.APP_NAME }}.app" "$GITHUB_WORKSPACE/${{ env.APP_NAME }}-macos-${{ steps.version.outputs.VERSION }}.zip"
+          # 产物名取决于 Xcode target（默认 Runner.app），动态查找
+          APP_PATH=$(find . -maxdepth 1 -name "*.app" | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::未找到 .app 产物"; exit 1
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "$GITHUB_WORKSPACE/${{ env.APP_NAME }}-macos-${{ steps.version.outputs.VERSION }}.zip"
 
       - name: Upload macOS Artifact
         uses: actions/upload-artifact@v4

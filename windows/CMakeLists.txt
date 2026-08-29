@@ -49,6 +49,12 @@ endfunction()
 set(FLUTTER_MANAGED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/flutter")
 add_subdirectory(${FLUTTER_MANAGED_DIR})
 
+# 兼容新版 MSVC（VS 17.14+ / 18）：<experimental/coroutine> 弃用警告
+# 在新版编译器中被升级为硬错误（STL1011），导致部分插件（如
+# permission_handler_windows、webview_all_windows）编译失败。
+# 需在插件子目录创建前定义该宏以抑制弃用错误。
+add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+
 # Application build; see runner/CMakeLists.txt.
 add_subdirectory("runner")
 
