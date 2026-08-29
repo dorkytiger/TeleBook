@@ -4,6 +4,8 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
+![badge-windows](http://img.shields.io/badge/platform-windows-6EDB8D.svg?style=flat)
+![badge-macos](http://img.shields.io/badge/platform-macos-6EDB8D.svg?style=flat)
 
 _**Note: Version 3.0 is a major update with numerous new features and optimizations. It's recommended to backup your data before upgrading.**_
 
@@ -87,8 +89,10 @@ Visit [GitHub Releases](https://github.com/dorkytiger/TeleBook/releases) to down
 
 - **Android**: Download APK file and install directly
 - **iOS**: Download IPA file (requires self-signing)
+- **Windows**: Download ZIP and extract to run (requires [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/), usually pre-installed on Win10 1809+)
+- **macOS**: Download ZIP and extract to run (unsigned, allow on first launch in System Settings → Privacy & Security)
 
-> **Note**: The desktop version will be re-implemented with **Qt** in the future. Currently only **iOS** and **Android** are supported.
+> **Note**: The desktop version is now built with **Flutter** and released in this repository, supporting **Windows / macOS**.
 
 ### Method 2: Manual Compilation
 
@@ -106,6 +110,8 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # Build
 flutter build apk        # Android
 flutter build ios        # iOS
+flutter build windows    # Windows
+flutter build macos      # macOS
 ```
 
 ## 🚀 Quick Start
@@ -193,16 +199,16 @@ flutter build ios        # iOS
 
 ## 🛠️ Tech Stack
 
-- **Flutter 3.29.0** - Cross-platform UI framework
-- **GetX** - State management and routing
+- **Flutter 3.47+** - Cross-platform UI framework
+- **Riverpod** - State management & dependency injection
 - **Drift** - Local database (SQLite)
-- **SharedPreferences** - Local settings storage
-- **WebView** - Web parsing
-- **Archive** - Archive processing
-- **Background Downloader** - Background downloading
-- **TDesign Flutter** - UI component library
-- **Path Provider** - File path management
-- **File Picker** - File selection
+- **ForUI** - UI component library (shadcn-style)
+- **webview_all** - Cross-platform WebView (system WebView on Windows/macOS)
+- **background_downloader** - Background downloading
+- **pdf / pdfrx** - PDF parsing & rendering
+- **archive** - Archive processing
+- **path_provider** - File path management
+- **file_picker** - File selection
 
 ## ✅ Completed Features
 
@@ -215,10 +221,13 @@ flutter build ios        # iOS
 - ✅ Dark mode adaptation
 - ✅ Reading progress tracking
 - ✅ Multiple reading directions (left-right/right-left/top-bottom)
+- ✅ Slider pagination (draggable progress slider)
 - ✅ Reading settings persistence
 - ✅ Instant rename function
 - ✅ Smart file deletion
 - ✅ Real-time data sync
+- ✅ Download group operations (retry / delete, ✓ after auto-save)
+- ✅ Business blue theme
 - ✅ Performance optimization
 
 ### Core Features
@@ -232,6 +241,7 @@ flutter build ios        # iOS
 - ✅ Book export feature
 - ✅ Background download management
 - ✅ Local library management
+- ✅ Windows / macOS desktop support
 
 ## 📝 Future Development Plans
 
@@ -244,7 +254,7 @@ flutter build ios        # iOS
 
 ### Long-term Vision
 
-- [ ] Desktop client re-implemented with Qt
+- [ ] Linux desktop support
 - [ ] Cloud sync feature
 - [ ] Community sharing
 - [ ] Plugin system
@@ -268,7 +278,7 @@ flutter build ios        # iOS
 |                           | Zoom Viewing     | 0.5x-4x zoom support                          |
 | 🎨 **UI Experience**      | Dark Mode        | Full system theme adaptation                   |
 |                           | Dual Layout      | List/grid view switching                       |
-|                           | Modern Design    | TDesign-style UI                              |
+|                           | Modern Design    | ForUI-style UI (shadcn design language)       |
 |                           | Performance      | Smooth responsive experience                   |
 
 ## 🤝 Contributing

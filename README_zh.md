@@ -4,6 +4,8 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
+![badge-windows](http://img.shields.io/badge/platform-windows-6EDB8D.svg?style=flat)
+![badge-macos](http://img.shields.io/badge/platform-macos-6EDB8D.svg?style=flat)
 
 _**注意：3.0 版本为重大更新，包含大量新功能和优化，建议备份数据后升级。**_
 
@@ -87,8 +89,10 @@ _**注意：3.0 版本为重大更新，包含大量新功能和优化，建议�
 
 - **Android**: 下载 APK 文件直接安装
 - **iOS**: 下载 IPA 文件（需自签名）
+- **Windows**: 下载 ZIP 解压运行（需安装 [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)，Win10 1809+ 一般已自带）
+- **macOS**: 下载 ZIP 解压运行（未签名，首次打开需在"系统设置 → 隐私与安全性"中允许）
 
-> **注意**：桌面端计划使用 **Qt** 重新实现，目前仅支持 **iOS** 和 **Android** 平台。
+> **注意**：桌面端已基于 **Flutter** 构建完成，随本仓库一同发布，支持 **Windows / macOS** 平台。
 
 ### 方式二：手动编译
 
@@ -106,6 +110,8 @@ flutter pub run build_runner build --delete-conflicting-outputs
 # 编译
 flutter build apk        # Android
 flutter build ios        # iOS
+flutter build windows    # Windows
+flutter build macos      # macOS
 ```
 
 ## 🚀 快速开始
@@ -193,16 +199,16 @@ flutter build ios        # iOS
 
 ## 🛠️ 技术栈
 
-- **Flutter 3.29.0** - 跨平台 UI 框架
-- **GetX** - 状态管理与路由
+- **Flutter 3.47+** - 跨平台 UI 框架
+- **Riverpod** - 状态管理与依赖注入
 - **Drift** - 本地数据库（SQLite）
-- **SharedPreferences** - 本地设置存储
-- **WebView** - 网页解析
-- **Archive** - 压缩包处理
-- **Background Downloader** - 后台下载
-- **TDesign Flutter** - UI 组件库
-- **Path Provider** - 文件路径管理
-- **File Picker** - 文件选择
+- **ForUI** - UI 组件库（shadcn 风格）
+- **webview_all** - 跨平台网页视图（Windows/macOS 使用系统 WebView）
+- **background_downloader** - 后台下载
+- **pdf / pdfrx** - PDF 解析与渲染
+- **archive** - 压缩包处理
+- **path_provider** - 文件路径管理
+- **file_picker** - 文件选择
 
 ## ✅ 已完成的功能
 
@@ -215,10 +221,13 @@ flutter build ios        # iOS
 - ✅ 深色模式适配
 - ✅ 阅读进度记录
 - ✅ 多种阅读方向（左右/右左/上下）
+- ✅ 滑块分页（可拖拽进度滑块）
 - ✅ 阅读设置持久化
 - ✅ 即时重命名功能
 - ✅ 智能文件删除
 - ✅ 实时数据同步
+- ✅ 下载组操作（重试 / 删除，自动保存后显示 ✓）
+- ✅ 商业蓝主题
 - ✅ 性能优化
 
 ### 核心功能
@@ -232,6 +241,7 @@ flutter build ios        # iOS
 - ✅ 书籍导出功能
 - ✅ 后台下载管理
 - ✅ 本地书库管理
+- ✅ Windows / macOS 桌面端支持
 
 ## 📝 未来开发计划
 
@@ -244,7 +254,7 @@ flutter build ios        # iOS
 
 ### 长期愿景
 
-- [ ] 桌面端使用 Qt 重新实现
+- [ ] Linux 桌面端支持
 - [ ] 云同步功能
 - [ ] 社区分享
 - [ ] 插件系统
@@ -268,7 +278,7 @@ flutter build ios        # iOS
 |              | 缩放查看        | 0.5x-4x缩放支持          |
 | 🎨 **界面体验**  | 深色模式        | 完整适配系统主题             |
 |              | 双布局         | 列表/网格视图切换            |
-|              | 现代设计        | TDesign风格UI          |
+|              | 现代设计        | ForUI风格UI（shadcn设计语言）|
 |              | 性能优化        | 流畅响应体验               |
 
 ## 🤝 贡献

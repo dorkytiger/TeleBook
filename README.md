@@ -15,6 +15,8 @@
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
+![badge-windows](http://img.shields.io/badge/platform-windows-6EDB8D.svg?style=flat)
+![badge-macos](http://img.shields.io/badge/platform-macos-6EDB8D.svg?style=flat)
 
 </div>
 
@@ -39,14 +41,18 @@
 ### 📖 Reading Experience / 阅读体验
 - 📍 Auto-save reading progress / 自动保存阅读进度
 - 🔄 Multiple reading directions (LTR/RTL/TTB) / 多种阅读方向
+- 🎚️ Slider pagination / 滑块分页（可拖拽进度滑块）
 - ⚙️ Customizable reading settings / 可自定义阅读设置
-- 📊 Smart progress indicators / 智能进度指示器
 
 ### 🌐 Content Import / 内容导入
 - 🌐 WebView web parsing / 网页解析
 - 📦 Archive import (ZIP/CBZ/RAR) / 压缩包导入
 - 📄 PDF file import / PDF文件导入
 - 📁 Folder import / 文件夹导入
+
+### 📥 Download Management / 下载管理
+- 🔄 Group retry & delete / 下载组重试与删除
+- ✅ Auto-save as book status / 自动保存为书籍状态标识
 
 ### 📤 Export / 导出
 - 📤 Single & batch export / 单个与批量导出
@@ -61,10 +67,12 @@
 
 - **Android**: APK
 - **iOS**: IPA (requires self-signing / 需自签名)
+- **Windows**: ZIP (requires WebView2 Runtime / 需 WebView2 运行时)
+- **macOS**: ZIP (unsigned, requires manual approval on first launch / 未签名，首次打开需手动允许)
 
-> **Note**: The desktop version in here [Desktop Version](https://github.com/dorkytiger/TelebookDesktop)
-> 
-> **注意**：桌面端在这里 [桌面版](https://github.com/dorkytiger/TelebookDesktop)
+> **Note**: The desktop version is now built with Flutter and released in this repository.
+>
+> **注意**：桌面版已基于 Flutter 构建，与本仓库一同发布。
 
 ---
 
@@ -81,11 +89,12 @@ For detailed documentation, please refer to:
 
 ## 🛠️ Tech Stack / 技术栈
 
-- **Flutter 3.29.0**
-- **GetX** - State management / 状态管理
+- **Flutter 3.47+**
+- **Riverpod** - State management / 状态管理
 - **Drift** - Local database / 本地数据库
-- **SharedPreferences** - Settings storage / 设置存储
-- **TDesign Flutter** - UI components / UI组件库
+- **ForUI** - UI components / UI组件库
+- **webview_all** - Cross-platform WebView / 跨平台网页视图
+- **background_downloader** - Background downloads / 后台下载
 
 ---
 
@@ -106,4 +115,3 @@ MIT License
 **⭐ If TeleBook helps you, please give it a Star!**
 
 **⭐ 如果 TeleBook 对你有帮助，请点个 Star 支持一下！**
-
