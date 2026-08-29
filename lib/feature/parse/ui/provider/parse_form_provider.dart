@@ -73,7 +73,7 @@ class ParseForm extends _$ParseForm {
   void onParse(BuildContext context) {
     switch (state.type) {
       case ParseFormType.web:
-        final uri = normalizeWebUrl(state.url);
+        final uri = normalizeWebUrl(urlController.text);
         if (uri == null) {
           showFToast(context: context, title: Text('网址无效，请检查格式'));
           return;
@@ -126,12 +126,7 @@ class ParseForm extends _$ParseForm {
     final text = clipboardData?.text ?? '';
     if (Uri.tryParse(text)?.hasAbsolutePath == true) {
       urlController.text = text;
-      state = state.copyWith(url: text);
     }
-  }
-
-  void onUrlChanged(String value) {
-    state = state.copyWith(url: value);
   }
 
   Future<void> pickerArchive() async {

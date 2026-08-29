@@ -163,10 +163,12 @@ jobs:
         run: flutter build windows --release
 
       - name: Package Windows build
-        shell: bash
+        shell: powershell
         run: |
-          cd build/windows/x64/runner/Release
-          tar -a -c -f "$GITHUB_WORKSPACE/${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip" .
+          # Git Bash 的 tar -a 在 Windows 上有兼容问题（Cannot connect to D:），
+          # 改用 PowerShell 原生 Compress-Archive 打包
+          $zip = "$env:GITHUB_WORKSPACE\${{ env.APP_NAME }}-windows-${{ steps.version.outputs.VERSION }}.zip"
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath $zip -Force
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
