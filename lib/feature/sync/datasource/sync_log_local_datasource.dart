@@ -34,6 +34,12 @@ class SyncLogLocalDatasource extends DatabaseAccessor<AppDatabase>
         .getSingleOrNull();
   }
 
+  /// 监听单条记录变化（同步会话期间进度持续写库，详情页实时刷新用）。
+  Stream<SyncLogTableData?> watchLog(int id) {
+    return (select(syncLogTable)..where((t) => t.id.equals(id)))
+        .watchSingleOrNull();
+  }
+
   Future<void> updateLog(
     int id, {
     DateTime? finishedAt,

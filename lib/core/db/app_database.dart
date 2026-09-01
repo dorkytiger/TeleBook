@@ -68,15 +68,20 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         // v3 → v4：书籍加同步 uuid 列 + 新增实体同步状态表
-        await migrator.addColumn(bookTable, bookTable.uuid);
+        // SQLite 的 ALTER TABLE 不支持添加 NOT NULL UNIQUE 列，
+        // 因此分三步：加可空列 → 回填 uuid → 建唯一索引。
+        await customStatement('ALTER TABLE "book_table" ADD COLUMN "uuid" TEXT');
         // 回填已有书籍的 uuid（SQLite 无 uuid 函数，用 randomblob 拼）
         await customStatement('''
-          UPDATE books SET uuid =
+          UPDATE "book_table" SET uuid =
             lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' ||
             lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' ||
             lower(hex(randomblob(6)))
           WHERE uuid IS NULL
         ''');
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS "book_table_uuid_key" ON "book_table" ("uuid")',
+        );
         await migrator.createTable(entitySyncStateTable);
       }
       if (from < 5) {

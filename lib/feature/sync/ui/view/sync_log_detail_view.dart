@@ -28,6 +28,9 @@ class SyncLogDetailView extends ConsumerWidget {
         loading: () => const Center(child: FCircularProgress()),
         error: (e, _) => Center(child: Text('加载失败: $e')),
         data: (entry) {
+          if (entry == null) {
+            return const Center(child: Text('该记录不存在'));
+          }
           final books = parseLogBooks(entry);
           if (books.isEmpty) {
             return const Center(child: Text('该记录没有书籍明细'));
@@ -160,9 +163,9 @@ class SyncLogDetailView extends ConsumerWidget {
   };
 }
 
-final syncLogDetailProvider = FutureProvider.autoDispose
-    .family<SyncLogTableData, int>((ref, id) async {
-      final log = await ref.watch(syncLogLocalDatasourceProvider).getLog(id);
-      if (log == null) throw StateError('记录不存在');
-      return log;
+/// 监听单条同步记录：同步会话期间数据库持续更新（进度/状态），
+/// StreamProvider 让详情页实时刷新；记录删除时返回 null。
+final syncLogDetailProvider = StreamProvider.autoDispose
+    .family<SyncLogTableData?, int>((ref, id) {
+      return ref.watch(syncLogLocalDatasourceProvider).watchLog(id);
     });

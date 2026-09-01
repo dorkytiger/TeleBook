@@ -40,6 +40,23 @@ final syncMutationServiceProvider = Provider<SyncMutationService>((ref) {
   );
 });
 
+/// 会话进行中的实时进度汇总（底栏"同步中"提示用）。
+class SyncSessionProgress {
+  final String? currentName; // 当前正在同步的书名
+  final int currentFilesDone; // 当前书图片已处理数
+  final int currentFilesTotal; // 当前书图片总数
+  final int booksDone; // 已完成书籍数
+  final int booksTotal; // 总书籍数
+
+  const SyncSessionProgress({
+    this.currentName,
+    this.currentFilesDone = 0,
+    this.currentFilesTotal = 0,
+    this.booksDone = 0,
+    this.booksTotal = 0,
+  });
+}
+
 /// 本地优先（离线优先）的书籍变更编排：
 ///
 /// 变更（修改/删除/导入）**立即落本地**（用户无感、离线可用），
@@ -69,6 +86,11 @@ class SyncMutationService {
 
   /// drain 是否进行中（底栏"同步中"据此显示，任意导入/删除触发也会亮）。
   final ValueNotifier<bool> draining = ValueNotifier(false);
+
+  /// 会话实时进度（当前书图片 done/total + 总书籍 done/total），
+  /// 每次会话状态变更时更新；无会话时为 null。
+  final ValueNotifier<SyncSessionProgress?> sessionProgress =
+      ValueNotifier(null);
 
   /// 当前同步会话（drain + pull 共用一条本地记录）。
   SyncLogSession? _session;
@@ -266,6 +288,21 @@ class SyncMutationService {
       final tasks = await _syncTasks.listPending();
       if (tasks.isNotEmpty) {
         await beginSyncSession();
+        // 预注册所有待同步书籍到会话（status=pending，files 全 pending）：
+        // 否则详情页只显示当前正在推送的那一本。
+        for (final task in tasks) {
+          if (task.entityType != 'book' || task.op != 'upsert') continue;
+          if (task.payload == null || task.payload!.isEmpty) continue;
+          final payload = BookPayload.fromJson(
+            jsonDecode(task.payload!) as Map<String, dynamic>,
+          );
+          final fileItems = _fileItemsFromPayload(payload, task.entityId);
+          sessionUpsertBook(
+            task.entityId,
+            payload.name,
+            fileItems.map((f) => f.relPath).toList(),
+          );
+        }
       }
       for (final task in tasks) {
         final proceed = await _pushTask(task);
@@ -555,16 +592,49 @@ class SyncMutationService {
     _schedulePersist(); // 立即刷
     await _persistSessionNow();
     _session = null;
+    sessionProgress.value = null; // 会话结束，底栏不再显示进度
   }
 
   Timer? _persistTimer;
   void _schedulePersist() {
-    if (!_sessionDirty) return;
-    _sessionDirty = false;
+    // 实时推送底栏进度（不等落库 timer）
+    _updateSessionProgress();
+    // 防抖：每次变更都（重新）调度，timer 到期写库并复位 dirty。
+    // 原实现只写一次库（dirty 复位后不再调度），导致进度 UI 停在最早快照。
+    _sessionDirty = true;
     _persistTimer?.cancel();
     _persistTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!_sessionDirty) return;
+      _sessionDirty = false;
       _persistSessionNow();
     });
+  }
+
+  /// 汇总会话实时进度（当前书图片 done/total + 总书籍 done/total）到底栏。
+  void _updateSessionProgress() {
+    final session = _session;
+    if (session == null) {
+      sessionProgress.value = null;
+      return;
+    }
+    // 当前正在同步的书：优先第一个 syncing；否则第一个非 done/failed（等待中）
+    SyncLogSessionBook? current;
+    for (final b in session.books) {
+      if (b.status == 'syncing') {
+        current = b;
+        break;
+      }
+    }
+    current ??= session.books
+        .where((b) => b.status != 'done' && b.status != 'failed')
+        .firstOrNull;
+    sessionProgress.value = SyncSessionProgress(
+      currentName: current?.name,
+      currentFilesDone: current?.filesDone ?? 0,
+      currentFilesTotal: current?.filesTotal ?? 0,
+      booksDone: session.syncedBooks,
+      booksTotal: session.totalBooks,
+    );
   }
 
   Future<void> _persistSessionNow() async {

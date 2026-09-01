@@ -21,6 +21,7 @@ class SyncHistoryItem {
     required this.createdAt,
   });
 
+
   factory SyncHistoryItem.fromBookHistory(BookHistory h) {
     return SyncHistoryItem(
       id: h.id,

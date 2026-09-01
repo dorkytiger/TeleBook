@@ -53,10 +53,12 @@ class SyncStatusNotifier extends Notifier<SyncStatusState> {
     mutation.conflictedBookIds.addListener(_refreshListeners);
     mutation.outboxRevision.addListener(_refreshListeners);
     mutation.draining.addListener(_onDrainingChanged);
+    mutation.sessionProgress.addListener(_onSessionProgressChanged);
     ref.onDispose(() {
       mutation.conflictedBookIds.removeListener(_refreshListeners);
       mutation.outboxRevision.removeListener(_refreshListeners);
       mutation.draining.removeListener(_onDrainingChanged);
+      mutation.sessionProgress.removeListener(_onSessionProgressChanged);
     });
 
     Future.microtask(refresh);
@@ -70,7 +72,28 @@ class SyncStatusNotifier extends Notifier<SyncStatusState> {
   /// drain 进行中 → 底栏显示"同步中"（任意导入/删除触发）。
   void _onDrainingChanged() {
     final draining = ref.read(syncMutationServiceProvider).draining.value;
-    state = state.copyWith(syncing: draining, syncDetail: draining ? '同步中…' : null);
+    state = state.copyWith(
+      syncing: draining,
+      syncDetail: draining ? _buildSyncDetail() : null,
+    );
+  }
+
+  /// 会话进度变化 → 更新"同步中"文案（当前书图片 + 总书籍进度）。
+  void _onSessionProgressChanged() {
+    if (!ref.read(syncMutationServiceProvider).draining.value) return;
+    state = state.copyWith(syncDetail: _buildSyncDetail());
+  }
+
+  /// 组装底栏同步中文案：当前书图片 done/total · 总书籍 done/total。
+  String? _buildSyncDetail() {
+    final p = ref.read(syncMutationServiceProvider).sessionProgress.value;
+    if (p == null) return '同步中…';
+    final parts = <String>[
+      '同步中',
+      '当前 ${p.currentFilesDone}/${p.currentFilesTotal}',
+      '共 ${p.booksDone}/${p.booksTotal}',
+    ];
+    return parts.join(' · ');
   }
 
   /// 刷新：配置状态 + 待同步数 + 冲突数（服务器不可达时退回本地标记数）。
