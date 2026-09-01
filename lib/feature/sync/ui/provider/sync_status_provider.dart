@@ -43,11 +43,18 @@ class SyncStatusState {
 
 /// 底栏同步状态：监听 outbox（待同步数）+ 冲突标记 + 服务器冲突列表；
 /// 读取即触发自动同步注册。
+///
+/// 依赖方向是单向的：本 notifier watch [autoSyncServiceProvider] 并监听其
+/// `ValueNotifier` 更新状态；AutoSyncService 不反向 read 本 provider
+/// （避免 riverpod 循环依赖）。
 class SyncStatusNotifier extends Notifier<SyncStatusState> {
   @override
   SyncStatusState build() {
     // 读取即注册自动同步（启动 drain + 定时）
-    ref.watch(autoSyncServiceProvider);
+    final autoSync = ref.watch(autoSyncServiceProvider);
+    autoSync.syncing.addListener(_onAutoSyncChanged);
+    autoSync.syncDetail.addListener(_onAutoSyncChanged);
+    autoSync.refreshTick.addListener(_onAutoSyncRefreshTick);
 
     final mutation = ref.watch(syncMutationServiceProvider);
     mutation.conflictedBookIds.addListener(_refreshListeners);
@@ -55,6 +62,9 @@ class SyncStatusNotifier extends Notifier<SyncStatusState> {
     mutation.draining.addListener(_onDrainingChanged);
     mutation.sessionProgress.addListener(_onSessionProgressChanged);
     ref.onDispose(() {
+      autoSync.syncing.removeListener(_onAutoSyncChanged);
+      autoSync.syncDetail.removeListener(_onAutoSyncChanged);
+      autoSync.refreshTick.removeListener(_onAutoSyncRefreshTick);
       mutation.conflictedBookIds.removeListener(_refreshListeners);
       mutation.outboxRevision.removeListener(_refreshListeners);
       mutation.draining.removeListener(_onDrainingChanged);
@@ -66,6 +76,20 @@ class SyncStatusNotifier extends Notifier<SyncStatusState> {
   }
 
   void _refreshListeners() {
+    Future.microtask(refresh);
+  }
+
+  /// AutoSyncService 的 syncing / syncDetail 变化 → 同步到底栏状态。
+  void _onAutoSyncChanged() {
+    final autoSync = ref.read(autoSyncServiceProvider);
+    state = state.copyWith(
+      syncing: autoSync.syncing.value,
+      syncDetail: autoSync.syncDetail.value,
+    );
+  }
+
+  /// AutoSyncService 完成一个周期 → 刷新配置/待同步数/冲突数。
+  void _onAutoSyncRefreshTick() {
     Future.microtask(refresh);
   }
 
@@ -125,14 +149,6 @@ class SyncStatusNotifier extends Notifier<SyncStatusState> {
       pendingCount: pending,
       conflictCount: count,
     );
-  }
-
-  void setSyncing(bool syncing) {
-    state = state.copyWith(syncing: syncing, syncDetail: syncing ? state.syncDetail : null);
-  }
-
-  void setSyncDetail(String? detail) {
-    state = state.copyWith(syncDetail: detail);
   }
 }
 

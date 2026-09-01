@@ -264,9 +264,13 @@ class SyncService extends _$SyncService {
 
   /// 仅拉取：应用服务器增量事件（手动同步页收尾用）。
   ///
+  /// [onBookFiles]：每本书开始下载前的文件清单（uuid, 书名, 文件列表；失败重试用）。
   /// [onBookDownload]：每本书图片下载进度（uuid, 书名, 已完成文件数, 总文件数）。
+  /// [onBookFileError]：单个图片下载失败（uuid, 相对路径, 错误对象）。
   Future<int> pullOnly({
+    void Function(String uuid, String name, List<BookFileMeta> files)? onBookFiles,
     void Function(String uuid, String name, int done, int total)? onBookDownload,
+    void Function(String uuid, String relPath, Object error)? onBookFileError,
   }) async {
     final url = await _settings.getString(SyncSettings.serverUrl);
     final token = await _settings.getString(SyncSettings.token);
@@ -276,8 +280,57 @@ class SyncService extends _$SyncService {
     return _pullEvents(
       url,
       Options(headers: {'Authorization': 'Bearer $token'}),
+      onBookFiles: onBookFiles,
       onBookDownload: onBookDownload,
+      onBookFileError: onBookFileError,
     );
+  }
+
+  /// 重试单本书的图片下载（同步下载页失败项"重试"用）。
+  ///
+  /// [files] 为拉取事件里上报的文件清单（onBookFiles 回调拿到），
+  /// 已存在且大小一致的文件自动跳过；全部成功返回 true。
+  ///
+  /// 首次拉取全失败时该书未落库（避免脏数据），重试成功后会补插元数据。
+  Future<bool> retryBookFiles({
+    required String uuid,
+    required String name,
+    required List<BookFileMeta> files,
+    void Function(int done, int total)? onProgress,
+    void Function(String relPath, Object error)? onFileError,
+  }) async {
+    var ok = true;
+    final (downloaded, failedCount) = await _downloadBookFiles(
+      uuid,
+      files,
+      onProgress: onProgress,
+      onFileError: (relPath, err) {
+        ok = false;
+        onFileError?.call(relPath, err);
+      },
+    );
+    if (downloaded.isEmpty || failedCount > 0) return ok;
+
+    // 书不存在（首次全失败未落库）→ 先补插元数据
+    if (await _books.getBookByUuid(uuid) == null) {
+      await _books.upsertSyncedBook(uuid: uuid, name: name);
+    }
+
+    final localSubPaths = <String>[];
+    String? coverSubPath;
+    for (final item in downloaded) {
+      if (item.relPath == 'cover.jpg') {
+        coverSubPath = '${uuid}/${item.relPath}';
+      } else {
+        localSubPaths.add('${uuid}/${item.relPath}');
+      }
+    }
+    await _books.updateSyncedBookFiles(
+      uuid: uuid,
+      localSubPaths: localSubPaths,
+      coverSubPath: coverSubPath,
+    );
+    return ok;
   }
 
   /// 归档历史列表（时间倒序）。
@@ -367,13 +420,19 @@ class SyncService extends _$SyncService {
   }
 
   /// 拉取服务器增量事件并应用到本地书库，推进游标。
+  ///
+  /// 任一图片下载失败时**不推进游标**：下次拉取会重新遇到同一批事件，
+  /// 已成功下载的文件按 hash+size 命中跳过，失败文件自动重试。
   Future<int> _pullEvents(
     String url,
     Options options, {
+    void Function(String uuid, String name, List<BookFileMeta> files)? onBookFiles,
     void Function(String uuid, String name, int done, int total)? onBookDownload,
+    void Function(String uuid, String relPath, Object error)? onBookFileError,
   }) async {
     var cursor = int.tryParse(await _settings.getString(SyncSettings.cursor) ?? '') ?? 0;
     var applied = 0;
+    var hasFailed = false;
 
     while (true) {
       final res = await _dio.get<Map<String, dynamic>>(
@@ -387,25 +446,35 @@ class SyncService extends _$SyncService {
         if (e.entityType == 'book') {
           if (e.op == 'upsert') {
             final payload = e.payload ?? const BookPayload(name: '未知书名');
-            // 1. 元数据落库（uuid 稳定）+ 回写服务器版本（避免下次 push 冲突）
-            await _books.upsertSyncedBook(
-              uuid: e.entityId,
-              name: payload.name,
-              currentPage: payload.currentPage,
-            );
-            if (e.revision > 0) {
-              await _syncState.upsertRevision('book', e.entityId, e.revision);
-            }
+            // 1. 先上报文件清单（失败重试用）
+            onBookFiles?.call(e.entityId, payload.name, payload.files);
             // 2. 下载缺失图片（按 hash，已有且大小一致则跳过）
-            final downloaded = await _downloadBookFiles(
+            final (downloaded, failedCount) = await _downloadBookFiles(
               e.entityId,
               payload.files,
               onProgress: onBookDownload == null
                   ? null
                   : (done, total) =>
                         onBookDownload(e.entityId, payload.name, done, total),
+              onFileError: (relPath, err) {
+                // 无论外部是否监听，失败都要记下：游标不推进 → 下次自动补下
+                hasFailed = true;
+                onBookFileError?.call(e.entityId, relPath, err);
+              },
             );
-            if (downloaded.isNotEmpty) {
+            // 3. 只有**全部图片都下载成功**才落库（元数据 + 回填路径）：
+            //    只要有任意一张失败，这本书就完全不落库 → 本地不留脏数据；
+            //    游标未推进，下次拉取自动重试，全部成功后再落库。
+            //    （已存在的书也仅在本次全部成功时更新，避免覆盖为脏状态）
+            if (downloaded.isNotEmpty && failedCount == 0) {
+              await _books.upsertSyncedBook(
+                uuid: e.entityId,
+                name: payload.name,
+                currentPage: payload.currentPage,
+              );
+              if (e.revision > 0) {
+                await _syncState.upsertRevision('book', e.entityId, e.revision);
+              }
               final localSubPaths = <String>[];
               String? coverSubPath;
               for (final item in downloaded) {
@@ -439,20 +508,26 @@ class SyncService extends _$SyncService {
       if (!data.hasMore) break;
     }
 
-    await _settings.setString(SyncSettings.cursor, '$cursor');
+    // 有图片下载失败：游标保持原值，下次拉取重新处理并补下失败文件
+    if (!hasFailed) {
+      await _settings.setString(SyncSettings.cursor, '$cursor');
+    }
     return applied;
   }
 
-  /// 按 hash 下载事件里引用的图片；返回实际下载/已存在的文件项。
+  /// 按 hash 下载事件里引用的图片；返回实际下载/已存在的文件项 + 失败数。
   ///
   /// [onProgress]：已完成文件数 / 总文件数（含已存在跳过的）。
-  Future<List<BookFileItem>> _downloadBookFiles(
+  /// [onFileError]：单个文件下载失败回调（相对路径, 错误对象），不中断整本书。
+  Future<(List<BookFileItem>, int)> _downloadBookFiles(
     String uuid,
     List<BookFileMeta> files, {
     void Function(int done, int total)? onProgress,
+    void Function(String relPath, Object error)? onFileError,
   }) async {
     final result = <BookFileItem>[];
     var done = 0;
+    var failed = 0;
     for (final f in files) {
       if (f.relPath.isEmpty || f.hash.isEmpty) {
         done++;
@@ -477,11 +552,19 @@ class SyncService extends _$SyncService {
           BookFileItem(relPath: f.relPath, absPath: dest, hash: f.hash, size: f.size),
         );
       } catch (e) {
+        failed++;
         AppLog.e('下载图片失败 ${f.hash}: $e');
+        // 清理下载中断留下的半截文件，避免下次误判为"已存在"
+        if (await existing.exists()) {
+          try {
+            await existing.delete();
+          } catch (_) {}
+        }
+        onFileError?.call(f.relPath, e);
       }
       done++;
       onProgress?.call(done, files.length);
     }
-    return result;
+    return (result, failed);
   }
 }

@@ -80,6 +80,7 @@ class _SyncHistoryDetailViewState extends ConsumerState<SyncHistoryDetailView> {
       final sync = ref.read(syncServiceProvider.notifier);
       await sync.restoreBook(historyId: widget.item.id);
       // 拉取恢复事件并下载图片（每本进度回调）
+      var failedFiles = 0;
       await sync.pullOnly(
         onBookDownload: (uuid, name, done, total) {
           if (!mounted) return;
@@ -91,8 +92,23 @@ class _SyncHistoryDetailViewState extends ConsumerState<SyncHistoryDetailView> {
             });
           }
         },
+        onBookFileError: (uuid, relPath, error) {
+          failedFiles++;
+        },
       );
       if (!mounted) return;
+      if (failedFiles > 0) {
+        setState(() {
+          _restoring = false;
+          _error = '有 $failedFiles 张图片下载失败（游标未推进，可稍后重试恢复）';
+        });
+        showFToast(
+          context: context,
+          title: const Text('部分图片下载失败'),
+          description: Text('$_error'),
+        );
+        return;
+      }
       showFToast(context: context, title: const Text('恢复成功'));
       context.go(AppRoute.main); // 返回书籍页面
     } catch (e) {

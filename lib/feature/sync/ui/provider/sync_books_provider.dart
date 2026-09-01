@@ -120,7 +120,15 @@ class SyncBooksNotifier extends Notifier<SyncBooksState> {
 
     // 收尾：拉取一次，应用其它设备的变更
     try {
-      await syncService.pullOnly();
+      var failedFiles = 0;
+      await syncService.pullOnly(
+        onBookFileError: (uuid, relPath, error) {
+          failedFiles++;
+        },
+      );
+      if (failedFiles > 0) {
+        mutation.reportError('有 $failedFiles 张图片下载失败，将在下次自动同步时重试');
+      }
     } catch (_) {}
 
     // 记录本次手动同步（快照 = 同步完成后的书库状态）
