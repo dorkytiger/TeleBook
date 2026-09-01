@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
@@ -196,7 +197,6 @@ class ParseBatchImageFolder extends _$ParseBatchImageFolder {
 
 @riverpod
 class SaveBatchAsBook extends _$SaveBatchAsBook {
-  BookRepository get _bookRepository => ref.read(bookRepositoryProvider);
 
   @override
   SaveBatchAsBookState build(ParseBatchImageFolderParam param) {
@@ -215,28 +215,25 @@ class SaveBatchAsBook extends _$SaveBatchAsBook {
         .map((e) => SaveAsBookDto(title: e.name, paths: e.tempPaths))
         .toList();
 
-    final result = await _bookRepository.saveBatchAsBooks(
-      dos,
-      (count) {
-        state = state.copyWith(saveAsBookCount: count);
-      },
-    );
-
-    result.fold(
-      onSuccess: (_) {
-        state = state.copyWith(
-          submitState: const AsyncData(null),
-          saveAsBookCount: 0,
-        );
-      },
-      onError: (error) {
-        state = state.copyWith(
-          submitState: AsyncValue.error(
-            error.message,
-            StackTrace.current,
-          ),
-        );
-      },
-    );
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBatchBookImport(
+        dos,
+        onProgress:
+        (count) {
+          state = state.copyWith(saveAsBookCount: count);
+        },
+      );
+      state = state.copyWith(
+        submitState: const AsyncData(null),
+        saveAsBookCount: 0,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        submitState: AsyncValue.error(
+          '$e',
+          StackTrace.current,
+        ),
+      );
+    }
   }
 }

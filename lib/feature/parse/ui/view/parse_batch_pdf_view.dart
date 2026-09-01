@@ -102,7 +102,7 @@ class _ParseBatchPdfViewState extends ConsumerState<ParseBatchPdfView> {
                         title: Text(item.name),
                         subtitle: Text('页数：${item.tempPaths.length}'),
                         prefix: LocalImageWidget(
-                          imagePath: item.tempPaths.first,
+                          imagePath: item.tempPaths.isEmpty ? '' : item.tempPaths.first,
                         ),
                         suffix: const Icon(FLucideIcons.chevronRight),
                         onPress: () {
@@ -124,7 +124,7 @@ class _ParseBatchPdfViewState extends ConsumerState<ParseBatchPdfView> {
                       ? Text(
                           '正在保存：${saveBookProgress.current} / ${saveBookProgress.total}',
                         )
-                      : const Text('保存到书架'),
+                      : const Text('保存全部'),
                 ),
               ),
             ],

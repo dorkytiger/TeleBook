@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_pdf_service.dart';
 
@@ -190,7 +191,6 @@ final parseBatchPdfSaveBookProgressProvider =
 
 @riverpod
 class ParseBatchPdfSaveBook extends _$ParseBatchPdfSaveBook {
-  BookRepository get _repository => ref.read(bookRepositoryProvider);
 
   @override
   FutureOr<void> build() => null;
@@ -211,19 +211,19 @@ class ParseBatchPdfSaveBook extends _$ParseBatchPdfSaveBook {
         );
 
 
-    final result = await _repository.saveBatchAsBooks(dos, (count) {
-      final progress = ref.read(parseBatchPdfSaveBookProgressProvider);
-      ref.read(parseBatchPdfSaveBookProgressProvider.notifier).state = progress
-          .copyWith(current: count);
-    });
-
-    result.fold(
-      onSuccess: (_) {
-        state = const AsyncValue.data(null);
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
-    );
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBatchBookImport(
+        dos,
+        onProgress:
+        (count) {
+          final progress = ref.read(parseBatchPdfSaveBookProgressProvider);
+          ref.read(parseBatchPdfSaveBookProgressProvider.notifier).state =
+              progress.copyWith(current: count);
+        },
+      );
+      state = const AsyncValue.data(null);
+    } catch (e) {
+      state = AsyncError('$e', StackTrace.current);
+    }
   }
 }

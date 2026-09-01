@@ -5,6 +5,7 @@ import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/enum/book_sort.dart';
 import 'package:tele_book/feature/book/model/state/book_list_state.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 
 part 'book_provider.g.dart';
 
@@ -16,27 +17,19 @@ final booksProvider = StreamProvider.autoDispose<List<BookTableData>>((ref){
 class _BookListQueryState {
   final String name;
   final BookSort? sort;
-  final int page;
-  final int pageSize;
 
   const _BookListQueryState({
     this.name = '',
     this.sort,
-    this.page = 1,
-    this.pageSize = 20,
   });
 
   _BookListQueryState copyWith({
     String? name,
     BookSort? sort,
-    int? page,
-    int? pageSize,
   }) {
     return _BookListQueryState(
       name: name ?? this.name,
       sort: sort ?? this.sort,
-      page: page ?? this.page,
-      pageSize: pageSize ?? this.pageSize,
     );
   }
 }
@@ -70,15 +63,11 @@ class _BookListQueryNotifier extends Notifier<_BookListQueryState> {
   _BookListQueryState build() => const _BookListQueryState();
 
   void updateSearch(String name) {
-    state = state.copyWith(name: name, page: 1);
+    state = state.copyWith(name: name);
   }
 
   void updateSort(BookSort? sort) {
-    state = state.copyWith(sort: sort, page: 1);
-  }
-
-  void loadNextPage() {
-    state = state.copyWith(page: state.page + 1);
+    state = state.copyWith(sort: sort);
   }
 }
 
@@ -183,10 +172,7 @@ class BookList extends _$BookList {
       filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
 
-    final visibleCount = query.page * query.pageSize;
-    final visibleBooks = filtered.take(visibleCount).toList();
-
-    final bookVos = visibleBooks.map((book) {
+    final bookVos = filtered.map((book) {
       final coverPath = book.coverSubPath != null
           ? GlobalConfig.resolveBookPath(book.coverSubPath!)
           : book.localSubPaths.isNotEmpty
@@ -197,18 +183,9 @@ class BookList extends _$BookList {
 
     return BookListState(
       bookVos: bookVos,
-      hasMore: filtered.length > visibleBooks.length,
       name: query.name,
       sort: query.sort,
-      isLoadingMore: false,
     );
-  }
-
-  Future<void> loadNextPage() async {
-    if (!state.hasValue || state.isLoading) return;
-    final current = state.requireValue;
-    if (!current.hasMore || current.isLoadingMore) return;
-    ref.read(bookListQueryProvider.notifier).loadNextPage();
   }
 
   Future<void> updateSearch(String name) async {
@@ -252,10 +229,14 @@ class BookList extends _$BookList {
     ref.read(bookListUiProvider.notifier).toggleLayout();
   }
 
-  // ➡️ 删除单本书并刷新列表
+  // ➡️ 删除单本书：服务器优先（同步成功后才删本地），未配置连接则直接本地删除
   Future<void> deleteBook(int bookId) async {
     final bookRepository = ref.read(bookRepositoryProvider);
-    await bookRepository.deleteBook(bookId);
+    final book = await bookRepository.getBookById(bookId);
+    if (book == null) return;
+    await ref
+        .read(syncMutationServiceProvider)
+        .enqueueBookDelete(uuid: book.uuid);
     ref.read(bookListUiProvider.notifier).clearSelectedIds([bookId]);
   }
 
@@ -267,7 +248,11 @@ class BookList extends _$BookList {
     final bookRepository = ref.read(bookRepositoryProvider);
 
     for (final id in selectedIds) {
-      await bookRepository.deleteBook(id);
+      final book = await bookRepository.getBookById(id);
+      if (book == null) continue;
+      await ref
+          .read(syncMutationServiceProvider)
+          .enqueueBookDelete(uuid: book.uuid);
     }
     ref.read(bookListUiProvider.notifier).exitSelectionMode();
   }

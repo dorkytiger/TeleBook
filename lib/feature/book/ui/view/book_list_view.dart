@@ -24,26 +24,7 @@ class BookListView extends ConsumerStatefulWidget {
 }
 
 class _BookListViewState extends ConsumerState<BookListView> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      ref.read(bookListProvider.notifier).loadNextPage();
-    }
-  }
+  bool _deleting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -71,16 +52,8 @@ class _BookListViewState extends ConsumerState<BookListView> {
           data: (state) {
             if (state.bookVos.isEmpty) return _buildEmpty();
             return layout == BookLayout.list
-                ? _BookListContent(
-                    bookVos: state.bookVos,
-                    isLoadingMore: state.isLoadingMore,
-                    scrollController: _scrollController,
-                  )
-                : _BookGridContent(
-                    bookVos: state.bookVos,
-                    isLoadingMore: state.isLoadingMore,
-                    scrollController: _scrollController,
-                  );
+                ? _BookListContent(bookVos: state.bookVos)
+                : _BookGridContent(bookVos: state.bookVos);
           },
         ),
       ),
@@ -181,9 +154,11 @@ class _BookListViewState extends ConsumerState<BookListView> {
                 SizedBox(width: 8),
                 FButton(
                   variant: .destructive,
-                  onPress: () => _deleteSelected(context),
-                  prefix: Icon(FLucideIcons.trash),
-                  child: Text("批量删除"),
+                  onPress: _deleting ? null : () => _deleteSelected(context),
+                  prefix: _deleting ? null : Icon(FLucideIcons.trash),
+                  child: _deleting
+                      ? const FCircularProgress()
+                      : const Text("批量删除"),
                 ),
               ],
             )
@@ -333,8 +308,15 @@ class _BookListViewState extends ConsumerState<BookListView> {
 
     final rootContext = Navigator.of(context).context;
     if (confirmed == true && context.mounted) {
-      await ref.read(bookListProvider.notifier).deleteSelected();
-      showFToast(context: rootContext, title: Text("删除成功"));
+      setState(() => _deleting = true);
+      try {
+        await ref.read(bookListProvider.notifier).deleteSelected();
+        if (mounted) {
+          showFToast(context: rootContext, title: Text("删除成功"));
+        }
+      } finally {
+        if (mounted) setState(() => _deleting = false);
+      }
     }
   }
 }
@@ -343,14 +325,8 @@ class _BookListViewState extends ConsumerState<BookListView> {
 
 class _BookListContent extends ConsumerWidget {
   final List<BookListItemVo> bookVos;
-  final bool isLoadingMore;
-  final ScrollController scrollController;
 
-  const _BookListContent({
-    required this.bookVos,
-    required this.isLoadingMore,
-    required this.scrollController,
-  });
+  const _BookListContent({required this.bookVos});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -361,19 +337,11 @@ class _BookListContent extends ConsumerWidget {
   }
 
   Widget _listView(WidgetRef ref) {
-    final count = bookVos.length + (isLoadingMore ? 1 : 0);
     final notifier = ref.read(bookListProvider.notifier);
     return FItemGroup.builder(
-      scrollController: scrollController,
-      count: count,
+      count: bookVos.length,
       itemBuilder: (context, index) {
         final bookVo = bookVos[index];
-        if (index >= bookVos.length) {
-          return const SizedBox(
-            height: 48,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          );
-        }
         return FTile(
           title: Text(bookVo.book.name),
           prefix: LocalImageWidget(imagePath: bookVo.coverImagePath),
@@ -419,7 +387,6 @@ class _BookListContent extends ConsumerWidget {
   }
 
   Widget _selectList(WidgetRef ref) {
-    final count = bookVos.length + (isLoadingMore ? 1 : 0);
     final notifier = ref.read(bookListProvider.notifier);
     final selectedIds = ref.watch(
       bookListUiProvider.select((s) => s.selectedBookIds),
@@ -431,14 +398,9 @@ class _BookListContent extends ConsumerWidget {
           notifier.toggleSelections(value);
         },
       ),
-      scrollController: scrollController,
-      count: count,
+      count: bookVos.length,
       tileBuilder: (context, index) {
         final bookVo = bookVos[index];
-        if (index >= bookVos.length) {
-          return .tile(title: Text("加载中"), value: -1);
-        }
-
         return .suffix(
           title: Text(bookVo.book.name),
           prefix: LocalImageWidget(imagePath: bookVo.coverImagePath),
@@ -497,8 +459,12 @@ class _BookListContent extends ConsumerWidget {
     final rootContext = Navigator.of(context).context;
 
     if (ok == true) {
-      await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
-      showFToast(context: rootContext, title: Text("删除成功"));
+      await _runDeleteWithProgress(context, () async {
+        await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
+      });
+      if (context.mounted) {
+        showFToast(context: rootContext, title: Text("删除成功"));
+      }
     }
   }
 }
@@ -507,31 +473,20 @@ class _BookListContent extends ConsumerWidget {
 
 class _BookGridContent extends ConsumerWidget {
   final List<BookListItemVo> bookVos;
-  final bool isLoadingMore;
-  final ScrollController scrollController;
 
-  const _BookGridContent({
-    required this.bookVos,
-    required this.isLoadingMore,
-    required this.scrollController,
-  });
+  const _BookGridContent({required this.bookVos});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemCount = bookVos.length + (isLoadingMore ? 1 : 0);
     return GridView.builder(
-      controller: scrollController,
       gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
         maxCrossAxisExtent: 180,
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
         mainAxisExtent: 240,
       ),
-      itemCount: itemCount,
+      itemCount: bookVos.length,
       itemBuilder: (context, index) {
-        if (index == bookVos.length) {
-          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-        }
         return _BookGridTile(bookVo: bookVos[index]);
       },
     );
@@ -716,8 +671,33 @@ class _BookGridTile extends ConsumerWidget {
 
     final rootContext = Navigator.of(context).context;
     if (ok == true && context.mounted) {
-      await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
-      showFToast(context: rootContext, title: Text("删除成功"));
+      await _runDeleteWithProgress(context, () async {
+        await ref.read(bookListProvider.notifier).deleteBook(bookVo.book.id);
+      });
+      if (context.mounted) {
+        showFToast(context: rootContext, title: Text("删除成功"));
+      }
+    }
+  }
+}
+
+/// 删除期间显示全屏模态转圈（首次删除需算快照 hash，可能耗时，给用户明确反馈）。
+Future<void> _runDeleteWithProgress(
+  BuildContext context,
+  Future<void> Function() action,
+) async {
+  if (!context.mounted) return;
+  final navigator = Navigator.of(context, rootNavigator: true);
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const Center(child: FCircularProgress()),
+  );
+  try {
+    await action();
+  } finally {
+    if (navigator.mounted) {
+      navigator.pop();
     }
   }
 }

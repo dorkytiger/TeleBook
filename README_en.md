@@ -1,13 +1,48 @@
-# TeleBook 3.0: Next-Generation Cross-Platform Book Management & Reading App
+# TeleBook 3.1: Next-Generation Cross-Platform Book Management & Reading App
 
-**TeleBook** is a powerful cross-platform book parsing, management, and reading application developed with **Flutter**. It supports multiple import methods, intelligent library management, and personalized reading experiences, making digital reading more convenient and comfortable than ever before.
+**TeleBook** is a powerful cross-platform book parsing, management, and reading application developed with **Flutter**. It supports multiple import methods, intelligent library management, personalized reading experiences, and **multi-device sync**, making digital reading more convenient and comfortable than ever before.
 
 ![badge-android](http://img.shields.io/badge/platform-android-6EDB8D.svg?style=flat)
 ![badge-ios](http://img.shields.io/badge/platform-ios-CDCDCD.svg?style=flat)
 ![badge-windows](http://img.shields.io/badge/platform-windows-6EDB8D.svg?style=flat)
 ![badge-macos](http://img.shields.io/badge/platform-macos-6EDB8D.svg?style=flat)
 
-_**Note: Version 3.0 is a major update with numerous new features and optimizations. It's recommended to backup your data before upgrading.**_
+_**Note: Version 3.1 adds multi-device sync with numerous new features and optimizations. It's recommended to backup your data before upgrading.**_
+
+## ✨ New in Version 3.1: Multi-Device Sync
+
+### 🔄 Local-First (Offline-Ready)
+
+- **Offline usable**: All changes (import / edit / delete / reading progress) take effect locally immediately and are queued for background push
+- **No interruption on disconnect**: Keep using normally without network; sync catches up automatically when back online
+- **Status strip**: Conflict > manual sync progress > syncing > pending N (tap to sync now)
+
+### 🌐 Full-Library Sync
+
+- **Books & images**: Book info, reading progress, and all image files stay consistent across devices
+- **Sync on connect**: A new device downloads the whole library after "Save & Connect", with per-book image download progress
+- **Content addressing**: Images deduplicated by SHA-256 with chunked upload; duplicate content is never re-transferred
+
+### 📚 Full-Library Snapshot History
+
+- Sensitive operations (import / edit / delete / manual sync) archive a full-library snapshot on completion
+- Browse history and restore to any archived point with one tap (full-library replacement)
+
+### 📋 Local Sync Logs
+
+- Each sync session: time / book count / status
+- Expand each book: upload / download status
+- Expand each image: upload / download progress
+
+### 🛡️ Conflict Handling
+
+- Conflicts detected automatically when multiple devices edit the same book
+- Choose: keep local / keep server / manual merge (batch selection supported)
+
+### 📍 Reading Progress Sync
+
+- Auto-saved on page turn (800ms debounce); other devices resume at the last position
+- High-frequency updates are merged automatically to avoid task flooding
 
 ## ✨ Major Updates in Version 3.0
 
@@ -204,13 +239,31 @@ flutter build macos      # macOS
 - **Drift** - Local database (SQLite)
 - **ForUI** - UI component library (shadcn-style)
 - **webview_all** - Cross-platform WebView (system WebView on Windows/macOS)
-- **background_downloader** - Background downloading
 - **pdf / pdfrx** - PDF parsing & rendering
 - **archive** - Archive processing
 - **path_provider** - File path management
 - **file_picker** - File selection
+- **Go + PostgreSQL + MinIO** - Multi-device sync backend ([TelebookServer](https://github.com/dorkytiger/TelebookServer))
+
+## 🔄 Multi-Device Sync Setup
+
+1. **Deploy backend**: Clone [TelebookServer](https://github.com/dorkytiger/TelebookServer), configure `cp .env.example .env` secrets, then `docker compose up --build`
+2. **Connect device A**: Settings → Sync Server → enter server address (e.g. `http://192.168.x.x:18080`) and connection key → Save & Connect, library and images upload automatically
+3. **Connect device B**: Same steps; the whole library downloads automatically
+4. **Continuous sync**: Imports / edits / deletes / reading on either side sync to the other automatically; offline operations never block, and catch up when back online
 
 ## ✅ Completed Features
+
+### New in Version 3.1
+
+- ✅ Multi-device sync (local-first + outbox background push)
+- ✅ Full-library snapshot history & restore
+- ✅ Local sync logs (session → book → image detail)
+- ✅ Image file sync (SHA-256 dedup + chunked upload + presigned download)
+- ✅ Conflict detection & resolution (keep local / server / manual merge)
+- ✅ Reading progress sync (debounced save + task merging)
+- ✅ Non-dismissable sync download page on connect (per-book progress)
+- ✅ Sync status strip in bottom bar
 
 ### New in Version 3.0
 
@@ -255,7 +308,6 @@ flutter build macos      # macOS
 ### Long-term Vision
 
 - [ ] Linux desktop support
-- [ ] Cloud sync feature
 - [ ] Community sharing
 - [ ] Plugin system
 - [ ] AI smart recommendations

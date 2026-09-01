@@ -10,17 +10,37 @@ import 'package:tele_book/feature/collection/datasource/local/collection_book_lo
 import 'package:tele_book/feature/collection/datasource/local/collection_local_datasource.dart';
 import 'package:tele_book/feature/collection/model/table/collection_book_table.dart';
 import 'package:tele_book/feature/collection/model/table/collection_table.dart';
+import 'package:tele_book/feature/setting/datasource/setting_local_datasource.dart';
+import 'package:tele_book/feature/setting/model/table/setting_table.dart';
+import 'package:tele_book/feature/sync/datasource/sync_log_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_task_local_datasource.dart';
+import 'package:tele_book/feature/sync/model/table/entity_sync_state_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_log_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_task_table.dart';
 
 import 'converter/string_list_converter.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [BookTable, CollectionTable, CollectionBookTable],
+  tables: [
+    BookTable,
+    CollectionTable,
+    CollectionBookTable,
+    SettingTable,
+    EntitySyncStateTable,
+    SyncTaskTable,
+    SyncLogTable,
+  ],
   daos: [
     BookLocalDatasource,
     CollectionLocalDatasource,
     CollectionBookLocalDatasource,
+    SettingLocalDatasource,
+    SyncStateLocalDatasource,
+    SyncTaskLocalDatasource,
+    SyncLogLocalDatasource,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -29,19 +49,46 @@ class AppDatabase extends _$AppDatabase {
     : super((executor ?? _openConnection()));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
-      // 破坏性更新：删除所有表并重建
-      await customStatement('PRAGMA foreign_keys = OFF');
-      final tableNames = allTables.map((t) => t.actualTableName).toList();
-      for (final name in tableNames) {
-        await customStatement('DROP TABLE IF EXISTS "$name"');
+      // 逐版本增量迁移，尽量保留用户数据
+      if (from < 2) {
+        // v1 → v2：早期版本表结构不可考，删除全部表并重建
+        for (final table in allTables) {
+          await migrator.deleteTable(table.actualTableName);
+        }
+        await migrator.createAll();
       }
-      await migrator.createAll();
-      await customStatement('PRAGMA foreign_keys = ON');
+      if (from < 3) {
+        // v2 → v3：新增设置表（书籍/收藏数据保留）
+        await migrator.createTable(settingTable);
+      }
+      if (from < 4) {
+        // v3 → v4：书籍加同步 uuid 列 + 新增实体同步状态表
+        await migrator.addColumn(bookTable, bookTable.uuid);
+        // 回填已有书籍的 uuid（SQLite 无 uuid 函数，用 randomblob 拼）
+        await customStatement('''
+          UPDATE books SET uuid =
+            lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' ||
+            lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' ||
+            lower(hex(randomblob(6)))
+          WHERE uuid IS NULL
+        ''');
+        await migrator.createTable(entitySyncStateTable);
+      }
+      if (from < 5) {
+        // v4 → v5：新增待同步任务表（outbox，本地优先 + 后台同步）
+        await migrator.createTable(syncTaskTable);
+      }
+      if (from < 6) {
+        // v5 → v6：新增本地同步记录表（每次同步会话）
+        await migrator.createTable(syncLogTable);
+      }
+      // 未来版本在这里追加：
+      // if (from < 6) { ... }
     },
   );
 

@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
 part 'parse_image_folder_provider.freezed.dart';
@@ -128,7 +129,6 @@ class ParseImageFolder extends _$ParseImageFolder {
 
 @riverpod
 class ParseImageFolderSaveBook extends _$ParseImageFolderSaveBook {
-  BookRepository get _bookRepository => ref.read(bookRepositoryProvider);
 
   @override
   FutureOr<void> build(ParseImageFolderParam param) => null;
@@ -145,29 +145,25 @@ class ParseImageFolderSaveBook extends _$ParseImageFolderSaveBook {
       total: submitParam.imagePaths.length,
     );
 
-    final result = await _bookRepository.saveAsBook(
-      SaveAsBookDto(
-        title: submitParam.folderName,
-        paths: submitParam.imagePaths,
-      ),
-      onStepProgress: (step, current, total) {
-        ref
-            .read(parseImageFolderSaveBookProgressProvider(param).notifier)
-            .state = ParseImageFolderSaveBookProgress(
-          step: step,
-          current: current,
-          total: total,
-        );
-      },
-    );
-
-    result.fold(
-      onSuccess: (_) {
-        state = const AsyncData(null);
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
-    );
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBookImport(
+        SaveAsBookDto(
+          title: submitParam.folderName,
+          paths: submitParam.imagePaths,
+        ),
+        onStepProgress: (step, current, total) {
+          ref
+              .read(parseImageFolderSaveBookProgressProvider(param).notifier)
+              .state = ParseImageFolderSaveBookProgress(
+            step: step,
+            current: current,
+            total: total,
+          );
+        },
+      );
+      state = const AsyncData(null);
+    } catch (e) {
+      state = AsyncError('$e', StackTrace.current);
+    }
   }
 }

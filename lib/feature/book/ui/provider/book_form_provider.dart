@@ -4,6 +4,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 
 part 'book_form_provider.freezed.dart';
 
@@ -116,13 +117,12 @@ class BookFormSubmit extends _$BookFormSubmit {
         name: newTitle,
         localSubPaths: newSubPaths,
       );
-      await ref
-          .read(databaseProvider)
-          .bookLocalDatasource
-          .updateBook(updatedBook);
 
-      // 重新生成封面和预览图
+      // 本地优先：先重新生成封面/预览（文件落盘），再入队同步（hash 基于最新文件）
       await ref.read(bookRepositoryProvider).regenerateImages(updatedBook);
+      await ref
+          .read(syncMutationServiceProvider)
+          .enqueueBookUpsert(book: updatedBook);
     });
 
     return !state.hasError;

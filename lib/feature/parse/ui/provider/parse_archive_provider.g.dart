@@ -124,7 +124,7 @@ final class ParseArchiveSaveBookProvider
 }
 
 String _$parseArchiveSaveBookHash() =>
-    r'731cd951752090666be1330594b8248c21d50f2f';
+    r'41294275b90aff71e1963d53813a030d0472423e';
 
 abstract class _$ParseArchiveSaveBook extends $AsyncNotifier<void> {
   FutureOr<void> build();

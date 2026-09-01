@@ -54,6 +54,14 @@
 - 🔄 Group retry & delete / 下载组重试与删除
 - ✅ Auto-save as book status / 自动保存为书籍状态标识
 
+### 🔄 Multi-Device Sync / 多设备同步
+- 🌐 Local-first sync (offline-ready) / 本地优先同步（离线可用）
+- 📤 Push/pull event stream / 事件流推送与拉取
+- 📸 Image file sync via MinIO / 图片文件同步（MinIO 分片上传）
+- 📚 Full-library snapshot history & restore / 整库快照历史与恢复
+- ⚡ Reading progress sync / 阅读进度同步
+- 🛡️ Conflict detection & resolution / 冲突检测与解决
+
 ### 📤 Export / 导出
 - 📤 Single & batch export / 单个与批量导出
 - ⚡ Background processing / 后台处理
@@ -94,7 +102,14 @@ For detailed documentation, please refer to:
 - **Drift** - Local database / 本地数据库
 - **ForUI** - UI components / UI组件库
 - **webview_all** - Cross-platform WebView / 跨平台网页视图
-- **background_downloader** - Background downloads / 后台下载
+- **Go + PostgreSQL + MinIO** - Sync backend / 同步后端（[TelebookServer](https://github.com/dorkytiger/TelebookServer)）
+
+## 🔄 Multi-Device Sync Setup / 多设备同步配置
+
+1. 部署同步后端（[TelebookServer](https://github.com/dorkytiger/TelebookServer)，Docker Compose 一键启动）
+2. 手机 A：设置 → 同步服务器 → 填写地址与连接密钥 → 保存并连接（自动同步书库与图片）
+3. 手机 B：同样连接，自动下载全部书籍与图片
+4. 任一侧导入 / 修改 / 删除 / 阅读，另一侧自动同步；离线操作不阻塞，联网自动补齐
 
 ---
 

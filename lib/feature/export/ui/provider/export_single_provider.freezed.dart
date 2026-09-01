@@ -25,12 +25,12 @@ $ExportSingleStateCopyWith<ExportSingleState> get copyWith => _$ExportSingleStat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExportSingleState&&(identical(other.book, book) || other.book == book)&&(identical(other.format, format) || other.format == format)&&(identical(other.fileNameCrl, fileNameCrl) || other.fileNameCrl == fileNameCrl)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting)&&(identical(other.isDone, isDone) || other.isDone == isDone)&&(identical(other.outputPathCrl, outputPathCrl) || other.outputPathCrl == outputPathCrl)&&(identical(other.errorMsg, errorMsg) || other.errorMsg == errorMsg));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ExportSingleState&&const DeepCollectionEquality().equals(other.book, book)&&(identical(other.format, format) || other.format == format)&&(identical(other.fileNameCrl, fileNameCrl) || other.fileNameCrl == fileNameCrl)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting)&&(identical(other.isDone, isDone) || other.isDone == isDone)&&(identical(other.outputPathCrl, outputPathCrl) || other.outputPathCrl == outputPathCrl)&&(identical(other.errorMsg, errorMsg) || other.errorMsg == errorMsg));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,book,format,fileNameCrl,isExporting,isDone,outputPathCrl,errorMsg);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(book),format,fileNameCrl,isExporting,isDone,outputPathCrl,errorMsg);
 
 @override
 String toString() {
@@ -62,9 +62,9 @@ class _$ExportSingleStateCopyWithImpl<$Res>
 
 /// Create a copy of ExportSingleState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? book = null,Object? format = null,Object? fileNameCrl = null,Object? isExporting = null,Object? isDone = null,Object? outputPathCrl = null,Object? errorMsg = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? book = freezed,Object? format = null,Object? fileNameCrl = null,Object? isExporting = null,Object? isDone = null,Object? outputPathCrl = null,Object? errorMsg = freezed,}) {
   return _then(_self.copyWith(
-book: null == book ? _self.book : book // ignore: cast_nullable_to_non_nullable
+book: freezed == book ? _self.book : book // ignore: cast_nullable_to_non_nullable
 as BookTableData,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
 as ExportFormat,fileNameCrl: null == fileNameCrl ? _self.fileNameCrl : fileNameCrl // ignore: cast_nullable_to_non_nullable
 as TextEditingController,isExporting: null == isExporting ? _self.isExporting : isExporting // ignore: cast_nullable_to_non_nullable
@@ -233,12 +233,12 @@ _$ExportSingleStateCopyWith<_ExportSingleState> get copyWith => __$ExportSingleS
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExportSingleState&&(identical(other.book, book) || other.book == book)&&(identical(other.format, format) || other.format == format)&&(identical(other.fileNameCrl, fileNameCrl) || other.fileNameCrl == fileNameCrl)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting)&&(identical(other.isDone, isDone) || other.isDone == isDone)&&(identical(other.outputPathCrl, outputPathCrl) || other.outputPathCrl == outputPathCrl)&&(identical(other.errorMsg, errorMsg) || other.errorMsg == errorMsg));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ExportSingleState&&const DeepCollectionEquality().equals(other.book, book)&&(identical(other.format, format) || other.format == format)&&(identical(other.fileNameCrl, fileNameCrl) || other.fileNameCrl == fileNameCrl)&&(identical(other.isExporting, isExporting) || other.isExporting == isExporting)&&(identical(other.isDone, isDone) || other.isDone == isDone)&&(identical(other.outputPathCrl, outputPathCrl) || other.outputPathCrl == outputPathCrl)&&(identical(other.errorMsg, errorMsg) || other.errorMsg == errorMsg));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,book,format,fileNameCrl,isExporting,isDone,outputPathCrl,errorMsg);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(book),format,fileNameCrl,isExporting,isDone,outputPathCrl,errorMsg);
 
 @override
 String toString() {
@@ -270,9 +270,9 @@ class __$ExportSingleStateCopyWithImpl<$Res>
 
 /// Create a copy of ExportSingleState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? book = null,Object? format = null,Object? fileNameCrl = null,Object? isExporting = null,Object? isDone = null,Object? outputPathCrl = null,Object? errorMsg = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? book = freezed,Object? format = null,Object? fileNameCrl = null,Object? isExporting = null,Object? isDone = null,Object? outputPathCrl = null,Object? errorMsg = freezed,}) {
   return _then(_ExportSingleState(
-book: null == book ? _self.book : book // ignore: cast_nullable_to_non_nullable
+book: freezed == book ? _self.book : book // ignore: cast_nullable_to_non_nullable
 as BookTableData,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
 as ExportFormat,fileNameCrl: null == fileNameCrl ? _self.fileNameCrl : fileNameCrl // ignore: cast_nullable_to_non_nullable
 as TextEditingController,isExporting: null == isExporting ? _self.isExporting : isExporting // ignore: cast_nullable_to_non_nullable

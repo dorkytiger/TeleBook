@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/model/parse_batch_archive_vo.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
@@ -179,7 +180,6 @@ class ParseBatchArchive extends _$ParseBatchArchive {
 
 @riverpod
 class ParseBatchArchiveSaveBook extends _$ParseBatchArchiveSaveBook {
-  BookRepository get _bookRepository => ref.read(bookRepositoryProvider);
 
   @override
   FutureOr<void> build() => null;
@@ -199,22 +199,22 @@ class ParseBatchArchiveSaveBook extends _$ParseBatchArchiveSaveBook {
         .map((e) => SaveAsBookDto(title: e.name, paths: e.tempPaths))
         .toList();
 
-    final result = await _bookRepository.saveBatchAsBooks(dos, (count) {
-      ref
-          .read(parseBatchArchiveSaveBookProgressProvider.notifier)
-          .state = ParseBatchArchiveSaveBookProgress(
-        current: count,
-        total: parseBatchList.length,
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBatchBookImport(
+        dos,
+        onProgress:
+        (count) {
+          ref
+              .read(parseBatchArchiveSaveBookProgressProvider.notifier)
+              .state = ParseBatchArchiveSaveBookProgress(
+            current: count,
+            total: parseBatchList.length,
+          );
+        },
       );
-    });
-
-    result.fold(
-      onSuccess: (_) {
-        state = const AsyncData(null);
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
-    );
+      state = const AsyncData(null);
+    } catch (e) {
+      state = AsyncError('$e', StackTrace.current);
+    }
   }
 }

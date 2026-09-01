@@ -4,8 +4,6 @@ import 'package:tele_book/feature/book/enum/book_sort.dart';
 class BookListState {
   // --- 数据与查询状态 ---
   final List<BookListItemVo> bookVos;
-  final bool hasMore;
-  final bool isLoadingMore;
   final String name;
   final BookSort? sort;
 
@@ -16,10 +14,8 @@ class BookListState {
 
   BookListState({
     required this.bookVos,
-    required this.hasMore,
     required this.name,
     this.sort,
-    this.isLoadingMore = false,
     this.isSelectionMode = false,
     this.selectedBookIds = const {},
     this.layout = BookLayout.list,
@@ -31,8 +27,6 @@ class BookListState {
 
   BookListState copyWith({
     List<BookListItemVo>? bookVos,
-    bool? hasMore,
-    bool? isLoadingMore,
     String? name,
     BookSort? sort,
     bool? isSelectionMode,
@@ -41,8 +35,6 @@ class BookListState {
   }) {
     return BookListState(
       bookVos: bookVos ?? this.bookVos,
-      hasMore: hasMore ?? this.hasMore,
-      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       name: name ?? this.name,
       sort: sort ?? this.sort,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,

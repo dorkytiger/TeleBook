@@ -26,7 +26,7 @@ class ExportSingleViewmodel extends ChangeNotifier {
   }
 
   Future<void> pickOutputDir() async {
-    final result = await FilePicker.platform.getDirectoryPath();
+    final result = await FilePicker.getDirectoryPath();
     if (result != null) {
       outputPath = result;
       notifyListeners();

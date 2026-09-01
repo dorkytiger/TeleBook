@@ -50,7 +50,7 @@ final class ParseBatchPdfProvider
   }
 }
 
-String _$parseBatchPdfHash() => r'4528c3d2c95825540661e8230b492c74f4184a00';
+String _$parseBatchPdfHash() => r'bd180fd8a14e006c4ff6ba32d19a2a035ad4430d';
 
 final class ParseBatchPdfFamily extends $Family
     with
@@ -124,7 +124,7 @@ final class ParseBatchPdfSaveBookProvider
 }
 
 String _$parseBatchPdfSaveBookHash() =>
-    r'4934b2ba4dd24931ffcef41c591f0331bcc18294';
+    r'72b0d59a5038eb8042cb30da62cd7bc6a780356b';
 
 abstract class _$ParseBatchPdfSaveBook extends $AsyncNotifier<void> {
   FutureOr<void> build();

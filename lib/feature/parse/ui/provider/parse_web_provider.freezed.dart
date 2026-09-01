@@ -12,7 +12,7 @@ part of 'parse_web_provider.dart';
 // dart format off
 T _$identity<T>(T value) => value;
 /// @nodoc
-mixin _$ParseWebState {
+mixin _$ParseWebState implements DiagnosticableTreeMixin {
 
  String get title; List<String> get urls; int get progress;
 /// Create a copy of ParseWebState
@@ -22,6 +22,12 @@ mixin _$ParseWebState {
 $ParseWebStateCopyWith<ParseWebState> get copyWith => _$ParseWebStateCopyWithImpl<ParseWebState>(this as ParseWebState, _$identity);
 
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'ParseWebState'))
+    ..add(DiagnosticsProperty('title', title))..add(DiagnosticsProperty('urls', urls))..add(DiagnosticsProperty('progress', progress));
+}
 
 @override
 bool operator ==(Object other) {
@@ -33,7 +39,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,title,const DeepCollectionEquality().hash(urls),progress);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'ParseWebState(title: $title, urls: $urls, progress: $progress)';
 }
 
@@ -207,7 +213,7 @@ return $default(_that.title,_that.urls,_that.progress);case _:
 /// @nodoc
 
 
-class _ParseWebState implements ParseWebState {
+class _ParseWebState with DiagnosticableTreeMixin implements ParseWebState {
   const _ParseWebState({required this.title, required final  List<String> urls, required this.progress}): _urls = urls;
   
 
@@ -228,6 +234,12 @@ class _ParseWebState implements ParseWebState {
 _$ParseWebStateCopyWith<_ParseWebState> get copyWith => __$ParseWebStateCopyWithImpl<_ParseWebState>(this, _$identity);
 
 
+@override
+void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+  properties
+    ..add(DiagnosticsProperty('type', 'ParseWebState'))
+    ..add(DiagnosticsProperty('title', title))..add(DiagnosticsProperty('urls', urls))..add(DiagnosticsProperty('progress', progress));
+}
 
 @override
 bool operator ==(Object other) {
@@ -239,7 +251,7 @@ bool operator ==(Object other) {
 int get hashCode => Object.hash(runtimeType,title,const DeepCollectionEquality().hash(_urls),progress);
 
 @override
-String toString() {
+String toString({ DiagnosticLevel minLevel = DiagnosticLevel.info }) {
   return 'ParseWebState(title: $title, urls: $urls, progress: $progress)';
 }
 

@@ -100,4 +100,19 @@ class BookLocalDatasource extends DatabaseAccessor<AppDatabase>
   Future<int> deleteById(int id) async {
     return (delete(bookTable)..where((t) => t.id.equals(id))).go();
   }
+
+  /// 全量查询（同步用；不分页）。
+  Future<List<BookTableData>> getAllBooks() {
+    return (select(bookTable)..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+  }
+
+  /// 按同步 uuid 查询。
+  Future<BookTableData?> getByUuid(String uuid) async {
+    return (select(bookTable)..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
+  }
+
+  /// 按同步 uuid 删除。
+  Future<int> deleteByUuid(String uuid) async {
+    return (delete(bookTable)..where((t) => t.uuid.equals(uuid))).go();
+  }
 }
