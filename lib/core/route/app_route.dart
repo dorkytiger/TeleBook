@@ -18,12 +18,9 @@ import 'package:tele_book/feature/parse/ui/view/parse_image_folder_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_pdf_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
 import 'package:tele_book/feature/setting/ui/view/sync_server_view.dart';
-import 'package:tele_book/feature/sync/ui/view/sync_books_view.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_history_detail_view.dart';
 import 'package:tele_book/feature/sync/ui/provider/sync_history_provider.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_history_view.dart';
-import 'package:tele_book/feature/sync/ui/view/sync_download_view.dart';
-import 'package:tele_book/feature/sync/ui/view/sync_log_detail_view.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_log_list_view.dart';
 
 class AppRoute {
@@ -59,12 +56,9 @@ class AppRoute {
 
   // 设置
   static const syncServer = '/setting/sync_server';
-  static const syncBooks = '/setting/sync_books';
   static const syncHistory = '/setting/sync_history';
   static const syncHistoryDetail = '/setting/sync_history/detail';
   static const syncLogList = '/setting/sync_log';
-  static const syncLogDetail = '/setting/sync_log/detail';
-  static const syncDownload = '/setting/sync_download';
 
   static final GoRouter router = GoRouter(
     initialLocation: main,
@@ -288,12 +282,6 @@ class AppRoute {
         },
       ),
       GoRoute(
-        path: syncBooks,
-        pageBuilder: (context, state) {
-          return MaterialPage(child: SyncBooksView());
-        },
-      ),
-      GoRoute(
         path: syncHistory,
         pageBuilder: (context, state) {
           return MaterialPage(child: SyncHistoryView());
@@ -313,22 +301,6 @@ class AppRoute {
         path: syncLogList,
         pageBuilder: (context, state) {
           return MaterialPage(child: SyncLogListView());
-        },
-      ),
-      GoRoute(
-        path: syncLogDetail,
-        pageBuilder: (context, state) {
-          final logId = state.extra;
-          if (logId is! int) {
-            return MaterialPage(child: ErrorRoutePage(message: '缺少记录ID参数'));
-          }
-          return MaterialPage(child: SyncLogDetailView(logId: logId));
-        },
-      ),
-      GoRoute(
-        path: syncDownload,
-        pageBuilder: (context, state) {
-          return MaterialPage(child: SyncDownloadView());
         },
       ),
     ],

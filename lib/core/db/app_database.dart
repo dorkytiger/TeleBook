@@ -12,12 +12,17 @@ import 'package:tele_book/feature/collection/model/table/collection_book_table.d
 import 'package:tele_book/feature/collection/model/table/collection_table.dart';
 import 'package:tele_book/feature/setting/datasource/setting_local_datasource.dart';
 import 'package:tele_book/feature/setting/model/table/setting_table.dart';
-import 'package:tele_book/feature/sync/datasource/sync_log_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_down_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_op_local_datasource.dart';
 import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
 import 'package:tele_book/feature/sync/datasource/sync_task_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_upload_local_datasource.dart';
 import 'package:tele_book/feature/sync/model/table/entity_sync_state_table.dart';
-import 'package:tele_book/feature/sync/model/table/sync_log_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_down_file_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_down_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_op_table.dart';
 import 'package:tele_book/feature/sync/model/table/sync_task_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_upload_table.dart';
 
 import 'converter/string_list_converter.dart';
 
@@ -31,7 +36,10 @@ part 'app_database.g.dart';
     SettingTable,
     EntitySyncStateTable,
     SyncTaskTable,
-    SyncLogTable,
+    SyncOpTable,
+    SyncDownTable,
+    SyncDownFileTable,
+    SyncUploadTable,
   ],
   daos: [
     BookLocalDatasource,
@@ -40,7 +48,9 @@ part 'app_database.g.dart';
     SettingLocalDatasource,
     SyncStateLocalDatasource,
     SyncTaskLocalDatasource,
-    SyncLogLocalDatasource,
+    SyncOpLocalDatasource,
+    SyncDownLocalDatasource,
+    SyncUploadLocalDatasource,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -48,30 +58,33 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super((executor ?? _openConnection()));
 
+  /// 数据库版本。main 分支当前为 v2（仅 book/collection/collection_book 三表，
+  /// 无 uuid 列、无任何同步表）；本分支 v3 在其上新增设置表与同步系列表，
+  /// 并给 book_table 加 uuid。每次 schema 变更 +1。
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
-      // 逐版本增量迁移，尽量保留用户数据
       if (from < 2) {
-        // v1 → v2：早期版本表结构不可考，删除全部表并重建
+        // v1 及更早：从未发布、结构不可考（main v2 自身也采用破坏性重建），
+        // 这里保持一致：删全部表后按当前定义重建。
+        await customStatement('PRAGMA foreign_keys = OFF');
         for (final table in allTables) {
-          await migrator.deleteTable(table.actualTableName);
+          await customStatement(
+            'DROP TABLE IF EXISTS "${table.actualTableName}"',
+          );
         }
         await migrator.createAll();
-      }
-      if (from < 3) {
-        // v2 → v3：新增设置表（书籍/收藏数据保留）
-        await migrator.createTable(settingTable);
-      }
-      if (from < 4) {
-        // v3 → v4：书籍加同步 uuid 列 + 新增实体同步状态表
-        // SQLite 的 ALTER TABLE 不支持添加 NOT NULL UNIQUE 列，
-        // 因此分三步：加可空列 → 回填 uuid → 建唯一索引。
+        await customStatement('PRAGMA foreign_keys = ON');
+      } else if (from < 3) {
+        // v2（main）→ v3：**保留书库/收藏数据**，只做真实差异的增量升级：
+        //  ① book_table 加 uuid（SQLite 不支持 ALTER 直接加 NOT NULL UNIQUE 列
+        //     → 加可空列 → 回填 UUID → 建唯一索引，与 v3 定义一致）
+        //  ② 新增设置表 + 同步系列表（entity_sync_state/sync_task/sync_op/
+        //     sync_down/sync_down_file/sync_upload）
         await customStatement('ALTER TABLE "book_table" ADD COLUMN "uuid" TEXT');
-        // 回填已有书籍的 uuid（SQLite 无 uuid 函数，用 randomblob 拼）
         await customStatement('''
           UPDATE "book_table" SET uuid =
             lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' ||
@@ -80,20 +93,17 @@ class AppDatabase extends _$AppDatabase {
           WHERE uuid IS NULL
         ''');
         await customStatement(
-          'CREATE UNIQUE INDEX IF NOT EXISTS "book_table_uuid_key" ON "book_table" ("uuid")',
+          'CREATE UNIQUE INDEX IF NOT EXISTS "book_table_uuid_key" '
+          'ON "book_table" ("uuid")',
         );
+        await migrator.createTable(settingTable);
         await migrator.createTable(entitySyncStateTable);
-      }
-      if (from < 5) {
-        // v4 → v5：新增待同步任务表（outbox，本地优先 + 后台同步）
         await migrator.createTable(syncTaskTable);
+        await migrator.createTable(syncOpTable);
+        await migrator.createTable(syncDownTable);
+        await migrator.createTable(syncDownFileTable);
+        await migrator.createTable(syncUploadTable);
       }
-      if (from < 6) {
-        // v5 → v6：新增本地同步记录表（每次同步会话）
-        await migrator.createTable(syncLogTable);
-      }
-      // 未来版本在这里追加：
-      // if (from < 6) { ... }
     },
   );
 

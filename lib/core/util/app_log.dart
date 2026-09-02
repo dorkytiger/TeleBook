@@ -15,6 +15,10 @@ abstract final class AppLog {
   static void i(dynamic message, {String? tag}) =>
       _log('INFO', message, tag: tag);
 
+  /// 警告日志。
+  static void w(dynamic message, {String? tag}) =>
+      _log('WARN', message, tag: tag);
+
   /// 错误日志。
   static void e(dynamic message, {String? tag, Object? error}) {
     _log('ERROR', message, tag: tag);

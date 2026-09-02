@@ -1,16 +1,20 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
-import 'package:tele_book/core/route/app_route.dart';
 import 'package:tele_book/core/service/sync_service.dart';
+import 'package:tele_book/common/widget/f_adaptive_dialog.dart';
 import 'package:tele_book/feature/setting/repository/setting_repository.dart';
+import 'package:tele_book/feature/sync/service/init_sync_service.dart';
 
-/// 同步服务器设置页：连接配置 / 测试连接 / 手动同步。
+/// 初始化服务器引导页（§1.4）：
+/// 地址 + 密钥 → 复制/粘贴/测试 → 保存并连接 → 询问是否立即同步。
+/// 同步功能（刷新/快照/历史/本地记录）在设置页按已配置状态显示，不在此页堆叠。
 class SyncServerView extends ConsumerStatefulWidget {
   const SyncServerView({super.key});
 
@@ -24,7 +28,6 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
 
   bool _testing = false;
   bool _connecting = false;
-  bool _refreshing = false;
   String? _statusText;
 
   @override
@@ -84,40 +87,74 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
         _connecting = false;
         _statusText = '已连接（服务器：$url）';
       });
-      // 连接成功后跳转不可关闭的同步下载页：显示每本书的下载进度，完成自动回书籍页
-      context.push(AppRoute.syncDownload);
+      // 连接成功 → 询问是否立即同步（§1.4）
+      await _askSyncNow();
     } catch (e) {
       if (!mounted) return;
       setState(() => _connecting = false);
       showFToast(
         context: context,
         title: const Text('连接失败'),
-        description: Text('$e'),
+        description: Text(
+          _friendlyConnectError(e),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
       );
     }
   }
 
-  /// 手动刷新：拉取服务器最新变更并应用（另一台设备改动后，本机点刷新同步）。
-  Future<void> _refresh() async {
-    if (_refreshing) return;
-    setState(() => _refreshing = true);
-    try {
-      final pulled = await ref.read(syncServiceProvider.notifier).pullOnly();
+  /// 把连接异常转成用户可读的短文案（不要拿 DioException 长原文直接弹 toast，
+  /// 会撑爆 ForUI 通知高度）。
+  String _friendlyConnectError(Object e) {
+    if (e is DioException) {
+      // 注册 401 = 连接密钥不对（服务器 SYNC_SECRET 比对失败）
+      if (e.response?.statusCode == 401) {
+        return '连接密钥不正确：请填写服务器 .env 中的 SYNC_SECRET';
+      }
+      if (e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout) {
+        return '无法连接服务器：请检查地址与网络';
+      }
+      // 服务器返回的业务错误 message 优先
+      final data = e.response?.data;
+      if (data is Map && data['message'] is String && (data['message'] as String).isNotEmpty) {
+        return data['message'] as String;
+      }
+      return e.message ?? '连接失败';
+    }
+    final s = e.toString();
+    return s.length > 80 ? '${s.substring(0, 80)}…' : s;
+  }
+
+  /// 连接成功后的引导：询问是否立即初始化同步（是→同步；否→后续刷新同步）。
+  Future<void> _askSyncNow() async {
+    if (!mounted) return;
+    final sync = await showFDialog<bool>(
+      context: context,
+      builder: (context, style, animate) => FAdaptiveDialog(
+        title: const Text('连接成功'),
+        body: const Text('是否立即同步书籍？\n（否则可稍后在设置中「刷新同步」）'),
+        actions: [
+          FButton(
+            variant: .outline,
+            onPress: () => Navigator.pop(context, false),
+            child: const Text('稍后'),
+          ),
+          FButton(
+            onPress: () => Navigator.pop(context, true),
+            child: const Text('立即同步'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (sync == true) {
+      // 立即初始化同步 → 入队一组任务，全局通知显示进度（§1.4/§2.1）
+      await ref.read(initSyncServiceProvider).run();
       if (!mounted) return;
-      showFToast(
-        context: context,
-        title: const Text('刷新完成'),
-        description: pulled > 0 ? Text('已应用 $pulled 条变更') : null,
-      );
-    } catch (e) {
-      if (!mounted) return;
-      showFToast(
-        context: context,
-        title: const Text('刷新失败'),
-        description: Text('$e'),
-      );
-    } finally {
-      if (mounted) setState(() => _refreshing = false);
+      showFToast(context: context, title: const Text('已开始同步，可在底部查看进度'));
+      context.pop();
     }
   }
 
@@ -330,14 +367,24 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
 
   @override
   Widget build(BuildContext context) {
+    final configured = _statusText != null && _statusText!.startsWith('已连接');
     return FScaffold(
       header: FHeader.nested(
-        title: const Text('同步服务器'),
+        title: Text(configured ? '重新初始化服务器' : '初始化服务器'),
         prefixes: [FHeaderAction.back(onPress: () => context.pop())],
       ),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // 引导说明
+          Text(
+            '输入服务器地址与连接密钥，让本设备与其他设备共享书库。\n'
+            '完成后可立即同步或稍后在设置中同步。',
+            style: context.theme.typography.body.sm.copyWith(
+              color: context.theme.colors.mutedForeground,
+            ),
+          ),
+          const SizedBox(height: 16),
           FTextFormField(
             label: const Text('服务器地址'),
             hint: 'http://192.168.x.x:18080',
@@ -350,6 +397,7 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
             control: FTextFieldControl.managed(controller: _keyController),
           ),
           const SizedBox(height: 8),
+          // 复制 / 粘贴配置（分享给其它设备或从剪贴板导入）
           Row(
             children: [
               Expanded(
@@ -373,7 +421,7 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
@@ -396,44 +444,27 @@ class _SyncServerViewState extends ConsumerState<SyncServerView> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
+          const SizedBox(height: 16),
+          // 连接状态提示
           if (_statusText != null)
             FItem(
               title: Text(_statusText!),
-              prefix: const Icon(FLucideIcons.info),
+              prefix: Icon(
+                configured ? FLucideIcons.checkCircle : FLucideIcons.info,
+                size: 16,
+                color: configured
+                    ? context.theme.colors.primary
+                    : context.theme.colors.mutedForeground,
+              ),
             ),
           const SizedBox(height: 12),
-          FItem(
-            title: const Text('刷新同步'),
-            subtitle: const Text('拉取服务器最新变更'),
-            prefix: _refreshing
-                ? const FCircularProgress(size: .sm)
-                : const Icon(FLucideIcons.refreshCw),
-            onPress: _refreshing ? null : _refresh,
+          Text(
+            '连接成功后：书库 / 阅读进度 / 图片可跨设备同步。\n'
+            '同步功能入口在「设置 → 服务器」分组中。',
+            style: context.theme.typography.body.sm.copyWith(
+              color: context.theme.colors.mutedForeground,
+            ),
           ),
-          const SizedBox(height: 12),
-          FItem(
-            title: const Text('手动同步'),
-            subtitle: const Text('上传所有书籍（含图片）'),
-            prefix: const Icon(FLucideIcons.uploadCloud),
-            onPress: () => context.push(AppRoute.syncBooks),
-          ),
-          const SizedBox(height: 12),
-          FItem(
-            title: const Text('历史记录'),
-            subtitle: const Text('查看同步归档，可恢复到归档时刻'),
-            prefix: const Icon(FLucideIcons.history),
-            onPress: () => context.push(AppRoute.syncHistory),
-          ),
-          const SizedBox(height: 12),
-          FItem(
-            title: const Text('本地同步记录'),
-            subtitle: const Text('查看每次同步的书籍与图片进度'),
-            prefix: const Icon(FLucideIcons.list),
-            onPress: () => context.push(AppRoute.syncLogList),
-          ),
-
         ],
       ),
     );

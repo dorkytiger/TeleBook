@@ -43,7 +43,7 @@ final class SyncServiceProvider extends $NotifierProvider<SyncService, void> {
   }
 }
 
-String _$syncServiceHash() => r'd35a2b07b04fe1c9d6ebbf0b6205aea4a790d7d4';
+String _$syncServiceHash() => r'a6f19e513138806b06e2b25107fdebe988303239';
 
 /// 客户端同步引擎：连接配置 / 设备注册 / 手动全量同步（书籍元数据 + 图片文件）。
 

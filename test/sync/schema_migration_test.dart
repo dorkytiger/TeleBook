@@ -4,9 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:tele_book/core/db/app_database.dart';
 
-/// 构造一个 v3 schema 的内存库（book_table 无 uuid 列），
-/// 返回可直接传给 AppDatabase 的已打开连接。
-NativeDatabase _openV3Database() {
+/// 构造 main 分支 v2 的真实库：只有 book_table（无 uuid 列）等业务表。
+/// 验证 v2 → v3 增量升级：书库数据保留 + uuid 回填 + 新增同步表。
+NativeDatabase _openV2Database() {
   final raw = sqlite.sqlite3.openInMemory();
   raw.execute('''
     CREATE TABLE "book_table" (
@@ -21,111 +21,157 @@ NativeDatabase _openV3Database() {
     )
   ''');
   raw.execute(
-    'INSERT INTO "book_table" (name, local_sub_paths) VALUES (?, ?)',
-    ['旧书A', '[]'],
+    'INSERT INTO "book_table" (name, local_sub_paths, current_page) VALUES (?, ?, ?)',
+    ['旧书A', '[]', 3],
   );
   raw.execute(
     'INSERT INTO "book_table" (name, local_sub_paths) VALUES (?, ?)',
     ['旧书B', '[]'],
   );
-  raw.execute('PRAGMA user_version = 3');
+  raw.execute('PRAGMA user_version = 2');
   return NativeDatabase.opened(raw);
 }
 
 void main() {
-  test('v3 → v6 真实迁移：加 uuid 列并回填唯一值', () async {
-    final db = AppDatabase(_openV3Database());
-    addTearDown(db.close);
-
-    // 迁移后 books 表应含 uuid 列，且旧数据全部回填
-    final rows = await db
-        .customSelect('SELECT uuid, name FROM book_table ORDER BY id')
-        .get();
-    expect(rows.length, 2);
-    final uuids = rows.map((r) => r.data['uuid'] as String).toList();
-    for (final uuid in uuids) {
-      expect(uuid, isNotEmpty);
-      expect(uuid.split('-').length, 5, reason: 'uuid 应为 5 段格式');
-    }
-    // 唯一性：两本书 uuid 不同
-    expect(uuids[0], isNot(uuids[1]));
-
-    // uuid 列上有唯一索引（SQLite 不允许 ALTER 加 NOT NULL UNIQUE 列，
-    // 迁移用可空列 + 回填 + 唯一索引实现）
-    final index = await db
-        .customSelect(
-          "SELECT name FROM sqlite_master WHERE type='index' AND name='book_table_uuid_key'",
-        )
-        .getSingleOrNull();
-    expect(index, isNotNull, reason: '应存在 uuid 唯一索引');
-  });
-
-  test('v3 → v6 真实迁移：新增的同步相关表存在且可用', () async {
-    final db = AppDatabase(_openV3Database());
-    addTearDown(db.close);
-
-    // entity_sync_state 表可读写
-    await db.customInsert(
-      'INSERT INTO entity_sync_state_table (entity_type, entity_id, server_revision) VALUES (?, ?, ?)',
-      variables: [Variable('book'), Variable('uuid-001'), Variable(3)],
-    );
-    final rev = await db
-        .customSelect(
-          'SELECT server_revision FROM entity_sync_state_table WHERE entity_id = ?',
-          variables: [Variable('uuid-001')],
-        )
-        .getSingle();
-    expect(rev.data['server_revision'], 3);
-
-    // sync_task（outbox）与 sync_log 表存在
-    for (final table in ['sync_task_table', 'sync_log_table']) {
-      final t = await db
-          .customSelect(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
-            variables: [Variable(table)],
-          )
-          .getSingleOrNull();
-      expect(t, isNotNull, reason: '$table 表应存在');
-    }
-  });
-
-  test('v4 schema：books 表含 uuid 列，entity_sync_state 表存在', () async {
+  test('v3 新库：同步队列/断点表齐全，sync_op 含 payload 列', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
 
-    // books 表带 uuid 插入
+    for (final t in [
+      'book_table',
+      'sync_op_table',
+      'sync_task_table',
+      'sync_down_table',
+      'sync_down_file_table',
+      'sync_upload_table',
+    ]) {
+      final r = await db.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+        variables: [Variable(t)],
+      ).getSingleOrNull();
+      expect(r, isNotNull, reason: '$t 表应存在');
+    }
+    // 旧 sync_log（会话记录）已删除
+    final log = await db.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='sync_log_table'",
+    ).getSingleOrNull();
+    expect(log, isNull, reason: 'sync_log_table 应不存在');
+
+    // sync_op.payload 列存在且可读写（组任务规格落库）
     await db.customInsert(
-      'INSERT INTO book_table (uuid, name, local_sub_paths) VALUES (?, ?, ?)',
-      variables: [Variable('uuid-001'), Variable('测试书'), Variable('[]')],
+      'INSERT INTO sync_op_table (type, title, status, payload, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      variables: [
+        Variable('push'), Variable('上传导入的书籍'), Variable('running'),
+        Variable('{"opType":"import","items":[]}'),
+        Variable(DateTime.now()), Variable(DateTime.now()),
+      ],
     );
     final row = await db
         .customSelect(
-          'SELECT uuid, name FROM book_table WHERE uuid = ?',
-          variables: [Variable('uuid-001')],
+          'SELECT type, payload FROM sync_op_table WHERE type = ?',
+          variables: [Variable('push')],
         )
         .getSingle();
-    expect(row.data['uuid'], 'uuid-001');
-    expect(row.data['name'], '测试书');
+    expect(row.data['payload'], '{"opType":"import","items":[]}');
+  });
 
-    // entity_sync_state 表已创建
-    final syncTable = await db
-        .customSelect(
-          "SELECT name FROM sqlite_master WHERE type='table' AND name='entity_sync_state_table'",
-        )
-        .getSingleOrNull();
-    expect(syncTable, isNotNull);
+  test('v2(main) → v3：保留书库数据，book 加 uuid 回填，新增同步表', () async {
+    final db = AppDatabase(_openV2Database());
+    addTearDown(db.close);
 
-    // sync 状态表可读写
+    // ① 旧书数据保留（增量升级不清库）
+    final books = await db
+        .customSelect('SELECT id, name, current_page FROM book_table ORDER BY id')
+        .get();
+    expect(books.length, 2, reason: '旧书应保留');
+    expect(books[0].data['name'], '旧书A');
+    expect(books[0].data['current_page'], 3);
+
+    // ② book_table.uuid 已回填：5 段格式且唯一
+    final uuids = await db
+        .customSelect('SELECT uuid FROM book_table ORDER BY id')
+        .get();
+    for (final row in uuids) {
+      final uuid = row.data['uuid'] as String?;
+      expect(uuid, isNotNull);
+      expect(uuid!.isNotEmpty, isTrue);
+      expect(uuid.split('-').length, 5, reason: 'uuid 应为 5 段');
+    }
+    expect(uuids[0].data['uuid'], isNot(uuids[1].data['uuid']), reason: 'uuid 唯一');
+    final index = await db.customSelect(
+      "SELECT name FROM sqlite_master WHERE type='index' AND name='book_table_uuid_key'",
+    ).getSingleOrNull();
+    expect(index, isNotNull, reason: '应存在 uuid 唯一索引');
+
+    // ③ v3 新增的表齐全
+    for (final t in [
+      'setting_table',
+      'entity_sync_state_table',
+      'sync_task_table',
+      'sync_op_table',
+      'sync_down_table',
+      'sync_down_file_table',
+      'sync_upload_table',
+    ]) {
+      final r = await db.customSelect(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name = ?",
+        variables: [Variable(t)],
+      ).getSingleOrNull();
+      expect(r, isNotNull, reason: '$t 表应在 v2→v3 升级后存在');
+    }
+
+    // ④ 新表可写（sync_op 含 payload）
     await db.customInsert(
-      'INSERT INTO entity_sync_state_table (entity_type, entity_id, server_revision) VALUES (?, ?, ?)',
-      variables: [Variable('book'), Variable('uuid-001'), Variable(3)],
+      'INSERT INTO sync_op_table (type, title, status, payload, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?)',
+      variables: [
+        Variable('push'), Variable('上传导入的书籍'), Variable('running'),
+        Variable('{"opType":"import","items":[]}'),
+        Variable(DateTime.now()), Variable(DateTime.now()),
+      ],
     );
-    final rev = await db
-        .customSelect(
-          'SELECT server_revision FROM entity_sync_state_table WHERE entity_id = ?',
-          variables: [Variable('uuid-001')],
-        )
+    final row = await db
+        .customSelect('SELECT payload FROM sync_op_table WHERE type = ?',
+            variables: [Variable('push')])
         .getSingle();
-    expect(rev.data['server_revision'], 3);
+    expect(row.data['payload'], '{"opType":"import","items":[]}');
+  });
+
+  test('sync_op 队列表可用：状态/进度读写', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await db.customInsert(
+      'INSERT INTO sync_op_table (type, title, status, total_books, done_books, current_page, total_pages, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      variables: [
+        Variable('init'), Variable('初始化同步'), Variable('running'),
+        Variable(5), Variable(2), Variable(10), Variable(30),
+        Variable(DateTime.now()), Variable(DateTime.now()),
+      ],
+    );
+    final row = await db
+        .customSelect('SELECT status, done_books, total_pages FROM sync_op_table')
+        .getSingle();
+    expect(row.data['status'], 'running');
+    expect(row.data['done_books'], 2);
+    expect(row.data['total_pages'], 30);
+  });
+
+  test('sync_down/sync_upload 断点表可用', () async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await db.customInsert(
+      'INSERT INTO sync_down_table (uuid, name, total_files, done_files, status, book_status, created_at, updated_at) '
+      'VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      variables: [Variable('u1'), Variable('书A'), Variable(38), Variable(5),
+                  Variable('downloading'), Variable('下载中'), Variable(DateTime.now()), Variable(DateTime.now())],
+    );
+    final row = await db.customSelect('SELECT name, done_files FROM sync_down_table WHERE uuid = ?',
+      variables: [Variable('u1')]).getSingle();
+    expect(row.data['name'], '书A');
+    expect(row.data['done_files'], 5);
   });
 }

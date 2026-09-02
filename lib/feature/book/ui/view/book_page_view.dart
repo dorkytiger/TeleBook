@@ -9,6 +9,7 @@ import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/ui/provider/book_page_provider.dart';
 import 'package:tele_book/feature/setting/enum/setting_key_value.dart';
 import 'package:tele_book/feature/setting/ui/provider/setting_provider.dart';
+import 'package:tele_book/feature/sync/service/optimistic_download_service.dart';
 import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 
 class BookPageView extends ConsumerStatefulWidget {
@@ -152,10 +153,77 @@ class _BookPageViewState extends ConsumerState<BookPageView> {
           itemCount: totalPages,
           itemBuilder: (context, index) {
             final page = state.paths[index];
-            return Image.file(File(page), fit: BoxFit.contain);
+            return _PageImage(
+              subPath: page,
+              bookUuid: state.book.uuid,
+            );
           },
         ),
       ),
     );
+  }
+}
+
+/// 阅读页单页渲染：三态（文件存在→图；下载中→进度条；等待→占位文案）。
+class _PageImage extends ConsumerWidget {
+  final String subPath; // 绝对路径
+  final String bookUuid;
+
+  const _PageImage({required this.subPath, required this.bookUuid});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 监听乐观下载状态（下载中 → 进度条；等待 → 占位；完成文件落盘 → 图）。
+    // 用 ValueListenableBuilder，进度更新/下载完成自动 rebuild。
+    return ValueListenableBuilder<Map<String, FileDownloadState>>(
+      valueListenable:
+          ref.read(optimisticDownloadServiceProvider).fileStates,
+      builder: (context, fileStates, _) {
+        final file = File(subPath);
+        // 文件已落盘 → 直接显图（下载完成/非下载场景）
+        if (file.existsSync()) {
+          return Image.file(file, fit: BoxFit.contain);
+        }
+        final state = fileStates['$bookUuid/${_relOf(subPath)}'];
+        if (state != null && state.status == 'syncing') {
+          // 下载中：进度条
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const FCircularProgress(),
+                  const SizedBox(height: 12),
+                  Text(
+                    '正在下载本页 ${(state.progress * 100).toStringAsFixed(0)}%',
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        // 等待中/未知（文件尚未下载完成）：占位文案
+        return Center(
+          child: Text(
+            state == null ? '等待下载…' : '正在下载本页…',
+            style: context.theme.typography.body.sm.copyWith(
+              color: context.theme.colors.mutedForeground,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 绝对路径 → 书内相对路径（如 original/0000000）。
+  String _relOf(String abs) {
+    final parts = abs.split('/');
+    // 去掉 .../books/<uuid>/ 前缀，保留 original/xxx 或 cover.jpg
+    final uuidIdx = parts.lastIndexOf(bookUuid);
+    if (uuidIdx >= 0 && uuidIdx + 1 < parts.length) {
+      return parts.sublist(uuidIdx + 1).join('/');
+    }
+    return parts.last;
   }
 }

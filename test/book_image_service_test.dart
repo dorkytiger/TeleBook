@@ -64,4 +64,24 @@ void main() {
       expect(await File(p).exists(), isTrue);
     }
   });
+
+  test('generateCover: 父目录不存在时也能写入（真实保存场景）', () async {
+    final dir = await Directory.systemTemp.createTemp('img_nodir');
+    addTearDown(() => dir.delete(recursive: true));
+
+    // 源图在临时目录
+    final src = img.Image(width: 100, height: 100);
+    img.fill(src, color: img.ColorRgb8(1, 2, 3));
+    final srcPath = '${dir.path}/src.png';
+    await File(srcPath).writeAsBytes(img.encodePng(src));
+
+    // 目标：一个完全不存在的深层目录（如 books/{bookId}/cover.jpg）
+    final bookDir = '${dir.path}/not_exist_yet/books/uuid123';
+    final coverPath = '$bookDir/cover.jpg';
+
+    await BookImageService.generateCover(srcPath, coverPath);
+
+    expect(await File(coverPath).exists(), isTrue);
+    expect(await File(coverPath).length(), greaterThan(0));
+  });
 }

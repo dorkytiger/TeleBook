@@ -10,6 +10,8 @@ import 'package:tele_book/core/util/uuid_util.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/setting/repository/setting_repository.dart';
 import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_task_local_datasource.dart';
+import 'package:tele_book/feature/sync/service/local_conflict_service.dart';
 import 'package:tele_book/feature/sync/model/request/auth_request.dart';
 import 'package:tele_book/feature/sync/model/request/refresh_request.dart';
 import 'package:tele_book/feature/sync/model/request/conflict_request.dart';
@@ -61,6 +63,16 @@ class SyncService extends _$SyncService {
   BookRepository get _books => ref.read(bookRepositoryProvider);
   SyncStateLocalDatasource get _syncState => ref.read(syncStateLocalDatasourceProvider);
   FileSyncService get _fileSync => ref.read(fileSyncServiceProvider);
+
+  /// pull 进度事件时，本地 outbox 有更晚待推变更的书（单次 pull 惰性加载缓存）。
+  Set<String>? _protectedBookIds;
+
+  /// pull 时的"待解决冲突"书（§7）：本地版本还没被用户选择保留，pull 不得用
+  /// 服务器事件覆盖本地内容（否则冲突列表里的"保留本地"选项形同虚设）。
+  Set<String>? _conflictUuids;
+
+  Set<String> get _conflictUuidSet => _conflictUuids ??=
+      {for (final c in ref.read(localConflictServiceProvider).pending.value) c.uuid};
 
   /// 测试连接：GET {url}/ping。
   Future<bool> testConnection(String url) async {
@@ -333,6 +345,39 @@ class SyncService extends _$SyncService {
     return ok;
   }
 
+  /// 服务端当前库状态（§2.1 分支检测：远程书数 + 整库版本）。
+  Future<LibraryStatus> libraryStatus() async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    if (url == null || token == null) {
+      throw StateError('尚未配置同步服务器');
+    }
+    final options = Options(headers: {'Authorization': 'Bearer $token'});
+    final res = await _dio.get<Map<String, dynamic>>(
+      '$url/api/v1/sync/library',
+      options: options,
+    );
+    return LibraryStatus.fromJson(res.data ?? {});
+  }
+
+  /// 服务端全量书清单（含每本书完整文件清单），初始化同步下载分支用（§2.1.2）。
+  Future<List<RemoteLibraryBook>> libraryBooks() async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    if (url == null || token == null) {
+      throw StateError('尚未配置同步服务器');
+    }
+    final options = Options(headers: {'Authorization': 'Bearer $token'});
+    final res = await _dio.get<dynamic>(
+      '$url/api/v1/sync/books',
+      options: options,
+    );
+    final list = (res.data as List?) ?? const [];
+    return list
+        .map((e) => RemoteLibraryBook.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   /// 归档历史列表（时间倒序）。
   Future<List<BookHistory>> listHistory({String? bookId}) async {
     final url = await _settings.getString(SyncSettings.serverUrl);
@@ -444,6 +489,20 @@ class SyncService extends _$SyncService {
 
       for (final e in data.events) {
         if (e.entityType == 'book') {
+          // §7 冲突保护：待解决冲突的书，pull 不得覆盖本地内容/响应墓碑，
+          // 只回填 revision（冲突解决动作负责收敛内容）
+          final conflicted = _conflictUuidSet.contains(e.entityId);
+          if (conflicted && e.op == 'upsert') {
+            if (e.revision > 0) {
+              await _syncState.upsertRevision('book', e.entityId, e.revision);
+            }
+            applied++;
+            continue;
+          }
+          if (conflicted && (e.op == 'delete' || e.op == 'progress')) {
+            applied++;
+            continue;
+          }
           if (e.op == 'upsert') {
             final payload = e.payload ?? const BookPayload(name: '未知书名');
             // 1. 先上报文件清单（失败重试用）
@@ -499,6 +558,32 @@ class SyncService extends _$SyncService {
               await _books.deleteBookByUuid(e.entityId);
             }
             await _syncState.deleteState('book', e.entityId);
+          } else if (e.op == 'progress') {
+            // 阅读进度（§3）：只更新本地 book.current_page，不建书、不记快照。
+            // 若本地 outbox 仍有该书待推的进度/编辑（本地更新更晚），跳过，
+            // 避免用旧事件覆盖自己刚推进的进度（§4 多设备收敛）。
+            if (_protectedBookIds == null) {
+              final pending =
+                  await ref.read(syncTaskLocalDatasourceProvider).listPending();
+              _protectedBookIds = pending
+                  .where(
+                    (t) =>
+                        t.entityType == 'book' &&
+                        (t.op == 'progress' || t.op == 'upsert'),
+                  )
+                  .map((t) => t.entityId)
+                  .toSet();
+            }
+            if (_protectedBookIds!.contains(e.entityId)) {
+              continue;
+            }
+            final payload = e.payload ?? const BookPayload(name: '');
+            final local = await _books.getBookByUuid(e.entityId);
+            if (local != null && payload.currentPage != local.currentPage) {
+              await _books.updateBook(
+                local.copyWith(currentPage: payload.currentPage),
+              );
+            }
           }
         }
         applied++;
@@ -567,4 +652,51 @@ class SyncService extends _$SyncService {
     }
     return (result, failed);
   }
+}
+
+/// 服务端库状态（§2.1 分支检测）。
+class LibraryStatus {
+  final int bookCount;
+  final String bookVersion;
+
+  const LibraryStatus({required this.bookCount, required this.bookVersion});
+
+  factory LibraryStatus.fromJson(Map<String, dynamic> json) => LibraryStatus(
+        bookCount: (json['book_count'] as num?)?.toInt() ?? 0,
+        bookVersion: json['book_version'] as String? ?? '',
+      );
+}
+
+/// 服务端远程书籍（含完整文件清单 + revision），初始化同步下载分支用。
+/// revision = 服务器 current_book 的版本号，客户端下载/比对后回填本地
+/// sync_state（§2.1.5 乐观锁基准），否则之后编辑推送会因 base=0 被拒绝。
+class RemoteLibraryBook {
+  final String uuid;
+  final String name;
+  final int currentPage;
+  final String? coverHash;
+  final List<BookFileMeta> files;
+  final int revision;
+
+  const RemoteLibraryBook({
+    required this.uuid,
+    required this.name,
+    this.currentPage = 0,
+    this.coverHash,
+    this.files = const [],
+    this.revision = 0,
+  });
+
+  factory RemoteLibraryBook.fromJson(Map<String, dynamic> json) =>
+      RemoteLibraryBook(
+        uuid: json['uuid'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        currentPage: (json['current_page'] as num?)?.toInt() ?? 0,
+        coverHash: json['cover_hash'] as String?,
+        files: ((json['files'] as List?) ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(BookFileMeta.fromJson)
+            .toList(),
+        revision: (json['revision'] as num?)?.toInt() ?? 0,
+      );
 }

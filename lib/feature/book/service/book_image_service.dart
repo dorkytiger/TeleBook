@@ -54,8 +54,11 @@ class BookImageService {
   }
 
   /// 编码为 JPEG 并写入目标路径。
+  /// ⚠️ 先确保父目录存在（原 flutter_image_compress 会自动建目录，
+  /// 换成 File.writeAsBytes 后不自动建，缺失会抛 PathNotFoundException）。
   static Future<void> _encodeJpeg(img.Image decoded, String destPath) async {
     final jpeg = img.encodeJpg(decoded, quality: jpegQuality);
+    await File(destPath).parent.create(recursive: true);
     await File(destPath).writeAsBytes(jpeg, flush: true);
   }
 

@@ -20,3 +20,11 @@ class ReadingDirectionSetting extends _$ReadingDirectionSetting {
     state = AsyncData(dir);
   }
 }
+
+/// 是否已初始化服务器（保存了 url + token）。
+///
+/// 响应 setting 表变更：在引导页连接成功写库后，设置页无需手动刷新
+/// 即从「初始化服务器」切换为「重新初始化服务器 + 同步功能」。
+final syncConfiguredProvider = StreamProvider.autoDispose<bool>((ref) {
+  return ref.watch(settingRepositoryProvider).watchConfigured();
+});

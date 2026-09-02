@@ -4,9 +4,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/service/dio_provdier.dart';
 import 'package:tele_book/core/service/sync_service.dart';
@@ -15,17 +13,12 @@ import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
 import 'package:tele_book/feature/setting/repository/setting_repository.dart';
 import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
-import 'package:tele_book/feature/sync/datasource/sync_log_local_datasource.dart';
 import 'package:tele_book/feature/sync/datasource/sync_task_local_datasource.dart';
-import 'package:tele_book/feature/sync/model/request/auth_request.dart';
 import 'package:tele_book/feature/sync/model/request/history_request.dart';
-import 'package:tele_book/feature/sync/model/request/refresh_request.dart';
 import 'package:tele_book/feature/sync/model/request/sync_request.dart';
-import 'package:tele_book/feature/sync/model/response/auth_response.dart';
-import 'package:tele_book/feature/sync/model/response/refresh_response.dart';
 import 'package:tele_book/feature/sync/model/response/sync_response.dart';
 import 'package:tele_book/feature/sync/service/file_sync_service.dart';
-import 'package:tele_book/feature/sync/service/sync_log_session.dart';
+import 'package:tele_book/feature/sync/service/sync_op_service.dart';
 import 'package:tele_book/feature/sync/service/sync_queue.dart';
 
 final syncMutationServiceProvider = Provider<SyncMutationService>((ref) {
@@ -34,76 +27,44 @@ final syncMutationServiceProvider = Provider<SyncMutationService>((ref) {
     ref.watch(bookRepositoryProvider),
     ref.watch(syncStateLocalDatasourceProvider),
     ref.watch(syncTaskLocalDatasourceProvider),
-    ref.watch(syncLogLocalDatasourceProvider),
     ref.watch(serverDioProvider),
     ref.watch(fileSyncServiceProvider),
+    ref.watch(syncOpServiceProvider),
   );
 });
 
-/// 会话进行中的实时进度汇总（底栏"同步中"提示用）。
-class SyncSessionProgress {
-  final String? currentName; // 当前正在同步的书名
-  final int currentFilesDone; // 当前书图片已处理数
-  final int currentFilesTotal; // 当前书图片总数
-  final int booksDone; // 已完成书籍数
-  final int booksTotal; // 总书籍数
-
-  const SyncSessionProgress({
-    this.currentName,
-    this.currentFilesDone = 0,
-    this.currentFilesTotal = 0,
-    this.booksDone = 0,
-    this.booksTotal = 0,
-  });
-}
-
-/// 本地优先（离线优先）的书籍变更编排：
+/// 本地优先（离线优先）的书籍变更编排（队列单一化，§5/§8.5）。
 ///
-/// 变更（修改/删除/导入）**立即落本地**（用户无感、离线可用），
-/// 同时写一条"待同步任务"（outbox：稳定 change_id + 变更快照）；
-/// 后台 [drain] 串行推送服务器：成功移除任务、冲突标记（底栏提示）、
-/// 网络错误保留任务下次重试。底栏只显示同步状态（待同步数/同步中/冲突）。
+/// **内容型变更（导入/批量导入/修改/删除）**：立即落本地（乐观），随后作为
+/// 一组 SyncOp 组任务（type=push，组 = 该次用户操作，含多本书）入队执行：
+/// 逐书上传缺失文件（内容寻址跳过已有）→ push 元数据/墓碑 → 成功后自动记录
+/// 整库快照历史（§3）。因此它天然获得：全局通知「上传中 第X/共N本 · 页a/b」、
+/// 可点开的组内书/页明细、失败可重试、App 中断后按落库规格（payload）恢复，
+/// 并写入本地同步记录。不再走独立的 outbox 双通道。
 ///
-/// 未配置同步服务器时只做本地操作（不产生 outbox 任务）。
+/// **阅读进度（progress）**：高频小推送，**不进组任务、不进本地记录/通知**，
+/// 静默直推（失败静默保留，下次翻页/内容型任务后补推；跨设备进度靠刷新同步
+/// 顺带拉取收敛）。
 class SyncMutationService {
   final SettingRepository _settings;
   final BookRepository _books;
   final SyncStateLocalDatasource _syncState;
   final SyncTaskLocalDatasource _syncTasks;
-  final SyncLogLocalDatasource _syncLogs;
   final Dio _dio;
   final FileSyncService _fileSync;
+  final SyncOpService _opsSync;
+
+  /// 本进程内所有网络推送（内容型组任务执行体 + 进度静默）串行互斥。
   final SyncQueue _queue = SyncQueue();
-
-  /// 本地冲突标记（实体 uuid → 冲突）；底栏据此提示"需先解决"。
-  final ValueNotifier<Set<String>> conflictedBookIds = ValueNotifier({});
-
-  /// outbox 变动计数（入队/清空后自增），SyncStatusNotifier 监听刷新底栏。
-  final ValueNotifier<int> outboxRevision = ValueNotifier(0);
-
-  /// 最近一次同步错误（drain 失败时设置；UI 监听弹窗提示，展示后清空）。
-  final ValueNotifier<String?> lastError = ValueNotifier(null);
-
-  /// drain 是否进行中（底栏"同步中"据此显示，任意导入/删除触发也会亮）。
-  final ValueNotifier<bool> draining = ValueNotifier(false);
-
-  /// 会话实时进度（当前书图片 done/total + 总书籍 done/total），
-  /// 每次会话状态变更时更新；无会话时为 null。
-  final ValueNotifier<SyncSessionProgress?> sessionProgress =
-      ValueNotifier(null);
-
-  /// 当前同步会话（drain + pull 共用一条本地记录）。
-  SyncLogSession? _session;
-  bool _sessionDirty = false;
 
   SyncMutationService(
     this._settings,
     this._books,
     this._syncState,
     this._syncTasks,
-    this._syncLogs,
     this._dio,
     this._fileSync,
+    this._opsSync,
   );
 
   /// 当前是否有可用的同步配置（serverUrl + token）。
@@ -113,595 +74,439 @@ class SyncMutationService {
     return url != null && token != null;
   }
 
-  // ── 本地优先变更：立即落库 + 写 outbox，后台 drain ─────────
+  // ── 内容型变更：本地立即生效 + 提交 push 组任务 ────────────
 
-  /// 修改书籍：本地立即生效，同步任务后台推送；操作完成后捕获整库快照 → 记 modify。
+  /// 修改书籍：本地立即生效；提交一组「上传修改的书籍」。
   Future<void> enqueueBookUpsert({required BookTableData book}) async {
-    final configured = await isConfigured();
     await _books.updateBook(book);
-    if (configured) {
-      final files = await _fileSync.buildBookFiles(book);
-      await _syncTasks.insertTask(
-        _task(
-          op: 'upsert',
-          entityId: book.uuid,
-          payload: _payloadOf(
-            name: book.name,
-            currentPage: book.currentPage,
-            files: files,
-          ),
-        ),
-      );
-      final postSnapshot = await buildSnapshot(); // 操作完成后的状态
-      await _syncTasks.insertTask(
-        _historyTask(opType: 'modify', tag: 'auto', snapshot: postSnapshot),
-      );
-      _bump();
-      unawaited(drain());
-    }
-  }
-
-  /// 阅读进度：本地立即落库，同步任务后台推送。
-  ///
-  /// 高频变更防膨胀：合并到已有 pending upsert（只更新 current_page），
-  /// 不新增任务、不记整库快照历史（进度不是内容变更，历史无意义）。
-  Future<void> enqueueBookProgress({required BookTableData book}) async {
-    await _books.updateBook(book); // 本地优先，立即生效（未配置也落库）
     if (!await isConfigured()) return;
-    final merged = await _syncTasks.mergePendingUpsert(
-      entityId: book.uuid,
-      name: book.name,
-      currentPage: book.currentPage,
+    await _submitPushGroup(
+      title: '上传修改的书籍',
+      opType: 'modify',
+      items: [
+        PushBookItem(uuid: book.uuid, op: 'upsert', name: book.name),
+      ],
     );
-    if (!merged) {
-      final files = await _fileSync.buildBookFiles(book);
-      await _syncTasks.insertTask(
-        _task(
-          op: 'upsert',
-          entityId: book.uuid,
-          payload: _payloadOf(
-            name: book.name,
-            currentPage: book.currentPage,
-            files: files,
-          ),
-        ),
-      );
-    }
-    _bump();
-    unawaited(drain());
   }
 
-  /// 删除书籍：本地立即删除（含图片文件），同步任务后台推送墓碑；
-  /// 删除完成后捕获整库快照 → 记 delete（快照 = 删除后的状态）。
+  /// 删除书籍：本地立即删除（含图片文件）；提交一组「上传删除的书籍」。
   Future<void> enqueueBookDelete({required String uuid}) async {
-    final configured = await isConfigured();
+    final row = await _books.getBookByUuid(uuid);
+    final name = row?.name;
     await _deleteLocalBook(uuid);
-    if (configured) {
-      await _syncTasks.insertTask(
-        _task(op: 'delete', entityId: uuid, payload: null),
-      );
-      final postSnapshot = await buildSnapshot(); // 删除完成后的状态
-      await _syncTasks.insertTask(
-        _historyTask(opType: 'delete', tag: 'auto', snapshot: postSnapshot),
-      );
-      _bump();
-      unawaited(drain());
-    }
+    if (!await isConfigured()) return;
+    await _submitPushGroup(
+      title: '上传删除的书籍',
+      opType: 'delete',
+      items: [PushBookItem(uuid: uuid, op: 'delete', name: name)],
+    );
   }
 
-  /// 导入书籍（单个）：本地立即生成图片并落库，同步任务后台推送；
-  /// 导入完成后捕获整库快照 → 记 import（快照 = 导入后的状态）。
+  /// 导入书籍（单个）：本地立即生成图片并落库；提交一组「上传导入的书籍」。
   Future<void> enqueueBookImport(
     SaveAsBookDto dto, {
     void Function(SaveStep step, int current, int total)? onStepProgress,
   }) async {
-    final configured = await isConfigured();
     final prepared = await _books.prepareBookImages(
       dto,
       onStepProgress: onStepProgress,
     );
     await _books.insertPreparedBook(prepared);
-    if (configured) {
-      final files = await _fileSync.buildBookFilesFor(
-        localSubPaths: prepared.localSubPaths,
-        coverSubPath: prepared.coverSubPath,
-      );
-      await _syncTasks.insertTask(
-        _task(
-          op: 'upsert',
-          entityId: prepared.uuid,
-          payload: _payloadOf(
-            name: prepared.name,
-            currentPage: 0,
-            files: files,
-          ),
-        ),
-      );
-      final postSnapshot = await buildSnapshot(); // 导入完成后的状态
-      await _syncTasks.insertTask(
-        _historyTask(opType: 'import', tag: 'auto', snapshot: postSnapshot),
-      );
-      _bump();
-      unawaited(drain());
-    }
+    if (!await isConfigured()) return;
+    await _submitPushGroup(
+      title: '上传导入的书籍',
+      opType: 'import',
+      items: [
+        PushBookItem(uuid: prepared.uuid, op: 'upsert', name: prepared.name),
+      ],
+    );
   }
 
-  /// 批量导入：逐本落库 + 写 outbox；批次完成后捕获整库快照 → 记一条 import。
+  /// 批量导入：逐本本地落库；整批提交一组「上传导入的 N 本书」。
   Future<void> enqueueBatchBookImport(
     List<SaveAsBookDto> dos, {
     void Function(int count)? onProgress,
   }) async {
-    final configured = await isConfigured();
+    final items = <PushBookItem>[];
     for (var i = 0; i < dos.length; i++) {
       final prepared = await _books.prepareBookImages(dos[i]);
       await _books.insertPreparedBook(prepared);
-      if (configured) {
-        final files = await _fileSync.buildBookFilesFor(
-          localSubPaths: prepared.localSubPaths,
-          coverSubPath: prepared.coverSubPath,
-        );
-        await _syncTasks.insertTask(
-          _task(
-            op: 'upsert',
-            entityId: prepared.uuid,
-            payload: _payloadOf(
-              name: prepared.name,
-              currentPage: 0,
-              files: files,
-            ),
-          ),
-        );
-      }
+      items.add(PushBookItem(uuid: prepared.uuid, op: 'upsert', name: prepared.name));
       onProgress?.call(i + 1);
     }
-    if (configured) {
-      // 整个批次记一条 import 历史（快照 = 导入完成后的状态）
-      final postSnapshot = await buildSnapshot();
-      await _syncTasks.insertTask(
-        _historyTask(opType: 'import', tag: 'auto', snapshot: postSnapshot),
-      );
-      _bump();
-      unawaited(drain());
-    }
-  }
-
-  /// 手动同步：同步前捕获快照，同步完成后记录 manual_sync（供手动同步页调用）。
-  Future<void> recordManualSync({required List<BookSnapshotItem> snapshot}) async {
     if (!await isConfigured()) return;
-    await _syncTasks.insertTask(
-      _historyTask(opType: 'manual_sync', tag: 'manual', snapshot: snapshot),
+    await _submitPushGroup(
+      title: dos.length > 1 ? '上传导入的 ${dos.length} 本书' : '上传导入的书籍',
+      opType: 'import',
+      items: items,
     );
-    _bump();
-    unawaited(drain());
   }
 
-  // ── 后台 drain：串行推送 outbox ───────────────────────────
+  // ── push 组任务：提交 / 执行 / 恢复 ─────────────────────────
 
-  /// 排空 outbox（串行）；返回完成信号（供手动同步等待）。
-  Future<void> drain() => _queue.enqueue(_drainOnce);
-
-  Future<void> _drainOnce() async {
-    if (!await isConfigured()) return;
-    draining.value = true;
-    var allOk = true;
-    try {
-      final tasks = await _syncTasks.listPending();
-      if (tasks.isNotEmpty) {
-        await beginSyncSession();
-        // 预注册所有待同步书籍到会话（status=pending，files 全 pending）：
-        // 否则详情页只显示当前正在推送的那一本。
-        for (final task in tasks) {
-          if (task.entityType != 'book' || task.op != 'upsert') continue;
-          if (task.payload == null || task.payload!.isEmpty) continue;
-          final payload = BookPayload.fromJson(
-            jsonDecode(task.payload!) as Map<String, dynamic>,
-          );
-          final fileItems = _fileItemsFromPayload(payload, task.entityId);
-          sessionUpsertBook(
-            task.entityId,
-            payload.name,
-            fileItems.map((f) => f.relPath).toList(),
-          );
-        }
-      }
-      for (final task in tasks) {
-        final proceed = await _pushTask(task);
-        if (!proceed) {
-          allOk = false;
-          break; // 网络/服务器错误：停止本次 drain，保留顺序，下轮重试
-        }
-      }
-    } catch (e) {
-      allOk = false;
-      _reportError('同步出错: $e');
-    } finally {
-      if (_session != null) {
-        await endSyncSession(ok: allOk);
-      }
-      draining.value = false;
-    }
-    _bump();
+  /// 提交一组内容型变更推送。规格（书清单 + 快照类型）随任务落库
+  /// （sync_op.payload，当前 schema 新增列），重启后可按它重建（[enqueuePushFromPayload]）。
+  Future<int> _submitPushGroup({
+    required String title,
+    required String opType,
+    required List<PushBookItem> items,
+  }) {
+    final payload = jsonEncode({
+      'opType': opType,
+      'items': [for (final it in items) it.toJson()],
+    });
+    return _enqueuePushFromPayload(payload, title: title);
   }
 
-  /// 推送单个任务。返回 true=已处理（成功/冲突/失败），false=错误（停止）。
-  Future<bool> _pushTask(SyncTaskTableData task) async {
-    try {
-      final url = await _settings.getString(SyncSettings.serverUrl);
-      final token = await _settings.getString(SyncSettings.token);
-      final options = Options(headers: {'Authorization': 'Bearer $token'});
-
-      // 历史记录任务：整库快照直接 POST /books/history
-      if (task.entityType == 'history') {
-        final req = RecordHistoryRequest.fromJson(
-          jsonDecode(task.payload!) as Map<String, dynamic>,
-        );
-        await _dio.post<Map<String, dynamic>>(
-          '$url/api/v1/books/history',
-          data: req.toJson(),
-          options: options,
-        );
-        await _syncTasks.removeTask(task.id);
-        return true;
-      }
-
-      final baseRev =
-          await _syncState.getRevision(task.entityType, task.entityId) ?? 0;
-      // outbox 存的是 BookPayload 的 JSON 快照；delete 任务无 payload
-      BookPayload? payload;
-      if (task.payload != null && task.payload!.isNotEmpty) {
-        payload = BookPayload.fromJson(
-          jsonDecode(task.payload!) as Map<String, dynamic>,
-        );
-      }
-
-      // 图片文件：按快照 hash 上传缺失（内容寻址去重）
-      final fileItems = _fileItemsFromPayload(payload, task.entityId);
-      if (task.op == 'upsert' && payload != null) {
-        sessionUpsertBook(
-          task.entityId,
-          payload.name,
-          fileItems.map((f) => f.relPath).toList(),
-        );
-      }
-      if (fileItems.isNotEmpty) {
-        final missing = await _fileSync.checkMissing(
-          fileItems.map((f) => f.hash).toList(),
-        );
-        for (final f in fileItems) {
-          if (!missing.contains(f.hash) || !File(f.absPath).existsSync()) {
-            sessionMarkFile(task.entityId, f.relPath, 'done'); // 已存在/已上传
-            continue;
-          }
-          sessionMarkFile(task.entityId, f.relPath, 'syncing');
-          try {
-            await _fileSync.uploadFile(
-              path: f.absPath,
-              hash: f.hash,
-              size: f.size,
-            );
-            sessionMarkFile(task.entityId, f.relPath, 'done');
-          } catch (_) {
-            sessionMarkFile(task.entityId, f.relPath, 'failed');
-          }
-        }
-      }
-
-      final res = await _dio.post<Map<String, dynamic>>(
-        '$url/api/v1/sync/push',
-        data: SyncPushRequest(
-          source: 'auto',
-          changes: [
-            BookChange(
-              changeId: task.changeId,
-              entityType: task.entityType,
-              entityId: task.entityId,
-              op: task.op,
-              baseRevision: baseRev,
-              payload: payload,
-            ),
-          ],
-        ).toJson(),
-        options: options,
-      );
-      final response = SyncPushResponse.fromJson(res.data ?? {});
-      if (response.results.isEmpty) {
-        await _syncTasks.removeTask(task.id);
-        return true;
-      }
-      final r = response.results.first;
-      if (r.accepted) {
-        if (r.revision > 0) {
-          await _syncState.upsertRevision(
-            task.entityType,
-            task.entityId,
-            r.revision,
-          );
-        }
-        await _syncTasks.removeTask(task.id);
-        sessionMarkBook(task.entityId, 'done');
-        return true;
-      }
-      if (r.reason == 'conflict') {
-        // 服务器已有更新版本：本地保留，标记冲突走解决流程，任务移除
-        _markConflict(task.entityId);
-        await _syncTasks.removeTask(task.id);
-        sessionMarkBook(task.entityId, 'failed');
-        return true;
-      }
-      // 其它失败：标记 failed（保留任务，下次 drain 重试）
-      await _syncTasks.markFailed(task.id);
-      sessionMarkBook(task.entityId, 'failed');
-      return true;
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        // 1) 先尝试 refresh token 换新 access（正常过期路径）
-        if (await _refreshAccessToken()) return _pushTask(task);
-        // 2) refresh 也失效（服务器重置/设备丢失）→ 用连接密钥重新注册
-        if (await _ensureRegistered()) return _pushTask(task);
-        _reportError('登录已失效，请到设置重新连接同步服务器');
-        return false;
-      }
-      _reportError(
-        '同步失败（${e.response?.statusCode ?? e.type}）: '
-        '${e.response?.statusMessage ?? e.message}',
-      );
-      return false;
-    } catch (e) {
-      _reportError('同步出错: $e');
-      return false;
-    }
-  }
-
-  /// 用 refresh token 换新 access token（服务端轮换 refresh token）。
-  Future<bool> _refreshAccessToken() async {
-    final url = await _settings.getString(SyncSettings.serverUrl);
-    final refreshToken = await _settings.getString(SyncSettings.refreshToken);
-    if (url == null || refreshToken == null || refreshToken.isEmpty) {
-      return false;
-    }
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '$url/api/v1/auth/refresh',
-        data: RefreshRequest(refreshToken: refreshToken).toJson(),
-      );
-      final response = RefreshResponse.fromJson(res.data ?? {});
-      if (response.accessToken.isEmpty) return false;
-      await _settings.setString(SyncSettings.token, response.accessToken);
-      await _settings.setString(SyncSettings.refreshToken, response.refreshToken);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  /// 服务器丢失设备（数据重置）时用本地保存的配置重新注册，换新 token。
-  Future<bool> _ensureRegistered() async {
-    final url = await _settings.getString(SyncSettings.serverUrl);
-    final key = await _settings.getString(SyncSettings.connectionKey);
-    final deviceId = await _settings.getString(SyncSettings.deviceId) ?? Uuid.v4();
-    if (url == null || key == null) return false;
-    try {
-      final res = await _dio.post<Map<String, dynamic>>(
-        '$url/api/v1/auth/register',
-        data: RegisterRequest(
-          connectionKey: key,
-          deviceId: deviceId,
-          deviceName: 'android-${deviceId.substring(0, 4)}',
-          platform: 'android',
-        ).toJson(),
-      );
-      final response = RegisterResponse.fromJson(res.data ?? {});
-      if (response.accessToken.isEmpty) return false;
-      await _settings.setString(SyncSettings.token, response.accessToken);
-      await _settings.setString(SyncSettings.refreshToken, response.refreshToken);
-      await _settings.setString(SyncSettings.deviceId, deviceId);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  // ── 本地同步记录（会话） ──────────────────────────────────
-
-  /// 开始一次同步会话（创建本地记录行；已存在则复用）。
-  Future<void> beginSyncSession() async {
-    if (_session != null) return;
-    final now = DateTime.now();
-    final id = await _syncLogs.insertLog(
-      SyncLogTableCompanion.insert(
-        startedAt: now,
-        status: 'running',
-      ),
+  /// 按 payload 入队 push 组任务（提交与重启恢复共用）。
+  Future<int> _enqueuePushFromPayload(String payload, {required String title}) {
+    return _opsSync.enqueue(
+      type: SyncOpType.push,
+      title: title,
+      payload: payload,
+      executor: (progress, detail) async {
+        // 执行体放入本服务串行队列，与进度静默推送互斥
+        await _queue.enqueue(() => _runPushGroup(payload, progress, detail));
+      },
     );
-    _session = SyncLogSession(id: id, startedAt: now);
-    _sessionDirty = true;
-    _schedulePersist();
   }
 
-  /// 注册一本书及其文件清单（drain 上传 / pull 下载共用）。
-  void sessionUpsertBook(String uuid, String name, List<String> relPaths) {
-    final session = _session;
-    if (session == null) return;
-    final book = session.book(uuid, name);
-    for (final rel in relPaths) {
-      book.files.putIfAbsent(rel, () => 'pending');
+  /// 重启恢复入口：读取遗留 failed/interrupted 的 push 任务（行内 payload），
+  /// **复用原任务行**重新入队执行（成功后原行 done、通知不残留；失败可再重试）。
+  /// 返回是否已调度。
+  Future<bool> enqueuePushFromPayload(SyncOpTableData op) async {
+    final payload = op.payload;
+    if (payload == null || payload.isEmpty) {
+      throw StateError('该任务没有可恢复的规格');
     }
-    _schedulePersist();
-  }
-
-  /// 标记某本书的一个文件状态（上传/下载进度）。
-  void sessionMarkFile(String uuid, String relPath, String status) {
-    final session = _session;
-    if (session == null) return;
-    final book = session.bookByUuid(uuid);
-    if (book == null) return;
-    book.files[relPath] = status;
-    if (status == 'syncing' && book.status == 'pending') {
-      book.status = 'syncing';
-    }
-    _schedulePersist();
-  }
-
-  /// 标记某本书整体状态（done / failed）。
-  void sessionMarkBook(String uuid, String status) {
-    final session = _session;
-    if (session == null) return;
-    final book = session.bookByUuid(uuid);
-    if (book == null) return;
-    book.status = status;
-    if (status == 'done') {
-      for (final k in book.files.keys) {
-        book.files[k] = 'done';
-      }
-    }
-    _schedulePersist();
-  }
-
-  /// pull 下载的书本聚合进度（done/total 文件）。
-  void sessionReportBookAggregate(String uuid, String name, int done, int total) {
-    final session = _session;
-    if (session == null) return;
-    final book = session.book(uuid, name);
-    // 无明细文件时按计数补齐占位
-    final rels = List<String>.of(book.files.keys);
-    if (rels.isEmpty) {
-      for (var i = 0; i < total; i++) {
-        book.files['#${i + 1}'] = 'pending';
-      }
-    }
-    final keys = List<String>.of(book.files.keys);
-    var count = 0;
-    for (final k in keys) {
-      if (count < done) {
-        book.files[k] = 'done';
-      } else {
-        book.files[k] = 'pending';
-      }
-      count++;
-    }
-    if (book.status == 'pending') book.status = 'syncing';
-    if (done >= total) book.status = 'done';
-    _schedulePersist();
-  }
-
-  /// 结束会话：落库最终状态（completed / failed）。
-  Future<void> endSyncSession({required bool ok, String? error}) async {
-    final session = _session;
-    if (session == null) return;
-    session.status = ok ? 'completed' : 'failed';
-    _schedulePersist(); // 立即刷
-    await _persistSessionNow();
-    _session = null;
-    sessionProgress.value = null; // 会话结束，底栏不再显示进度
-  }
-
-  Timer? _persistTimer;
-  void _schedulePersist() {
-    // 实时推送底栏进度（不等落库 timer）
-    _updateSessionProgress();
-    // 防抖：每次变更都（重新）调度，timer 到期写库并复位 dirty。
-    // 原实现只写一次库（dirty 复位后不再调度），导致进度 UI 停在最早快照。
-    _sessionDirty = true;
-    _persistTimer?.cancel();
-    _persistTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!_sessionDirty) return;
-      _sessionDirty = false;
-      _persistSessionNow();
+    return _opsSync.retryWithExecutor(op.id, (progress, detail) async {
+      await _queue.enqueue(() => _runPushGroup(payload, progress, detail));
     });
   }
 
-  /// 汇总会话实时进度（当前书图片 done/total + 总书籍 done/total）到底栏。
-  void _updateSessionProgress() {
-    final session = _session;
-    if (session == null) {
-      sessionProgress.value = null;
-      return;
+  /// 执行一组内容型推送（幂等可重放，§8.7.7）：
+  /// 逐书：文件按 hash 只传缺失 → push 元数据/墓碑 → 收尾记录整库快照历史。
+  /// **断点续传（§8.2）**：行内已落库的 doneBooks 经 [detail.resumeFrom] 注入，
+  /// 重跑/恢复时从上次完成的本数继续，已完成的书跳过（不重复上传/push）。
+  Future<void> _runPushGroup(
+    String payload,
+    SyncOpProgressCallback progress,
+    SyncOpDetailWriter detail,
+  ) async {
+    final spec = jsonDecode(payload) as Map<String, dynamic>;
+    final items = [
+      for (final it in (spec['items'] as List? ?? const []))
+        PushBookItem.fromJson(it as Map<String, dynamic>),
+    ];
+    if (items.isEmpty) return;
+    final opType = spec['opType'] as String? ?? 'modify';
+    final total = items.length;
+    final start = detail.resumeFrom.clamp(0, total);
+    var pushedAny = false;
+
+    for (var idx = 0; idx < total; idx++) {
+      final item = items[idx];
+      final done = idx + 1; // 绝对序号（第几本，1-based）
+      progress(SyncOpProgress(
+        currentBook: done,
+        totalBooks: total,
+        totalPages: 1,
+      ));
+      if (idx < start) {
+        // 上次已完成的书：仅回填明细为 done，跳过（不重复上传/push）
+        if (item.op == 'upsert' && item.name != null) {
+          detail.book(item.uuid, item.name!, const []);
+          detail.finishBook(item.uuid, ok: true);
+        }
+        continue;
+      }
+      if (item.op == 'delete') {
+        await _pushTombstone(item.uuid);
+        pushedAny = true;
+        progress(SyncOpProgress(
+          currentBook: done,
+          totalBooks: total,
+          currentPage: 1,
+          totalPages: 1,
+        ));
+        continue;
+      }
+      // upsert：运行时取书（文件可能已被改/删 → 以当前为准）
+      final book = await _books.getBookByUuid(item.uuid);
+      if (book == null) continue; // 已不存在（用户又删了）→ 跳过
+      final files = await _fileSync.buildBookFiles(book);
+      detail.book(
+        book.uuid,
+        book.name,
+        [for (final f in files) f.relPath],
+      );
+      progress(SyncOpProgress(
+        currentBook: done,
+        totalBooks: total,
+        totalPages: files.length,
+      ));
+      await _pushBook(
+        book,
+        files,
+        progress: progress,
+        detail: detail,
+        currentBook: done,
+        totalBooks: total,
+      );
+      detail.finishBook(book.uuid, ok: true);
+      progress(SyncOpProgress(
+        currentBook: done,
+        totalBooks: total,
+        currentPage: files.isEmpty ? 1 : files.length,
+        totalPages: files.isEmpty ? 1 : files.length,
+      ));
+      pushedAny = true;
     }
-    // 当前正在同步的书：优先第一个 syncing；否则第一个非 done/failed（等待中）
-    SyncLogSessionBook? current;
-    for (final b in session.books) {
-      if (b.status == 'syncing') {
-        current = b;
-        break;
+
+    // §3：变更完成后自动记录整库快照历史（tag=auto）
+    if (pushedAny) {
+      final snapshot = await buildSnapshot();
+      await _postHistory(opType: opType, tag: 'auto', snapshot: snapshot);
+    }
+  }
+
+  /// 推送单本 upsert：先按 hash 只传缺失图片（逐文件进度/明细），再 push 元数据。
+  /// 网络错误抛出（组任务标 failed 可重试）；服务器版本冲突抛出并提示走刷新同步。
+  Future<void> _pushBook(
+    BookTableData book,
+    List<BookFileItem> files, {
+    required SyncOpProgressCallback progress,
+    required SyncOpDetailWriter detail,
+    required int currentBook,
+    required int totalBooks,
+  }) async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    final options = Options(headers: {'Authorization': 'Bearer $token'});
+
+    // 1. 文件上传（内容寻址去重；每文件进度 → 行级页数与明细）
+    if (files.isNotEmpty) {
+      final missing = await _fileSync.checkMissing(
+        files.map((f) => f.hash).toList(),
+      );
+      var fileDone = 0;
+      for (final f in files) {
+        if (!missing.contains(f.hash)) {
+          fileDone++;
+          detail.fileDone(book.uuid, f.relPath);
+          progress(SyncOpProgress(
+            currentBook: currentBook,
+            totalBooks: totalBooks,
+            currentPage: fileDone,
+            totalPages: files.length,
+          ));
+          continue; // 已在服务器（跨设备已传）
+        }
+        if (!File(f.absPath).existsSync()) {
+          fileDone++;
+          continue; // 本地文件缺失 → 跳过（内容以服务器为准）
+        }
+        detail.fileSyncing(book.uuid, f.relPath);
+        try {
+          await _fileSync.uploadFile(
+            path: f.absPath,
+            hash: f.hash,
+            size: f.size,
+            onProgress: (p) {
+              progress(SyncOpProgress(
+                currentBook: currentBook,
+                totalBooks: totalBooks,
+                currentPage: fileDone + (p >= 1 ? 1 : 0),
+                totalPages: files.length,
+              ));
+              detail.fileSyncing(book.uuid, f.relPath, progress: p);
+            },
+          );
+          fileDone++;
+          detail.fileDone(book.uuid, f.relPath);
+          progress(SyncOpProgress(
+            currentBook: currentBook,
+            totalBooks: totalBooks,
+            currentPage: fileDone,
+            totalPages: files.length,
+          ));
+        } catch (e) {
+          detail.fileFailed(book.uuid, f.relPath, error: '$e');
+          throw StateError('上传图片失败 ${f.relPath}：$e（可重试，已传部分自动跳过）');
+        }
       }
     }
-    current ??= session.books
-        .where((b) => b.status != 'done' && b.status != 'failed')
-        .firstOrNull;
-    sessionProgress.value = SyncSessionProgress(
-      currentName: current?.name,
-      currentFilesDone: current?.filesDone ?? 0,
-      currentFilesTotal: current?.filesTotal ?? 0,
-      booksDone: session.syncedBooks,
-      booksTotal: session.totalBooks,
-    );
-  }
 
-  Future<void> _persistSessionNow() async {
-    final session = _session;
-    if (session == null) return;
-    try {
-      await _syncLogs.updateLog(
-        session.id,
-        status: session.status,
-        totalBooks: session.totalBooks,
-        syncedBooks: session.syncedBooks,
-        failedBooks: session.failedBooks,
-        detail: session.toDetailJson(),
-        finishedAt: session.status != 'running' ? DateTime.now() : null,
+    // 2. push 元数据（乐观锁 base_revision 来自本地记录）
+    final baseRev =
+        await _syncState.getRevision('book', book.uuid) ?? 0;
+    final res = await _dio.post<Map<String, dynamic>>(
+      '$url/api/v1/sync/push',
+      data: SyncPushRequest(
+        source: 'auto',
+        changes: [
+          BookChange(
+            changeId: Uuid.v4(),
+            entityType: 'book',
+            entityId: book.uuid,
+            op: 'upsert',
+            baseRevision: baseRev,
+            payload: _payloadOf(
+              name: book.name,
+              currentPage: book.currentPage,
+              files: files,
+            ),
+          ),
+        ],
+      ).toJson(),
+      options: options,
+    );
+    final response = SyncPushResponse.fromJson(res.data ?? {});
+    final r = response.results.isEmpty ? null : response.results.first;
+    if (r != null && r.accepted) {
+      if (r.revision > 0) {
+        await _syncState.upsertRevision('book', book.uuid, r.revision);
+      }
+      return;
+    }
+    if (r?.reason == 'conflict') {
+      throw StateError(
+        '「${book.name}」在服务器已被其它设备修改：请到 设置 → 刷新同步 选择保留哪一版',
       );
-    } catch (_) {}
+    }
+    throw StateError('服务器未接受「${book.name}」的变更（${r?.reason ?? '未知原因'}），可重试');
   }
 
-  /// 上报同步错误（UI 弹窗提示）。
-  void reportError(String message) {
-    lastError.value = message;
-  }
-
-  void _reportError(String message) {
-    reportError(message);
-  }
-
-  // ── 工具 ───────────────────────────────────────────────────
-
-  SyncTaskTableCompanion _task({
-    required String op,
-    required String entityId,
-    required BookPayload? payload,
-  }) {
-    return SyncTaskTableCompanion.insert(
-      changeId: Uuid.v4(),
-      entityType: 'book',
-      entityId: entityId,
-      op: op,
-      payload: Value(payload == null ? null : jsonEncode(payload.toJson())),
+  /// 推送删除墓碑（base_revision 来自本地记录；冲突时提示刷新同步处理）。
+  Future<void> _pushTombstone(String uuid) async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    final options = Options(headers: {'Authorization': 'Bearer $token'});
+    final baseRev = await _syncState.getRevision('book', uuid) ?? 0;
+    final res = await _dio.post<Map<String, dynamic>>(
+      '$url/api/v1/sync/push',
+      data: SyncPushRequest(
+        source: 'auto',
+        changes: [
+          BookChange(
+            changeId: Uuid.v4(),
+            entityType: 'book',
+            entityId: uuid,
+            op: 'delete',
+            baseRevision: baseRev,
+            payload: null,
+          ),
+        ],
+      ).toJson(),
+      options: options,
     );
+    final response = SyncPushResponse.fromJson(res.data ?? {});
+    final r = response.results.isEmpty ? null : response.results.first;
+    if (r != null && r.accepted) {
+      await _syncState.deleteState('book', uuid);
+      return;
+    }
+    if (r?.reason == 'conflict') {
+      throw StateError('删除未同步：服务器版本已被其它设备修改，请刷新同步处理');
+    }
+    throw StateError('服务器未接受删除（${r?.reason ?? '未知原因'}），可重试');
   }
 
-  /// 历史记录任务（整库快照，客户端驱动）。
-  SyncTaskTableCompanion _historyTask({
+  // ── 阅读进度：静默单通道（不进组任务/通知/本地记录） ───────
+
+  /// 兼容别名：排空 outbox = 补推静默进度（对外调用点如重试按钮）。
+  Future<void> drain() => flushProgress();
+
+  /// 阅读进度：本地立即落库，静默直推。
+  ///
+  /// §3/§4：进度独立 op='progress'，只带 current_page（不含文件、不参与整库
+  /// 版本、不记快照）；高频防抖由翻页侧（800ms）保证。
+  /// 推送失败静默保留（下次翻页/内容型推送后补推），不打扰用户。
+  Future<void> enqueueBookProgress({required BookTableData book}) async {
+    await _books.updateBook(book); // 本地优先，立即生效（未配置也落库）
+    if (!await isConfigured()) return;
+    await _syncTasks.insertTask(
+      _progressTask(book.uuid, book.name, book.currentPage),
+    );
+    unawaited(flushProgress());
+  }
+
+  /// 立即补推所有静默进度任务（串行，成功移除；失败保留，不弹窗）。
+  Future<void> flushProgress() async {
+    if (!await isConfigured()) return;
+    await _queue.enqueue(_flushProgressOnce);
+  }
+
+  Future<void> _flushProgressOnce() async {
+    // 同一本书只留最新一条（防离线长时间阅读积压）
+    final pending = await _syncTasks.listPending();
+    final byUuid = <String, SyncTaskTableData>{};
+    for (final t in pending) {
+      final prev = byUuid[t.entityId];
+      if (prev == null || t.id > prev.id) {
+        if (prev != null) {
+          await _syncTasks.removeTask(prev.id);
+        }
+        byUuid[t.entityId] = t;
+      } else {
+        await _syncTasks.removeTask(t.id);
+      }
+    }
+    for (final task in byUuid.values) {
+      try {
+        await _pushProgress(task);
+      } catch (_) {
+        // 网络失败：静默保留，下次补推
+        return;
+      }
+    }
+  }
+
+  Future<void> _pushProgress(SyncTaskTableData task) async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    final payload = BookPayload.fromJson(
+      jsonDecode(task.payload!) as Map<String, dynamic>,
+    );
+    await _dio.post<Map<String, dynamic>>(
+      '$url/api/v1/sync/push',
+      data: SyncPushRequest(
+        source: 'auto',
+        changes: [
+          BookChange(
+            changeId: task.changeId,
+            entityType: task.entityType,
+            entityId: task.entityId,
+            op: task.op,
+            baseRevision: 0,
+            payload: payload,
+          ),
+        ],
+      ).toJson(),
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
+    );
+    await _syncTasks.removeTask(task.id);
+  }
+
+  // ── 快照历史（§3/§2.4：客户端驱动，整库快照） ────────────
+
+  /// 上传整库快照为一条历史记录（幂等可重放）。
+  Future<void> _postHistory({
     required String opType,
     required String tag,
     required List<BookSnapshotItem> snapshot,
-  }) {
-    return SyncTaskTableCompanion.insert(
-      changeId: Uuid.v4(),
-      entityType: 'history',
-      entityId: 'history-$opType',
-      op: 'record',
-      payload: Value(
-        jsonEncode(
-          RecordHistoryRequest(
-            opType: opType,
-            tag: tag,
-            snapshot: snapshot,
-          ).toJson(),
-        ),
-      ),
+  }) async {
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    await _dio.post<Map<String, dynamic>>(
+      '$url/api/v1/books/history',
+      data: RecordHistoryRequest(opType: opType, tag: tag, snapshot: snapshot)
+          .toJson(),
+      options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
   }
 
-  /// 构建当前整库快照（deleted 之外的所有书，含文件 hash）。
+  /// 构建当前整库快照（所有书，含文件 hash）。
   Future<List<BookSnapshotItem>> buildSnapshot() async {
     final books = await _books.getAllBooks();
     final items = <BookSnapshotItem>[];
@@ -728,6 +533,23 @@ class SyncMutationService {
     return items;
   }
 
+  // ── 工具 ───────────────────────────────────────────────────
+
+  SyncTaskTableCompanion _progressTask(String uuid, String name, int page) {
+    return SyncTaskTableCompanion.insert(
+      changeId: Uuid.v4(),
+      entityType: 'book',
+      entityId: uuid,
+      op: 'progress',
+      payload: Value(
+        jsonEncode(
+          BookPayload(name: name, currentPage: page, coverHash: null, files: const [])
+              .toJson(),
+        ),
+      ),
+    );
+  }
+
   BookPayload _payloadOf({
     required String name,
     required int currentPage,
@@ -749,36 +571,28 @@ class SyncMutationService {
     );
   }
 
-  /// 从快照 payload 重建本地文件项（abs 路径 = booksDir/`entityId`/`rel_path`）。
-  List<BookFileItem> _fileItemsFromPayload(
-    BookPayload? payload,
-    String entityId,
-  ) {
-    if (payload == null) return const [];
-    return payload.files
-        .where((f) => f.hash.isNotEmpty)
-        .map(
-          (f) => BookFileItem(
-            relPath: f.relPath,
-            absPath: GlobalConfig.resolveBookPath('$entityId/${f.relPath}'),
-            hash: f.hash,
-            size: f.size,
-          ),
-        )
-        .toList();
-  }
-
   Future<void> _deleteLocalBook(String uuid) async {
     final row = await _books.getBookByUuid(uuid);
     if (row == null) return;
     await _books.deleteBook(row.id);
   }
+}
 
-  void _markConflict(String uuid) {
-    conflictedBookIds.value = {...conflictedBookIds.value, uuid};
-  }
+/// 组任务 payload 里的一本书（uuid + 动作 + 展示名）。
+class PushBookItem {
+  final String uuid;
+  final String op; // upsert / delete
+  final String? name;
+  const PushBookItem({required this.uuid, required this.op, this.name});
 
-  void _bump() {
-    outboxRevision.value++;
-  }
+  Map<String, dynamic> toJson() => {
+        'uuid': uuid,
+        'op': op,
+        if (name != null) 'name': name,
+      };
+  factory PushBookItem.fromJson(Map<String, dynamic> json) => PushBookItem(
+        uuid: json['uuid'] as String? ?? '',
+        op: json['op'] as String? ?? 'upsert',
+        name: json['name'] as String?,
+      );
 }

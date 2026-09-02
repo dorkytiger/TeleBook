@@ -11,6 +11,9 @@ import 'package:tele_book/core/service/package_info_service.dart';
 import 'package:tele_book/core/service/version_service.dart';
 import 'package:tele_book/feature/setting/enum/setting_key_value.dart';
 import 'package:tele_book/feature/setting/ui/provider/setting_provider.dart';
+import 'package:tele_book/feature/sync/service/init_sync_service.dart';
+import 'package:tele_book/feature/sync/service/sync_op_service.dart';
+import 'package:tele_book/feature/sync/service/upload_snapshot_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingView extends ConsumerStatefulWidget {
@@ -28,63 +31,130 @@ class _SettingViewState extends ConsumerState<SettingView> {
   Widget build(BuildContext context) {
     final readingDirectionSetting = ref.watch(readingDirectionSettingProvider);
     final packInfo = ref.watch(packageInfoServiceProvider);
-
-    final itemList = [
-      FItem(
-        title: const Text('阅读顺序'),
-        subtitle: readingDirectionSetting.when(
-          data: (d) => Text(d.label),
-          loading: () => const SizedBox.shrink(),
-          error: (e, st) => const Text('读取失败'),
-        ),
-        prefix: const Icon(FLucideIcons.eye),
-        suffix: const Icon(FLucideIcons.chevronRight),
-        onPress: () => _showReadingDirectionSheet(context, ref),
-      ),
-      FItem(
-        title: const Text('同步服务器'),
-        subtitle: const Text('多设备书库同步'),
-        prefix: const Icon(FLucideIcons.server),
-        suffix: const Icon(FLucideIcons.chevronRight),
-        onPress: () => context.push(AppRoute.syncServer),
-      ),
-      FItem(
-        title: const Text('当前版本与更新'),
-        subtitle: packInfo.when(
-          data: (data) => Text('当前版本：${data.version}'),
-          error: (s, t) => Text("加载失败"),
-          loading: () => SizedBox.shrink(),
-        ),
-        prefix: const Icon(FLucideIcons.arrowUpFromLine),
-        suffix: _checkingUpdate
-            ? const FCircularProgress(size: .sm)
-            : const Icon(FLucideIcons.chevronRight),
-        onPress: _checkingUpdate ? null : _checkUpdate,
-      ),
-      FItem(
-        title: const Text('关于'),
-        subtitle: const Text('TeleBook · MIT License'),
-        prefix: const Icon(FLucideIcons.info),
-        suffix: const Icon(FLucideIcons.chevronRight),
-        onPress: _showAboutDialog,
-      ),
-      FItem(
-        title: const Text('联系作者'),
-        subtitle: const Text('dorkytiger'),
-        prefix: const Icon(FLucideIcons.mail),
-        suffix: const Icon(FLucideIcons.chevronRight),
-        onPress: _showContactDialog,
-      ),
-    ];
+    final syncConfigured = ref.watch(syncConfiguredProvider).value ?? false;
 
     return FScaffold(
       childPad: false,
       header: FHeader(title: Text("设置")),
-      child: FItemGroup.builder(
-        count: itemList.length,
-        itemBuilder: (context, index) {
-          return itemList[index];
-        },
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── 基本设置 ──
+          _groupTitle('基本设置'),
+          FItemGroup(
+            children: [
+              FItem(
+                title: const Text('阅读顺序'),
+                subtitle: readingDirectionSetting.when(
+                  data: (d) => Text(d.label),
+                  loading: () => const SizedBox.shrink(),
+                  error: (e, st) => const Text('读取失败'),
+                ),
+                prefix: const Icon(FLucideIcons.eye),
+                suffix: const Icon(FLucideIcons.chevronRight),
+                onPress: () => _showReadingDirectionSheet(context, ref),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 服务器（未初始化时只显示「初始化服务器」）──
+          _groupTitle('服务器'),
+          FItemGroup(
+            children: [
+              FItem(
+                title: Text(syncConfigured ? '重新初始化服务器' : '初始化服务器'),
+                subtitle: Text(
+                  syncConfigured ? '更换服务器或连接配置' : '填写地址与密钥并连接',
+                ),
+                prefix: const Icon(FLucideIcons.server),
+                suffix: const Icon(FLucideIcons.chevronRight),
+                onPress: () => context.push(AppRoute.syncServer),
+              ),
+              // 已初始化服务器后才有同步功能
+              if (syncConfigured) ...[
+                FItem(
+                  title: const Text('刷新同步'),
+                  subtitle: const Text('拉取服务器最新变更'),
+                  prefix: const Icon(FLucideIcons.refreshCw),
+                  suffix: const Icon(FLucideIcons.chevronRight),
+                  onPress: _refreshSync,
+                ),
+                FItem(
+                  title: const Text('上传快照'),
+                  subtitle: const Text('上传当前书籍快照到服务器'),
+                  prefix: const Icon(FLucideIcons.uploadCloud),
+                  suffix: const Icon(FLucideIcons.chevronRight),
+                  onPress: _uploadSnapshot,
+                ),
+                FItem(
+                  title: const Text('历史记录'),
+                  subtitle: const Text('查看同步归档，可恢复到归档时刻'),
+                  prefix: const Icon(FLucideIcons.history),
+                  suffix: const Icon(FLucideIcons.chevronRight),
+                  onPress: () => context.push(AppRoute.syncHistory),
+                ),
+                FItem(
+                  title: const Text('本地同步记录'),
+                  subtitle: const Text('查看每次同步任务与进度'),
+                  prefix: const Icon(FLucideIcons.list),
+                  suffix: const Icon(FLucideIcons.chevronRight),
+                  onPress: () => context.push(AppRoute.syncLogList),
+                ),
+              ],
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // ── 其他 ──
+          _groupTitle('其他'),
+          FItemGroup(
+            children: [
+              FItem(
+                title: const Text('当前版本与更新'),
+                subtitle: packInfo.when(
+                  data: (data) => Text('当前版本：${data.version}'),
+                  error: (s, t) => Text("加载失败"),
+                  loading: () => SizedBox.shrink(),
+                ),
+                prefix: const Icon(FLucideIcons.arrowUpFromLine),
+                suffix: _checkingUpdate
+                    ? const FCircularProgress(size: .sm)
+                    : const Icon(FLucideIcons.chevronRight),
+                onPress: _checkingUpdate ? null : _checkUpdate,
+              ),
+              FItem(
+                title: const Text('关于'),
+                subtitle: const Text('TeleBook · MIT License'),
+                prefix: const Icon(FLucideIcons.info),
+                suffix: const Icon(FLucideIcons.chevronRight),
+                onPress: _showAboutDialog,
+              ),
+              FItem(
+                title: const Text('联系作者'),
+                subtitle: const Text('dorkytiger'),
+                prefix: const Icon(FLucideIcons.mail),
+                suffix: const Icon(FLucideIcons.chevronRight),
+                onPress: _showContactDialog,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 分组小标题。
+  Widget _groupTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Text(
+        text,
+        style: context.theme.typography.body.md.copyWith(
+          color: context.theme.colors.mutedForeground,
+        ),
       ),
     );
   }
@@ -276,6 +346,85 @@ class _SettingViewState extends ConsumerState<SettingView> {
         ],
       ),
     );
+  }
+
+  /// 刷新同步：初始化同步的手动调用（§2.2，逻辑同初始化，组任务类型=refresh）。
+  Future<void> _refreshSync() async {
+    // 防连点：已有初始化/刷新任务在跑或排队时不再重复入队
+    final ops = ref.read(syncOpServiceProvider);
+    if (await ops.hasActiveOfType(SyncOpType.refresh) ||
+        await ops.hasActiveOfType(SyncOpType.init)) {
+      if (!mounted) return;
+      showFToast(context: context, title: const Text('刷新同步已在队列中，请稍候'));
+      return;
+    }
+    try {
+      await ref.read(initSyncServiceProvider).run(opType: SyncOpType.refresh);
+      if (!mounted) return;
+      showFToast(context: context, title: const Text('刷新完成'));
+    } catch (e) {
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        title: const Text('刷新失败'),
+        description: Text(
+          _shortError(e),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+  }
+
+  /// 上传当前书库快照到服务器（§2.3）：确认后再入队一组任务，全局通知显示。
+  Future<void> _uploadSnapshot() async {
+    final confirmed = await showFDialog<bool>(
+      context: context,
+      builder: (context, style, animate) => FAdaptiveDialog(
+        title: const Text('上传快照'),
+        body: const Text(
+          '把当前书库快照上传到服务器历史记录？\n'
+          '不会改动服务器上的当前书库，其他设备也看不到这次快照。',
+        ),
+        actions: [
+          FButton(
+            variant: .outline,
+            size: .sm,
+            onPress: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FButton(
+            size: .sm,
+            onPress: () => Navigator.pop(context, true),
+            child: const Text('上传'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(uploadSnapshotServiceProvider).upload();
+      if (!mounted) return;
+      showFToast(context: context, title: const Text('已加入队列，可在底部查看进度'));
+    } catch (e) {
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        title: const Text('上传快照失败'),
+        description: Text(
+          _shortError(e),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+  }
+
+  /// 异常 → 短文案（防止长 DioException 撑爆 toast）。
+  static String _shortError(Object e) {
+    final s = e.toString();
+    if (s.length <= 120) return s;
+    return '${s.substring(0, 120)}…';
   }
 
   /// 检查更新：请求 GitHub 最新版，与本地比较，弹 forui 对话框。

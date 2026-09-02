@@ -17,6 +17,11 @@ class SettingLocalDatasource extends DatabaseAccessor<AppDatabase>
     return row?.value;
   }
 
+  /// 监听全部设置（任何 key 变更都会发出新快照；UI 状态类配置用）。
+  Stream<List<SettingTableData>> watchAll() {
+    return (select(settingTable)).watch();
+  }
+
   /// 写入设置：key 存在则更新，不存在则插入。
   /// 依赖你改过的 key 唯一约束/主键，insertOnConflictUpdate 才有冲突目标。
   Future<void> setValue(String key, String value) {
