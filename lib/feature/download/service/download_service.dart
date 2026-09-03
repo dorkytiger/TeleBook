@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
@@ -296,6 +297,8 @@ class DownloadService {
       final groups = _downloadRepository.getDownloadGroups();
       for (final group in groups) {
         if (group.status != DownloadStatus.completed) continue;
+        // 正在自动保存为书籍的组暂不可清空（会删掉还在使用的临时文件）
+        if (group.processing) continue;
         completedGroups.add(group);
         _autoSavedGroups.remove(group.id);
         _downloadRepository.deleteGroup(group.id);
@@ -420,17 +423,29 @@ class DownloadService {
       // 按 order 排序后再保存
       final sortedItems = List<DownloadItemBo>.from(items)
         ..sort((a, b) => a.order.compareTo(b.order));
-      // 走同步队列：本地立即保存 + outbox 任务（自动同步会推送服务器）
-      await _syncMutation.enqueueBookImport(
-        SaveAsBookDto(
-          title: group.name,
-          paths: sortedItems
-              .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
-              .toList(),
-        ),
-      );
-      // 保存成功后标记并推送，UI 据此显示"已保存"状态
-      _downloadRepository.upsertGroup(group.copyWith(savedToBook: true));
+      // 自动保存（生成封面/预览、写库）可能耗时较长：先标记"处理中"，
+      // 下载组行 UI 据此把 subtitle 改为「正在处理」、suffix 换成 FProgress，
+      // 保存完成前不会显示对勾。
+      _downloadRepository.upsertGroup(group.copyWith(processing: true));
+      try {
+        // 走同步队列：本地立即保存 + outbox 任务（自动同步会推送服务器）
+        await _syncMutation.enqueueBookImport(
+          SaveAsBookDto(
+            title: group.name,
+            paths: sortedItems
+                .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
+                .toList(),
+          ),
+        );
+        // 保存成功后标记并推送，UI 据此显示"已保存"状态（suffix 变为对勾）
+        _downloadRepository.upsertGroup(
+          group.copyWith(processing: false, savedToBook: true),
+        );
+      } catch (e) {
+        // 保存失败：退出"处理中"，保留已下载内容，用户可经下载组菜单「重试」
+        _downloadRepository.upsertGroup(group.copyWith(processing: false));
+        AppLog.w('自动保存为书籍失败 group=${group.name}: $e', tag: 'AUTO_SAVE');
+      }
     }
   }
 }
