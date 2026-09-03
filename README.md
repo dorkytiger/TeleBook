@@ -1,4 +1,4 @@
-# TeleBook 3.0
+# TeleBook 4.0
 
 <div align="center">
 
@@ -55,12 +55,16 @@
 - ✅ Auto-save as book status / 自动保存为书籍状态标识
 
 ### 🔄 Multi-Device Sync / 多设备同步
+- 🗂️ Unified group-task queue with Task Center / 统一组任务队列 + 同步任务中心（三级状态、失败即重试）
 - 🌐 Local-first sync (offline-ready) / 本地优先同步（离线可用）
-- 📤 Push/pull event stream / 事件流推送与拉取
+- 🔄 True resume after interruption / 断点续传（中断恢复不重复传输）
+- 📱 iOS true background download/upload (native URLSession) / iOS 原生后台下载与上传（熄屏/被杀持续推进）
+- 🤖 Android foreground-service keep-alive / Android 前台服务保活
 - 📸 Image file sync via MinIO / 图片文件同步（MinIO 分片上传）
 - 📚 Full-library snapshot history & restore / 整库快照历史与恢复
 - ⚡ Reading progress sync / 阅读进度同步
-- 🛡️ Conflict detection & resolution / 冲突检测与解决
+- 🛡️ Conflict detection & resolution / 冲突检测与解决（保留服务器/保留本地）
+- 🧰 Diagnostics: crash capture + export bundle / 崩溃自动捕获 + 诊断包一键导出分享
 
 ### 📤 Export / 导出
 - 📤 Single & batch export / 单个与批量导出

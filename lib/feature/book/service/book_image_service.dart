@@ -19,11 +19,13 @@ class BookImageService {
   /// JPEG 压缩质量 (0-100)
   static const int jpegQuality = 80;
 
-  /// 解码并缩放到目标宽度（等比），返回 RGBA 像素 + 尺寸。
+  /// 解码并缩放到目标宽度（等比），返回 RGBA 字节 + 尺寸。
   ///
   /// 用 dart:ui 原生编解码：支持 JPEG/PNG/WebP/GIF 等常见格式，
   /// 且 targetWidth 让解码阶段直接降采样，内存占用远小于先全尺寸解码。
-  static Future<(img.Image, int width, int height)> _decodeScaled(
+  /// 解码是 engine 异步（不占主 isolate 计算），后续 [encodeJpegToFile]
+  /// 的 JPEG 编码才真正吃 CPU → 放 compute isolate，UI 不卡。
+  static Future<(Uint8List rgba, int width, int height)> _decodeScaled(
     String srcPath,
     int targetWidth,
   ) async {
@@ -39,43 +41,46 @@ class BookImageService {
       if (data == null) {
         throw Exception('图片像素读取失败: $srcPath');
       }
-      final rgba = data.buffer.asUint8List();
-      final decoded = img.Image.fromBytes(
-        width: image.width,
-        height: image.height,
-        bytes: rgba.buffer,
-        order: img.ChannelOrder.rgba,
+      return (
+        data.buffer.asUint8List(),
+        image.width,
+        image.height,
       );
-      return (decoded, image.width, image.height);
     } finally {
       image.dispose();
       codec.dispose();
     }
   }
 
-  /// 编码为 JPEG 并写入目标路径。
-  /// ⚠️ 先确保父目录存在（原 flutter_image_compress 会自动建目录，
-  /// 换成 File.writeAsBytes 后不自动建，缺失会抛 PathNotFoundException）。
-  static Future<void> _encodeJpeg(img.Image decoded, String destPath) async {
-    final jpeg = img.encodeJpg(decoded, quality: jpegQuality);
-    await File(destPath).parent.create(recursive: true);
-    await File(destPath).writeAsBytes(jpeg, flush: true);
+  /// RGBA 像素 → JPEG 写入目标路径（在后台 isolate 执行编码，不卡 UI）。
+  /// ⚠️ 先确保父目录存在（缺失会抛 PathNotFoundException）。
+  static Future<void> encodeJpegToFile(
+    Uint8List rgba,
+    int width,
+    int height,
+    String destPath, {
+    int quality = jpegQuality,
+  }) {
+    return compute(
+      _encodeJpegIsolate,
+      (rgba: rgba, width: width, height: height, quality: quality, dest: destPath),
+    );
   }
 
   /// 从原图生成封面缩略图
   /// [srcPath] 原图绝对路径
   /// [destPath] 封面输出绝对路径 (如 books/{bookId}/cover.jpg)
   static Future<void> generateCover(String srcPath, String destPath) async {
-    final (decoded, _, _) = await _decodeScaled(srcPath, coverWidth);
-    await _encodeJpeg(decoded, destPath);
+    final (rgba, w, h) = await _decodeScaled(srcPath, coverWidth);
+    await encodeJpegToFile(rgba, w, h, destPath);
   }
 
   /// 从原图生成单张预览图
   /// [srcPath] 原图绝对路径
   /// [destPath] 预览图输出绝对路径
   static Future<void> generatePreview(String srcPath, String destPath) async {
-    final (decoded, _, _) = await _decodeScaled(srcPath, previewWidth);
-    await _encodeJpeg(decoded, destPath);
+    final (rgba, w, h) = await _decodeScaled(srcPath, previewWidth);
+    await encodeJpegToFile(rgba, w, h, destPath);
   }
 
   /// 批量生成预览图
@@ -125,4 +130,26 @@ Future<List<String>> _copyOriginalsIsolate(
     relPaths.add('$bookId/original/$fileName');
   }
   return relPaths;
+}
+
+/// RGBA → JPEG 编码并写盘（compute isolate 执行，避免编码卡 UI）。
+Future<void> _encodeJpegIsolate(
+  ({
+    Uint8List rgba,
+    int width,
+    int height,
+    int quality,
+    String dest,
+  }) args,
+) async {
+  final decoded = img.Image.fromBytes(
+    width: args.width,
+    height: args.height,
+    bytes: args.rgba.buffer,
+    order: img.ChannelOrder.rgba,
+  );
+  final jpeg = img.encodeJpg(decoded, quality: args.quality);
+  final dest = File(args.dest);
+  await dest.parent.create(recursive: true);
+  await dest.writeAsBytes(jpeg, flush: true);
 }

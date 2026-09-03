@@ -384,12 +384,14 @@ class BookRepository {
       destDir: previewDir,
     );
 
-    // 更新数据库
+    // 更新数据库：以**最新行**为基础只回填图片字段（cover/preview），
+    // 保留期间可能发生的 name/localSubPaths 等新编辑（后台重建与保存并发安全）。
+    final latest = await _bookLocalDatasource.getById(book.id) ?? book;
     final previewSubPaths = List.generate(
       originalPaths.length,
       (i) => '$bookId/preview/${i.toString().padLeft(7, '0')}.jpg',
     );
-    final updatedBook = book.copyWith(
+    final updatedBook = latest.copyWith(
       coverSubPath: Value('$bookId/cover.jpg'),
       previewSubPaths: Value(previewSubPaths),
     );
