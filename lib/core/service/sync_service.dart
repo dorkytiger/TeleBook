@@ -111,6 +111,8 @@ class SyncService extends _$SyncService {
     await _settings.setString(SyncSettings.deviceId, deviceId);
     await _settings.setString(SyncSettings.token, response.accessToken);
     await _settings.setString(SyncSettings.refreshToken, response.refreshToken);
+    AppLog.i('服务器连接成功 deviceId=$deviceId url=$urlTrimmed',
+        tag: 'SYNC');
   }
 
   /// 用 refresh token 换新 access token（服务端同时轮换 refresh token）。
@@ -132,7 +134,8 @@ class SyncService extends _$SyncService {
       await _settings.setString(SyncSettings.token, response.accessToken);
       await _settings.setString(SyncSettings.refreshToken, response.refreshToken);
       return true;
-    } catch (_) {
+    } catch (e) {
+      AppLog.w('刷新 access token 失败（可能需重新连接）: $e', tag: 'AUTH');
       return false;
     }
   }
@@ -289,13 +292,15 @@ class SyncService extends _$SyncService {
     if (url == null || token == null) {
       throw StateError('尚未配置同步服务器');
     }
-    return _pullEvents(
+    final applied = await _pullEvents(
       url,
       Options(headers: {'Authorization': 'Bearer $token'}),
       onBookFiles: onBookFiles,
       onBookDownload: onBookDownload,
       onBookFileError: onBookFileError,
     );
+    AppLog.i('拉取事件完成：应用 $applied 条', tag: 'SYNC');
+    return applied;
   }
 
   /// 重试单本书的图片下载（同步下载页失败项"重试"用）。

@@ -1,66 +1,34 @@
-import 'dart:async';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-import 'package:tele_book/common/config/global_config.dart';
+import 'package:tele_book/core/util/app_log.dart';
 
-/// 轻量文件日志（临时调试用）：同步/后台任务关键链路写本地文件，
-/// 便于 release 真机（无法连调试器）排查熄屏后后台是否推进。
+/// 同步/后台链路调试日志（并入统一日志系统后的兼容层）。
 ///
-/// 文件：{appDocDir}/sync_bg.log；超 2MB 自动截断为后半。
-class FileLog {
-  static final List<String> _pending = [];
-  static bool _writing = false;
-
-  static String get filePath => p.join(GlobalConfig.appDocDir.path, 'sync_bg.log');
-
-  /// 追加一条日志（异步落盘，不阻塞调用方）。
+/// 早期版本独立写 `sync_bg.log`；现在统一走 [AppLog] 的滚动落盘
+/// （{appDocDir}/logs/app.log），仅保留 `log/read/clear/filePath` 三个
+/// 兼容入口，调用点（同步服务/原生桥）无需改动。
+///
+/// 与 [AppLog] 的区别：只落盘 + 进环形缓冲，**不打控制台**（BG 链路
+/// 日志量大，避免刷屏）；行格式相同，可与 AppLog 日志混排按 tag 过滤。
+abstract final class FileLog {
+  /// 追加一条日志（异步落盘，不打控制台）。
   static void log(String tag, String msg) {
-    _pending.add('[${DateTime.now().toIso8601String()}] [$tag] $msg');
-    unawaited(_flush());
+    AppLog.silent(tag, msg);
   }
 
-  static Future<void> _flush() async {
-    if (_writing) return;
-    _writing = true;
-    try {
-      final f = File(filePath);
-      if (!await f.exists()) {
-        await f.parent.create(recursive: true);
-        await f.create();
-      }
-      // 防膨胀：超过上限时先截断（保留新内容）
-      if (await f.length() > 2 * 1024 * 1024) {
-        await f.delete();
-        await f.create();
-      }
-      final sink = f.openWrite(mode: FileMode.append);
-      while (_pending.isNotEmpty) {
-        sink.write(_pending.removeAt(0));
-        sink.write('\n');
-      }
-      await sink.flush();
-      await sink.close();
-    } catch (_) {
-      // 日志失败不打扰主流程
-    } finally {
-      _writing = false;
-    }
-  }
+  /// 读取日志尾部（统一日志，跨滚动文件拼接）。
+  static Future<List<String>> read({int tail = 2000}) =>
+      AppLog.readTail(tail: tail);
 
-  /// 读取日志（最近 [tail] 行）。
-  static Future<List<String>> read({int tail = 2000}) async {
-    final f = File(filePath);
-    if (!await f.exists()) return const [];
-    final lines = await f.readAsLines();
-    if (lines.length <= tail) return lines;
-    return lines.sublist(lines.length - tail);
-  }
+  /// 清空统一日志。
+  static Future<void> clear() => AppLog.clear();
 
-  static Future<void> clear() async {
-    final f = File(filePath);
-    if (await f.exists()) {
-      await f.delete();
-    }
-  }
+  /// 统一日志主文件路径。
+  static String get filePath => AppLog.filePath;
+
+  /// 兼容：旧实现是独立文件，现统一后返回 null（调用方不再单独展示）。
+  static String? get legacyFilePath => null;
+
+  /// 崩溃记录文件（排查同步链路崩溃现场用）。
+  static Future<List<File>> crashFiles() => AppLog.crashFiles();
 }

@@ -4,6 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/book/datasource/local/book_local_datasource.dart';
 import 'package:tele_book/feature/book/model/table/book_table.dart';
 import 'package:tele_book/feature/collection/datasource/local/collection_book_local_datasource.dart';
@@ -67,6 +68,7 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
+      AppLog.w('数据库升级 v$from → v$to 开始', tag: 'DB');
       if (from < 2) {
         // v1 及更早：从未发布、结构不可考（main v2 自身也采用破坏性重建），
         // 这里保持一致：删全部表后按当前定义重建。
@@ -79,6 +81,7 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createAll();
         await customStatement('PRAGMA foreign_keys = ON');
       } else if (from < 3) {
+        AppLog.w('数据库 v$from→v$to：增量升级（保留数据）', tag: 'DB');
         // v2（main）→ v3：**保留书库/收藏数据**，只做真实差异的增量升级：
         //  ① book_table 加 uuid（SQLite 不支持 ALTER 直接加 NOT NULL UNIQUE 列
         //     → 加可空列 → 回填 UUID → 建唯一索引，与 v3 定义一致）
@@ -115,10 +118,10 @@ class AppDatabase extends _$AppDatabase {
         databaseDirectory: () async {
           if (Platform.isIOS || Platform.isAndroid) {
             final dbFolder = await getApplicationDocumentsDirectory();
-            print('Database path: ${dbFolder.path}');
+            AppLog.d('Database path: ${dbFolder.path}', tag: 'DB');
             return dbFolder.path;
           } else {
-            print('Database path: ${Directory.current.path}');
+            AppLog.d('Database path: ${Directory.current.path}', tag: 'DB');
             return Directory.current.path;
           }
         },

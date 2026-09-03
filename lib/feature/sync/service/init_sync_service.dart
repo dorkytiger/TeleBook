@@ -56,18 +56,24 @@ class InitSyncService {
   /// 执行同步（初始化或刷新）：入队一组任务（组 = 一次操作）。
   /// [opType]：SyncOpType.init（初始化同步）或 SyncOpType.refresh（刷新同步）。
   Future<void> run({String opType = SyncOpType.init}) async {
+    final localCount = (await _books.getAllBooks()).length;
     final branch = await detect();
+    AppLog.i('$opType 开始：本地 $localCount 本，分支 $branch', tag: 'SYNC');
     switch (branch) {
       case InitSyncBranch.bothEmpty:
         // §2.1.1：直接跳过，无任务
+        AppLog.i('$opType 完成：本地与远程都为空，跳过', tag: 'SYNC');
         break;
       case InitSyncBranch.downloadOnly:
+        AppLog.i('$opType：纯下载分支', tag: 'SYNC');
         await _enqueueDownload(opType);
         break;
       case InitSyncBranch.uploadOnly:
+        AppLog.i('$opType：纯上传分支', tag: 'SYNC');
         await _enqueueUpload(opType);
         break;
       case InitSyncBranch.bidirectional:
+        AppLog.i('$opType：双向分支', tag: 'SYNC');
         await _enqueueBidirectional(opType);
         break;
     }

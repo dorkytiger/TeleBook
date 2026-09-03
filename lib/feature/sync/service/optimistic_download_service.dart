@@ -135,6 +135,8 @@ class OptimisticDownloadService {
           if (!ok) failedBooks++;
         }
         downloading.value = false;
+        AppLog.i('批量下载完成：共 ${books.length} 本，失败 $failedBooks 本',
+            tag: 'OPT_DL');
         if (failedBooks > 0) {
           // §0：整批有书未下齐 → 组任务标 failed（失败页可展开重试/整批重试）
           throw StateError('$failedBooks 本书有页下载失败，可重试');

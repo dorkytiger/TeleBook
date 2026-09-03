@@ -7,8 +7,10 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tele_book/common/widget/f_adaptive_dialog.dart';
 import 'package:tele_book/common/widget/f_sheet_content.dart';
 import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/core/service/diag_export_service.dart';
 import 'package:tele_book/core/service/package_info_service.dart';
 import 'package:tele_book/core/service/version_service.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/setting/enum/setting_key_value.dart';
 import 'package:tele_book/feature/setting/ui/provider/setting_provider.dart';
 import 'package:tele_book/feature/sync/service/init_sync_service.dart';
@@ -144,16 +146,25 @@ class _SettingViewState extends ConsumerState<SettingView> {
 
           const SizedBox(height: 20),
 
-          // ── 调试（临时）──
+          // ── 调试（崩溃排查/日志）──
           _groupTitle('调试'),
           FItemGroup(
             children: [
               FItem(
-                title: const Text('同步后台日志'),
-                subtitle: const Text('查看 sync_bg.log（熄屏后台调试用）'),
+                title: const Text('诊断日志'),
+                subtitle: const Text('查看日志与崩溃记录（自动滚动保留）'),
                 prefix: const Icon(FLucideIcons.fileText),
                 suffix: const Icon(FLucideIcons.chevronRight),
                 onPress: () => context.push(AppRoute.syncFileLog),
+              ),
+              FItem(
+                title: const Text('导出诊断包'),
+                subtitle: const Text('打包日志+崩溃+设备信息，通过分享发出'),
+                prefix: const Icon(FLucideIcons.packageOpen),
+                suffix: _exportingDiag
+                    ? const FCircularProgress(size: .sm)
+                    : const Icon(FLucideIcons.chevronRight),
+                onPress: _exportingDiag ? null : _exportDiag,
               ),
             ],
           ),
@@ -441,6 +452,35 @@ class _SettingViewState extends ConsumerState<SettingView> {
     final s = e.toString();
     if (s.length <= 120) return s;
     return '${s.substring(0, 120)}…';
+  }
+
+  bool _exportingDiag = false;
+
+  /// 导出诊断包：先维护一次（清过期/预算）再打包分享。
+  Future<void> _exportDiag() async {
+    if (_exportingDiag) return;
+    setState(() => _exportingDiag = true);
+    try {
+      await AppLog.maintenance();
+      final ok = await DiagExport.share();
+      if (!mounted) return;
+      if (!ok) {
+        showFToast(
+          context: context,
+          title: const Text('导出失败'),
+          description: const Text('请检查系统是否支持文件分享'),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      showFToast(
+        context: context,
+        title: const Text('导出诊断包失败'),
+        description: Text(_shortError(e)),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingDiag = false);
+    }
   }
 
   /// 检查更新：请求 GitHub 最新版，与本地比较，弹 forui 对话框。

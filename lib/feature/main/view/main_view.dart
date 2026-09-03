@@ -8,6 +8,7 @@ import 'package:tele_book/feature/book/ui/view/book_list_view.dart';
 import 'package:tele_book/feature/collection/ui/view/collection_view.dart';
 import 'package:tele_book/feature/download/ui/view/download_list_view.dart';
 import 'package:tele_book/feature/main/provider/main_provider.dart';
+import 'package:tele_book/feature/main/widget/diag_context_sync.dart';
 import 'package:tele_book/feature/setting/ui/provider/setting_provider.dart';
 import 'package:tele_book/feature/setting/ui/view/setting_view.dart';
 import 'package:tele_book/feature/sync/service/local_conflict_service.dart';
@@ -64,6 +65,8 @@ class MainView extends ConsumerWidget {
           ),
           // §8.0 启动恢复提示（检测到上次中断残留时弹一次）
           const SyncRecoveryGate(),
+          // 崩溃诊断上下文同步（不可见，注入服务器地址给诊断包）
+          const DiagContextSync(),
         ],
       ),
     );
