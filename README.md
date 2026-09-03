@@ -1,4 +1,4 @@
-# TeleBook 3.0
+# TeleBook 4.0
 
 <div align="center">
 
@@ -54,6 +54,18 @@
 - 🔄 Group retry & delete / 下载组重试与删除
 - ✅ Auto-save as book status / 自动保存为书籍状态标识
 
+### 🔄 Multi-Device Sync / 多设备同步
+- 🗂️ Unified group-task queue with Task Center / 统一组任务队列 + 同步任务中心（三级状态、失败即重试）
+- 🌐 Local-first sync (offline-ready) / 本地优先同步（离线可用）
+- 🔄 True resume after interruption / 断点续传（中断恢复不重复传输）
+- 📱 iOS true background download/upload (native URLSession) / iOS 原生后台下载与上传（熄屏/被杀持续推进）
+- 🤖 Android foreground-service keep-alive / Android 前台服务保活
+- 📸 Image file sync via MinIO / 图片文件同步（MinIO 分片上传）
+- 📚 Full-library snapshot history & restore / 整库快照历史与恢复
+- ⚡ Reading progress sync / 阅读进度同步
+- 🛡️ Conflict detection & resolution / 冲突检测与解决（保留服务器/保留本地）
+- 🧰 Diagnostics: crash capture + export bundle / 崩溃自动捕获 + 诊断包一键导出分享
+
 ### 📤 Export / 导出
 - 📤 Single & batch export / 单个与批量导出
 - ⚡ Background processing / 后台处理
@@ -94,7 +106,14 @@ For detailed documentation, please refer to:
 - **Drift** - Local database / 本地数据库
 - **ForUI** - UI components / UI组件库
 - **webview_all** - Cross-platform WebView / 跨平台网页视图
-- **background_downloader** - Background downloads / 后台下载
+- **Go + PostgreSQL + MinIO** - Sync backend / 同步后端（[TelebookServer](https://github.com/dorkytiger/TelebookServer)）
+
+## 🔄 Multi-Device Sync Setup / 多设备同步配置
+
+1. 部署同步后端（[TelebookServer](https://github.com/dorkytiger/TelebookServer)，Docker Compose 一键启动）
+2. 手机 A：设置 → 同步服务器 → 填写地址与连接密钥 → 保存并连接（自动同步书库与图片）
+3. 手机 B：同样连接，自动下载全部书籍与图片
+4. 任一侧导入 / 修改 / 删除 / 阅读，另一侧自动同步；离线操作不阻塞，联网自动补齐
 
 ---
 

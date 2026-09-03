@@ -130,13 +130,13 @@ class ParseForm extends _$ParseForm {
   }
 
   Future<void> pickerArchive() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFile(
       dialogTitle: '选择 tele_book 导出的书籍归档文件',
       type: FileType.custom,
       allowedExtensions: ['zip'],
     );
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    if (result != null && result.path != null) {
+      final path = result.path!;
       archivePathController.text = path;
       state = state.copyWith(archivePath: path);
     }
@@ -144,14 +144,13 @@ class ParseForm extends _$ParseForm {
 
   Future<void> pickerBatchArchive() async {
     if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         dialogTitle: '选择一个或多个 ZIP 压缩包',
         type: FileType.custom,
         allowedExtensions: ['zip'],
-        allowMultiple: true,
       );
-      if (result != null) {
-        final paths = result.paths.whereType<String>().toList();
+      if (result.isNotEmpty) {
+        final paths = result.map((f) => f.path).whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 个 ZIP 文件';
         batchArchivePathController.text = text;
         state = state.copyWith(
@@ -162,7 +161,7 @@ class ParseForm extends _$ParseForm {
       return;
     }
 
-    final result = await FilePicker.platform.getDirectoryPath(
+    final result = await FilePicker.getDirectoryPath(
       dialogTitle: '选择 tele_book 导出��书籍归档文件夹',
     );
     if (result != null) {
@@ -176,14 +175,13 @@ class ParseForm extends _$ParseForm {
 
   Future<void> pickerImageFolder() async {
     if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         dialogTitle: '选择图片文件',
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-        allowMultiple: true,
       );
-      if (result != null) {
-        final paths = result.paths.whereType<String>().toList();
+      if (result.isNotEmpty) {
+        final paths = result.map((f) => f.path).whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 张图片';
         imageFolderPathController.text = text;
         state = state.copyWith(imagePaths: paths, imageFolderPath: text);
@@ -191,7 +189,7 @@ class ParseForm extends _$ParseForm {
       return;
     }
 
-    final result = await FilePicker.platform.getDirectoryPath(
+    final result = await FilePicker.getDirectoryPath(
       dialogTitle: '选择包含图片的文件夹',
     );
     if (result != null) {
@@ -202,14 +200,13 @@ class ParseForm extends _$ParseForm {
 
   Future<void> pickerBatchImageFolder() async {
     if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         dialogTitle: '选择批量图片文件',
         type: FileType.custom,
         allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'],
-        allowMultiple: true,
       );
-      if (result != null) {
-        final paths = result.paths.whereType<String>().toList();
+      if (result.isNotEmpty) {
+        final paths = result.map((f) => f.path).whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 张图片（按所在文件夹分组）';
         batchImageFolderPathController.text = text;
         state = state.copyWith(
@@ -220,7 +217,7 @@ class ParseForm extends _$ParseForm {
       return;
     }
 
-    final result = await FilePicker.platform.getDirectoryPath(
+    final result = await FilePicker.getDirectoryPath(
       dialogTitle: '选择批量图片文件夹的父目录',
     );
     if (result != null) {
@@ -233,13 +230,13 @@ class ParseForm extends _$ParseForm {
   }
 
   Future<void> pickerPdf() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFile(
       dialogTitle: '选择 PDF 文件',
       type: FileType.custom,
       allowedExtensions: ['pdf'],
     );
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
+    if (result != null && result.path != null) {
+      final path = result.path!;
       pdfPathController.text = path;
       state = state.copyWith(pdfPath: path);
     }
@@ -247,14 +244,13 @@ class ParseForm extends _$ParseForm {
 
   Future<void> pickerBatchPdf() async {
     if (Platform.isIOS) {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         dialogTitle: '选择一个或多个 PDF 文件',
         type: FileType.custom,
         allowedExtensions: ['pdf'],
-        allowMultiple: true,
       );
-      if (result != null) {
-        final paths = result.paths.whereType<String>().toList();
+      if (result.isNotEmpty) {
+        final paths = result.map((f) => f.path).whereType<String>().toList();
         final text = paths.isEmpty ? '' : '已选择 ${paths.length} 个 PDF 文件';
         batchPdfPathController.text = text;
         state = state.copyWith(batchPdfPaths: paths, batchPdfPath: text);
@@ -262,7 +258,7 @@ class ParseForm extends _$ParseForm {
       return;
     }
 
-    final result = await FilePicker.platform.getDirectoryPath(
+    final result = await FilePicker.getDirectoryPath(
       dialogTitle: '选择包含 PDF 的文件夹',
     );
     if (result != null) {

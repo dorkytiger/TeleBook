@@ -140,7 +140,7 @@ class _ParseBatchImageFolderViewState
                         title: Text(folder.name),
                         subtitle: Text("图片数: ${folder.tempPaths.length}"),
                         prefix: LocalImageWidget(
-                          imagePath: folder.tempPaths.first,
+                          imagePath: folder.tempPaths.isEmpty ? '' : folder.tempPaths.first,
                         ),
                         suffix: const Icon(FLucideIcons.chevronRight),
                         onPress: () {
@@ -167,7 +167,7 @@ class _ParseBatchImageFolderViewState
                       ? Text(
                           "正在保存：${saveState.saveAsBookCount}/${saveState.totalCount}",
                         )
-                      : const Text("保存到书架"),
+                      : const Text("保存全部"),
                 ),
               ),
             ],

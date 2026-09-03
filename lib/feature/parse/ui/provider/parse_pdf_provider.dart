@@ -8,6 +8,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/service/parse_pdf_service.dart';
 
 part 'parse_pdf_provider.freezed.dart';
@@ -102,7 +103,6 @@ String saveBookStepText((SaveStep step, int current, int total) progress) {
 
 @riverpod
 class ParsePdfSaveBook extends _$ParsePdfSaveBook {
-  BookRepository get _repository => ref.read(bookRepositoryProvider);
 
   @override
   FutureOr<void> build() => null;
@@ -118,27 +118,23 @@ class ParsePdfSaveBook extends _$ParsePdfSaveBook {
       tempPaths.length,
     );
 
-    AppLog.i('调用 repository.saveAsBook，开始文件复制和 DB 写入');
-    final result = await _repository.saveAsBook(
-      SaveAsBookDto(title: pdfName, paths: tempPaths),
-      onStepProgress: (step, current, total) {
-        ref.read(parsePdfSaveBookProgressProvider.notifier).state = (
-          step,
-          current,
-          total,
-        );
-      },
-    );
-
-    result.fold(
-      onSuccess: (_) {
-        AppLog.i('保存书籍成功');
-        state = AsyncValue.data(null);
-      },
-      onError: (e) {
-        AppLog.e('保存书籍失败，错误信息：${e.message}');
-        state = AsyncValue.error(e.message, StackTrace.current);
-      },
-    );
+    AppLog.i('保存书籍：走同步队列（先推服务器，成功才落本地）');
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBookImport(
+        SaveAsBookDto(title: pdfName, paths: tempPaths),
+        onStepProgress: (step, current, total) {
+          ref.read(parsePdfSaveBookProgressProvider.notifier).state = (
+            step,
+            current,
+            total,
+          );
+        },
+      );
+      AppLog.i('保存书籍成功');
+      state = AsyncValue.data(null);
+    } catch (e) {
+      AppLog.e('保存书籍失败：$e');
+      state = AsyncValue.error('$e', StackTrace.current);
+    }
   }
 }

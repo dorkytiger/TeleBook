@@ -1,15 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/route/app_route.dart';
+import 'package:tele_book/core/util/app_log.dart';
+import 'package:tele_book/core/util/crash_guard.dart';
+import 'package:tele_book/core/util/lifecycle_log_observer.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await _init();
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await _init();
 
-  runApp(appProviders);
+    runApp(appProviders);
+  }, CrashGuard.zoneError);
 }
 
 /// 全局 providers，在 runApp 中使用
@@ -17,6 +24,13 @@ late Widget appProviders;
 
 Future<void> _init() async {
   await GlobalConfig.init();
+  // 诊断日志系统：统一落盘目录 + 崩溃捕获（须在 runApp 前装好）
+  await AppLog.init();
+  CrashGuard.install();
+  // 前后台切换日志（排查熄屏后台同步是否推进）
+  WidgetsBinding.instance
+      .addObserver(LifecycleLogObserver());
+  AppLog.i('App 启动，日志系统就绪', tag: 'BOOT');
   // 启动后台缓存清理，不阻塞启动流程
   GlobalConfig.cleanCacheOnStartup();
 

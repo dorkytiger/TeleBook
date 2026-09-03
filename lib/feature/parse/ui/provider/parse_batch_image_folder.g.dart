@@ -161,7 +161,7 @@ final class SaveBatchAsBookProvider
   }
 }
 
-String _$saveBatchAsBookHash() => r'aca3134e86c0e740a17d3e20b69c137043d9bb74';
+String _$saveBatchAsBookHash() => r'3604192647cfa58fcdf49a4c70f4c652343b274d';
 
 final class SaveBatchAsBookFamily extends $Family
     with

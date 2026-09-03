@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
-import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/download/enum/download_status.dart';
 import 'package:tele_book/feature/download/model/bo/download_bo.dart';
 import 'package:tele_book/feature/download/model/vo/download_vo.dart';
@@ -16,18 +17,30 @@ import 'package:tele_book/core/util/uuid_util.dart';
 final downloadServiceProvider = Provider<DownloadService>((ref) {
   return DownloadService(
     ref.watch(downloadRepositoryProvider),
-    ref.watch(bookRepositoryProvider),
+    ref.watch(syncMutationServiceProvider),
   );
 });
 
+/// 单个文件的下载事件（替代 background_downloader 的 TaskStatus）。
+enum _DownloadEvent {
+  started,
+  completed,
+  failed,
+}
+
 class DownloadService {
-  final FileDownloader _downloader = FileDownloader();
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(minutes: 10),
+    ),
+  );
   final DownloadRepository _downloadRepository;
-  final BookRepository _bookRepository;
+  final SyncMutationService _syncMutation;
   final AsyncLock _stateLock = AsyncLock();
   final Set<String> _autoSavedGroups = {};
 
-  DownloadService(this._downloadRepository, this._bookRepository);
+  DownloadService(this._downloadRepository, this._syncMutation);
 
   Stream<List<DownloadTaskVO>> watchDownloadTasks() {
     return _downloadRepository.watchDownloadList();
@@ -86,66 +99,59 @@ class DownloadService {
       }
 
       for (var item in downloadItems) {
-        _downloader.download(
-          DownloadTask(
-            url: item.url,
-            filename: item.saveSubPath,
-            // `directory` is relative under `baseDirectory`.
-            directory: groupId,
-            baseDirectory: BaseDirectory.temporary,
+        unawaited(
+          _downloadItem(
+            item,
+            downloadGroup.saveParentPath,
+            onProgress: (progress) async {
+              await _stateLock.synchronized(() {
+                final current = itemStateMap[item.id] ?? item;
+                final next = current.copyWith(
+                  progress: progress,
+                  status: DownloadStatus.downloading,
+                );
+                itemStateMap[item.id] = next;
+                _downloadRepository.upsertItem(next);
+              });
+            },
+            onStatus: (event) async {
+              await _stateLock.synchronized(() {
+                final current = itemStateMap[item.id] ?? item;
+                switch (event) {
+                  case _DownloadEvent.started:
+                    final downloadingItem = current.copyWith(
+                      status: DownloadStatus.downloading,
+                    );
+                    itemStateMap[item.id] = downloadingItem;
+                    _downloadRepository.upsertItem(downloadingItem);
+                    emitGroupStatus();
+                  case _DownloadEvent.completed:
+                    if (current.status != DownloadStatus.completed) {
+                      successCount += 1;
+                    }
+                    final completedItem = current.copyWith(
+                      status: DownloadStatus.completed,
+                      progress: 1,
+                    );
+                    itemStateMap[item.id] = completedItem;
+                    _downloadRepository.upsertItem(completedItem);
+                    emitGroupStatus();
+                  case _DownloadEvent.failed:
+                    if (current.status != DownloadStatus.failed) {
+                      errorCount += 1;
+                    }
+                    final failedItem = current.copyWith(
+                      status: DownloadStatus.failed,
+                    );
+                    itemStateMap[item.id] = failedItem;
+                    _downloadRepository.upsertItem(failedItem);
+                    emitGroupStatus();
+                }
+              });
+              // 在 lock 外检查是否满足自动保存条件
+              await _checkAndAutoSave(groupId);
+            },
           ),
-          onProgress: (progress) async {
-            await _stateLock.synchronized(() {
-              final current = itemStateMap[item.id] ?? item;
-              final next = current.copyWith(
-                progress: progress,
-                status: DownloadStatus.downloading,
-              );
-              itemStateMap[item.id] = next;
-              _downloadRepository.upsertItem(next);
-            });
-          },
-          onStatus: (status) async {
-            await _stateLock.synchronized(() {
-              final current = itemStateMap[item.id] ?? item;
-              switch (status) {
-                case TaskStatus.failed:
-                  if (current.status != DownloadStatus.failed) {
-                    errorCount += 1;
-                  }
-                  final failedItem = current.copyWith(
-                    status: DownloadStatus.failed,
-                  );
-                  itemStateMap[item.id] = failedItem;
-                  _downloadRepository.upsertItem(failedItem);
-                  emitGroupStatus();
-                  break;
-                case TaskStatus.complete:
-                  if (current.status != DownloadStatus.completed) {
-                    successCount += 1;
-                  }
-                  final completedItem = current.copyWith(
-                    status: DownloadStatus.completed,
-                    progress: 1,
-                  );
-                  itemStateMap[item.id] = completedItem;
-                  _downloadRepository.upsertItem(completedItem);
-                  emitGroupStatus();
-                  break;
-                case TaskStatus.running || TaskStatus.enqueued:
-                  final downloadingItem = current.copyWith(
-                    status: DownloadStatus.downloading,
-                  );
-                  itemStateMap[item.id] = downloadingItem;
-                  _downloadRepository.upsertItem(downloadingItem);
-                  emitGroupStatus();
-                  break;
-                default:
-              }
-            });
-            // 在 lock 外检查是否满足自动保存条件
-            await _checkAndAutoSave(groupId);
-          },
         );
       }
     } catch (e) {
@@ -188,54 +194,48 @@ class DownloadService {
       group.copyWith(status: DownloadStatus.downloading),
     );
 
-    _downloader.download(
-      DownloadTask(
-        url: item.url,
-        filename: item.saveSubPath,
-        directory: group.id,
-        baseDirectory: BaseDirectory.temporary,
+    unawaited(
+      _downloadItem(
+        item,
+        group.saveParentPath,
+        onProgress: (progress) async {
+          await _stateLock.synchronized(() {
+            final next = currentItem.copyWith(
+              progress: progress,
+              status: DownloadStatus.downloading,
+            );
+            currentItem = next;
+            _downloadRepository.upsertItem(next);
+          });
+        },
+        onStatus: (event) async {
+          await _stateLock.synchronized(() {
+            switch (event) {
+              case _DownloadEvent.started:
+                final downloadingItem = currentItem.copyWith(
+                  status: DownloadStatus.downloading,
+                );
+                currentItem = downloadingItem;
+                _downloadRepository.upsertItem(downloadingItem);
+              case _DownloadEvent.completed:
+                final completedItem = currentItem.copyWith(
+                  status: DownloadStatus.completed,
+                  progress: 1,
+                );
+                currentItem = completedItem;
+                _downloadRepository.upsertItem(completedItem);
+              case _DownloadEvent.failed:
+                final failedItem = currentItem.copyWith(
+                  status: DownloadStatus.failed,
+                );
+                currentItem = failedItem;
+                _downloadRepository.upsertItem(failedItem);
+            }
+          });
+          // 在 lock 外统一刷新组状态并检查自动保存条件
+          await _refreshGroupState(item.groupId);
+        },
       ),
-      onProgress: (progress) async {
-        await _stateLock.synchronized(() {
-          final next = currentItem.copyWith(
-            progress: progress,
-            status: DownloadStatus.downloading,
-          );
-          currentItem = next;
-          _downloadRepository.upsertItem(next);
-        });
-      },
-      onStatus: (status) async {
-        await _stateLock.synchronized(() {
-          switch (status) {
-            case TaskStatus.failed:
-              final failedItem = currentItem.copyWith(
-                status: DownloadStatus.failed,
-              );
-              currentItem = failedItem;
-              _downloadRepository.upsertItem(failedItem);
-              break;
-            case TaskStatus.complete:
-              final completedItem = currentItem.copyWith(
-                status: DownloadStatus.completed,
-                progress: 1,
-              );
-              currentItem = completedItem;
-              _downloadRepository.upsertItem(completedItem);
-              break;
-            case TaskStatus.running || TaskStatus.enqueued:
-              final downloadingItem = currentItem.copyWith(
-                status: DownloadStatus.downloading,
-              );
-              currentItem = downloadingItem;
-              _downloadRepository.upsertItem(downloadingItem);
-              break;
-            default:
-          }
-        });
-        // 在 lock 外统一刷新组状态并检查自动保存条件
-        await _refreshGroupState(item.groupId);
-      },
     );
   }
 
@@ -297,6 +297,8 @@ class DownloadService {
       final groups = _downloadRepository.getDownloadGroups();
       for (final group in groups) {
         if (group.status != DownloadStatus.completed) continue;
+        // 正在自动保存为书籍的组暂不可清空（会删掉还在使用的临时文件）
+        if (group.processing) continue;
         completedGroups.add(group);
         _autoSavedGroups.remove(group.id);
         _downloadRepository.deleteGroup(group.id);
@@ -311,6 +313,43 @@ class DownloadService {
     }
 
     return completedGroups.length;
+  }
+
+  /// 用 dio 下载单个文件到 [saveParentPath]/[saveSubPath]，
+  /// 进度与状态变更通过回调上报（替代 background_downloader）。
+  Future<void> _downloadItem(
+    DownloadItemBo item,
+    String saveParentPath, {
+    required Future<void> Function(double progress) onProgress,
+    required Future<void> Function(_DownloadEvent event) onStatus,
+  }) async {
+    final filePath = '$saveParentPath/${item.saveSubPath}';
+    final file = File(filePath);
+    await file.parent.create(recursive: true);
+
+    await onStatus(_DownloadEvent.started);
+
+    try {
+      await _dio.download(
+        item.url,
+        filePath,
+        onReceiveProgress: (received, total) async {
+          final progress = total > 0
+              ? (received / total).clamp(0.0, 1.0)
+              : 0.0;
+          await onProgress(progress);
+        },
+      );
+      await onStatus(_DownloadEvent.completed);
+    } catch (e) {
+      // 清理半成品文件，避免残留
+      if (await file.exists()) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+      await onStatus(_DownloadEvent.failed);
+    }
   }
 
   /// 根据组内所有项的状态更新组状态
@@ -384,16 +423,29 @@ class DownloadService {
       // 按 order 排序后再保存
       final sortedItems = List<DownloadItemBo>.from(items)
         ..sort((a, b) => a.order.compareTo(b.order));
-      await _bookRepository.saveAsBook(
-        SaveAsBookDto(
-          title: group.name,
-          paths: sortedItems
-              .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
-              .toList(),
-        ),
-      );
-      // 保存成功后标记并推送，UI 据此显示"已保存"状态
-      _downloadRepository.upsertGroup(group.copyWith(savedToBook: true));
+      // 自动保存（生成封面/预览、写库）可能耗时较长：先标记"处理中"，
+      // 下载组行 UI 据此把 subtitle 改为「正在处理」、suffix 换成 FProgress，
+      // 保存完成前不会显示对勾。
+      _downloadRepository.upsertGroup(group.copyWith(processing: true));
+      try {
+        // 走同步队列：本地立即保存 + outbox 任务（自动同步会推送服务器）
+        await _syncMutation.enqueueBookImport(
+          SaveAsBookDto(
+            title: group.name,
+            paths: sortedItems
+                .map((e) => "${group.saveParentPath}/${e.saveSubPath}")
+                .toList(),
+          ),
+        );
+        // 保存成功后标记并推送，UI 据此显示"已保存"状态（suffix 变为对勾）
+        _downloadRepository.upsertGroup(
+          group.copyWith(processing: false, savedToBook: true),
+        );
+      } catch (e) {
+        // 保存失败：退出"处理中"，保留已下载内容，用户可经下载组菜单「重试」
+        _downloadRepository.upsertGroup(group.copyWith(processing: false));
+        AppLog.w('自动保存为书籍失败 group=${group.name}: $e', tag: 'AUTO_SAVE');
+      }
     }
   }
 }

@@ -12,6 +12,10 @@ class DownloadGroupBo {
   /// 是否已全部下载成功并自动保存为书籍。
   final bool savedToBook;
 
+  /// 下载全部完成后，是否正处于自动保存为书籍的处理阶段
+  /// （生成封面/预览图并写库，可能耗时较长）。
+  final bool processing;
+
   DownloadGroupBo({
     required this.id,
     required this.name,
@@ -21,6 +25,7 @@ class DownloadGroupBo {
     required this.saveParentPath,
     required this.status,
     this.savedToBook = false,
+    this.processing = false,
   });
 
   int completeCount() => errorCount + successCount;
@@ -34,6 +39,7 @@ class DownloadGroupBo {
     String? saveParentPath,
     DownloadStatus? status,
     bool? savedToBook,
+    bool? processing,
   }) {
     return DownloadGroupBo(
       id: id ?? this.id,
@@ -44,6 +50,7 @@ class DownloadGroupBo {
       saveParentPath: saveParentPath ?? this.saveParentPath,
       status: status ?? this.status,
       savedToBook: savedToBook ?? this.savedToBook,
+      processing: processing ?? this.processing,
     );
   }
 }

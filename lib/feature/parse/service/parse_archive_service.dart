@@ -56,12 +56,16 @@ class ParseArchiveService {
           },
         );
         if (parseResult.isSuccess) {
-          results.add(
-            ParseBatchArchiveVo(
-              name: path.split(Platform.pathSeparator).last,
-              tempPaths: parseResult.data!,
-            ),
-          );
+          final paths = parseResult.data!;
+          // 空压缩包（解出 0 张图）跳过，避免生成空书
+          if (paths.isNotEmpty) {
+            results.add(
+              ParseBatchArchiveVo(
+                name: path.split(Platform.pathSeparator).last,
+                tempPaths: paths,
+              ),
+            );
+          }
           onProgress(index + 1);
         } else {
           throw Exception(parseResult.error?.message);

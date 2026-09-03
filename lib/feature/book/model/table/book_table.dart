@@ -4,6 +4,9 @@ import 'package:tele_book/core/db/converter/string_list_converter.dart';
 class BookTable extends Table {
   IntColumn get id => integer()();
 
+  /// 跨设备稳定 ID（UUID，同步用）；本地 id 是 SQLite rowid。
+  TextColumn get uuid => text().unique()();
+
   TextColumn get name => text()();
 
   TextColumn get localSubPaths => text().map(const StringListConverter())();

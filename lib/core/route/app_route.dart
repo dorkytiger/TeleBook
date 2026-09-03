@@ -17,6 +17,13 @@ import 'package:tele_book/feature/parse/ui/view/parse_form_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_image_folder_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_pdf_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
+import 'package:tele_book/feature/setting/ui/view/sync_file_log_view.dart';
+import 'package:tele_book/feature/setting/ui/view/sync_server_view.dart';
+import 'package:tele_book/feature/sync/ui/view/sync_history_detail_view.dart';
+import 'package:tele_book/feature/sync/ui/provider/sync_history_provider.dart';
+import 'package:tele_book/feature/sync/ui/view/sync_history_view.dart';
+import 'package:tele_book/feature/sync/ui/view/sync_log_list_view.dart';
+import 'package:tele_book/feature/sync/ui/view/sync_tasks_view.dart';
 
 class AppRoute {
   // 主页面
@@ -48,6 +55,15 @@ class AppRoute {
   static const parseArchiveSingle = '/parse/archive/single';
   static const parseArchiveBatch = '/parse/archive/batch';
   static const parseArchiveBatchEdit = '/parse/archive/batch/edit';
+
+  // 设置
+  static const syncServer = '/setting/sync_server';
+  static const syncHistory = '/setting/sync_history';
+  static const syncHistoryDetail = '/setting/sync_history/detail';
+  static const syncLogList = '/setting/sync_log';
+  static const syncTasks = '/setting/sync_tasks';
+  static const syncTaskDetail = '/setting/sync_task_detail';
+  static const syncFileLog = '/setting/sync_file_log';
 
   static final GoRouter router = GoRouter(
     initialLocation: main,
@@ -262,6 +278,56 @@ class AppRoute {
             }
           }
           return MaterialPage(child: ErrorRoutePage(message: "缺少 PDF 路径参数"));
+        },
+      ),
+      GoRoute(
+        path: syncServer,
+        pageBuilder: (context, state) {
+          return MaterialPage(child: SyncServerView());
+        },
+      ),
+      GoRoute(
+        path: syncHistory,
+        pageBuilder: (context, state) {
+          return MaterialPage(child: SyncHistoryView());
+        },
+      ),
+      GoRoute(
+        path: syncHistoryDetail,
+        pageBuilder: (context, state) {
+          final item = state.extra;
+          if (item is! SyncHistoryItem) {
+            return MaterialPage(child: ErrorRoutePage(message: '缺少归档参数'));
+          }
+          return MaterialPage(child: SyncHistoryDetailView(item: item));
+        },
+      ),
+      GoRoute(
+        path: syncLogList,
+        pageBuilder: (context, state) {
+          return MaterialPage(child: SyncLogListView());
+        },
+      ),
+      GoRoute(
+        path: syncTasks,
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncTasksView());
+        },
+      ),
+      GoRoute(
+        path: syncTaskDetail,
+        pageBuilder: (context, state) {
+          final op = state.extra;
+          if (op is! SyncOpTableData) {
+            return MaterialPage(child: ErrorRoutePage(message: '缺少同步任务参数'));
+          }
+          return MaterialPage(child: SyncTaskDetailView(op: op));
+        },
+      ),
+      GoRoute(
+        path: syncFileLog,
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncFileLogView());
         },
       ),
     ],

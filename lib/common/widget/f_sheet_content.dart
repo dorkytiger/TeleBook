@@ -48,7 +48,7 @@ class FSheetContent extends StatelessWidget {
   static Widget title(BuildContext context, String title) {
     return Text(
       title,
-      style: context.theme.typography.display.xl2.copyWith(
+      style: context.theme.typography.display.xl.copyWith(
         fontWeight: .w600,
         color: context.theme.colors.foreground,
         height: 1.5,

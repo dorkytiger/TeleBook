@@ -95,24 +95,68 @@ class _ParseBatchArchiveViewState extends ConsumerState<ParseBatchArchiveView> {
           }
 
           return Builder(
-            builder: (innerContext) => FItemGroup(
+            builder: (innerContext) => Column(
               children: [
-                for (var archive in data)
-                  .item(
-                    title: Text(archive.name),
-                    subtitle: Text('图片数: ${archive.tempPaths.length}'),
-                    prefix: LocalImageWidget(
-                      imagePath: archive.tempPaths.first,
-                    ),
-                    suffix: const Icon(FLucideIcons.chevronRight),
-                    onPress: () {
-                      _buildImageList(
-                        innerContext,
-                        archive.name,
-                        archive.tempPaths,
+                Expanded(
+                  child: FItemGroup(
+                    children: [
+                      for (var archive in data)
+                        .item(
+                          title: Text(archive.name),
+                          subtitle: Text('图片数: ${archive.tempPaths.length}'),
+                          prefix: LocalImageWidget(
+                            imagePath: archive.tempPaths.isEmpty
+                                ? ''
+                                : archive.tempPaths.first,
+                          ),
+                          suffix: const Icon(FLucideIcons.chevronRight),
+                          onPress: () {
+                            _buildImageList(
+                              innerContext,
+                              archive.name,
+                              archive.tempPaths,
+                            );
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final asyncState = ref.watch(
+                        parseBatchArchiveProvider(
+                          ParseBatchArchiveParam(
+                            archiveDirPath: widget.archiveDirPath,
+                            archivePaths: widget.archivePaths,
+                          ),
+                        ),
+                      );
+                      final saveState = ref.watch(
+                        parseBatchArchiveSaveBookProvider,
+                      );
+                      final saveProgress = ref.watch(
+                        parseBatchArchiveSaveBookProgressProvider,
+                      );
+                      final saveNotifier = ref.watch(
+                        parseBatchArchiveSaveBookProvider.notifier,
+                      );
+                      return FButton(
+                        onPress: saveState.isLoading
+                            ? null
+                            : () => saveNotifier.saveBatchAsBook(
+                                asyncState.value!.parseBatchArchiveList,
+                              ),
+                        child: saveState.isLoading
+                            ? Text(
+                                '正在保存：${saveProgress.current}/${saveProgress.total}',
+                              )
+                            : const Text('保存全部'),
                       );
                     },
                   ),
+                ),
               ],
             ),
           );
@@ -198,41 +242,6 @@ class _ParseBatchArchiveViewState extends ConsumerState<ParseBatchArchiveView> {
                       );
                     },
                   ),
-                ),
-                Consumer(
-                  builder: (context, ref, _) {
-                    final provider = parseBatchArchiveProvider(
-                      ParseBatchArchiveParam(
-                        archiveDirPath: widget.archiveDirPath,
-                        archivePaths: widget.archivePaths,
-                      ),
-                    );
-                    final asyncState = ref.watch(provider);
-                    final saveState = ref.watch(
-                      parseBatchArchiveSaveBookProvider,
-                    );
-                    final saveProgress = ref.watch(
-                      parseBatchArchiveSaveBookProgressProvider,
-                    );
-                    final saveNotifier = ref.watch(
-                      parseBatchArchiveSaveBookProvider.notifier,
-                    );
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      child: FButton(
-                        onPress: saveState.isLoading
-                            ? null
-                            : () => saveNotifier.saveBatchAsBook(
-                                asyncState.value!.parseBatchArchiveList,
-                              ),
-                        child: saveState.isLoading
-                            ? Text(
-                                '正在保存：${saveProgress.current}/${saveProgress.total}',
-                              )
-                            : const Text('保存到书架'),
-                      ),
-                    );
-                  },
                 ),
               ],
             ),

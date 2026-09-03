@@ -195,12 +195,16 @@ class ParsePdfService {
           },
         );
         if (result.isSuccess) {
-          results.add(
-            ParseBatchArchiveVo(
-              name: p.basenameWithoutExtension(path),
-              tempPaths: result.data!,
-            ),
-          );
+          final paths = result.data!;
+          // 空 PDF（渲染出 0 页）跳过，避免生成空书
+          if (paths.isNotEmpty) {
+            results.add(
+              ParseBatchArchiveVo(
+                name: p.basenameWithoutExtension(path),
+                tempPaths: paths,
+              ),
+            );
+          }
           onProgress(i + 1);
         } else {
           throw Exception(result.error?.message);

@@ -68,25 +68,38 @@ class DownloadListView extends ConsumerWidget {
               : FItemGroup.builder(
                   itemBuilder: (context, index) {
                     final item = tasks[index];
+                    final group = item.downloadGroupBo;
                     final progressPercent = _groupProgressPercent(
                       item.downloadItemBoList,
                     );
                     return TaskItemWidget(
-                      title: item.downloadGroupBo.name,
+                      title: group.name,
                       coverUrl: item.downloadItemBoList.first.url,
-                      status: item.downloadGroupBo.status.description,
+                      status: group.status.description,
                       progress: progressPercent,
+                      // 下载完成后正处于自动保存为书籍的阶段：副标题显示"正在处理"
+                      subtitle: group.processing ? '正在处理' : null,
                       onTap: () => _showDownloadTaskList(
                         context,
-                        item.downloadGroupBo.id,
-                        item.downloadGroupBo.name,
+                        group.id,
+                        group.name,
                         ref,
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // 下载已完成但还在自动保存为书籍 → 显示处理进度条，
+                          // 保存完成（savedToBook）后 suffix 才变成对勾
+                          if (group.processing)
+                            const Padding(
+                              padding: EdgeInsets.only(right: 8),
+                              child: SizedBox(
+                                width: 56,
+                                child: FProgress(),
+                              ),
+                            )
                           // 已全部下载成功并保存为书籍 → 显示对勾，不再提供操作菜单
-                          if (item.downloadGroupBo.savedToBook)
+                          else if (group.savedToBook)
                             const Padding(
                               padding: EdgeInsets.only(right: 8),
                               child: Icon(
@@ -97,9 +110,9 @@ class DownloadListView extends ConsumerWidget {
                           else
                             _DownloadGroupMenu(
                               onRetry: () =>
-                                  _retryGroup(context, ref, item.downloadGroupBo),
+                                  _retryGroup(context, ref, group),
                               onDelete: () =>
-                                  _deleteGroup(context, ref, item.downloadGroupBo),
+                                  _deleteGroup(context, ref, group),
                             ),
                         ],
                       ),
@@ -115,7 +128,10 @@ class DownloadListView extends ConsumerWidget {
   Future<void> _clearCompletedTasks(BuildContext context, WidgetRef ref) async {
     final tasks = await ref.read(downloadTasksProvider.future);
     final hasCompleted = tasks.any(
-      (group) => group.downloadGroupBo.status == DownloadStatus.completed,
+      (group) =>
+          group.downloadGroupBo.status == DownloadStatus.completed &&
+          // 还在自动保存为书籍的组不算可清空的已完成任务
+          !group.downloadGroupBo.processing,
     );
     if (!hasCompleted) {
       if (!context.mounted) return;

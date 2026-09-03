@@ -29,6 +29,23 @@ enum SaveStep {
   };
 }
 
+/// 已生成本地图片、待插入 DB 的书籍数据（同步导入的中间产物）。
+class PreparedBook {
+  final String uuid;
+  final String name;
+  final List<String> localSubPaths;
+  final String coverSubPath;
+  final List<String> previewSubPaths;
+
+  const PreparedBook({
+    required this.uuid,
+    required this.name,
+    required this.localSubPaths,
+    required this.coverSubPath,
+    required this.previewSubPaths,
+  });
+}
+
 /// 在后台 Isolate 中递归删除目录列表
 Future<void> _deleteBookDirs(List<String> dirPaths) async {
   for (final path in dirPaths) {
@@ -55,6 +72,11 @@ class BookRepository {
     return _bookLocalDatasource.watchAllBooks();
   }
 
+  /// 按本地 id 读取书籍（同步编排解析 uuid 用）。
+  Future<BookTableData?> getBookById(int id) {
+    return _bookLocalDatasource.getById(id);
+  }
+
   Future<List<BookTableData>> getPagedBooks({
     int? page,
     int pageSize = 20,
@@ -77,6 +99,61 @@ class BookRepository {
 
   Future<void> updateBook(BookTableData book) {
     return _bookLocalDatasource.updateBook(book);
+  }
+
+  // ── 同步相关 ─────────────────────────────────
+
+  /// 全量书籍（同步用）。
+  Future<List<BookTableData>> getAllBooks() {
+    return _bookLocalDatasource.getAllBooks();
+  }
+
+  /// 按同步 uuid 查询书籍。
+  Future<BookTableData?> getBookByUuid(String uuid) {
+    return _bookLocalDatasource.getByUuid(uuid);
+  }
+
+  /// 从服务器事件插入/更新一本书（仅逻辑字段，图片由文件同步补齐）。
+  Future<void> upsertSyncedBook({
+    required String uuid,
+    required String name,
+    int currentPage = 0,
+  }) async {
+    final existing = await _bookLocalDatasource.getByUuid(uuid);
+    if (existing != null) {
+      await _bookLocalDatasource.updateBook(
+        existing.copyWith(name: name, currentPage: currentPage),
+      );
+      return;
+    }
+    await _bookLocalDatasource.insertBook(
+      BookTableCompanion.insert(
+        uuid: uuid,
+        name: name,
+        localSubPaths: const [],
+      ),
+    );
+  }
+
+  /// 同步拉取图片下载完成后，回填本地路径（原图 + 封面）。
+  Future<void> updateSyncedBookFiles({
+    required String uuid,
+    required List<String> localSubPaths,
+    String? coverSubPath,
+  }) async {
+    final existing = await _bookLocalDatasource.getByUuid(uuid);
+    if (existing == null) return;
+    await _bookLocalDatasource.updateBook(
+      existing.copyWith(
+        localSubPaths: localSubPaths,
+        coverSubPath: Value(coverSubPath),
+      ),
+    );
+  }
+
+  /// 按同步 uuid 删除书籍（同步的 delete 事件）。
+  Future<void> deleteBookByUuid(String uuid) async {
+    await _bookLocalDatasource.deleteByUuid(uuid);
   }
 
   Future<Result<void>> deleteBook(int id) async {
@@ -104,8 +181,26 @@ class BookRepository {
     return Result.success(null);
   }
 
-  /// 保存单本书：封面 → 预览图 → 原图 → DB
+  /// 保存单本书：封面 → 预览图 → 原图 → DB（本地原子路径；同步导入走 SyncMutationService）
   Future<Result<void>> saveAsBook(
+    SaveAsBookDto dto, {
+    void Function(SaveStep step, int current, int total)? onStepProgress,
+  }) async {
+    try {
+      final prepared = await prepareBookImages(dto, onStepProgress: onStepProgress);
+      await insertPreparedBook(prepared);
+      return Result.success(null);
+    } catch (e, st) {
+      return Result.failure(
+        BusinessFailure(message: '保存书籍失败', details: e, stackTrace: st),
+      );
+    }
+  }
+
+  /// 步骤一：生成本地图片（封面/预览/原图），返回待插入数据（不写 DB）。
+  ///
+  /// 供同步导入编排使用：先推送服务器，成功后再 [insertPreparedBook]。
+  Future<PreparedBook> prepareBookImages(
     SaveAsBookDto dto, {
     void Function(SaveStep step, int current, int total)? onStepProgress,
   }) async {
@@ -140,29 +235,40 @@ class BookRepository {
       );
       onStepProgress?.call(SaveStep.saveOriginal, dto.paths.length, dto.paths.length);
 
-      // ④ 写入数据库
-      onStepProgress?.call(SaveStep.saveDatabase, 0, 1);
-      final coverSubPath = '$bookId/cover.jpg';
-      final previewSubPaths = List.generate(
-        dto.paths.length,
-        (i) => '$bookId/preview/${i.toString().padLeft(7, '0')}.jpg',
-      );
-      await _bookLocalDatasource.insertBook(
-        BookTableCompanion.insert(
-          name: dto.title,
-          localSubPaths: relPaths,
-          coverSubPath: Value(coverSubPath),
-          previewSubPaths: Value(previewSubPaths),
+      return PreparedBook(
+        uuid: bookId,
+        name: dto.title,
+        localSubPaths: relPaths,
+        coverSubPath: '$bookId/cover.jpg',
+        previewSubPaths: List.generate(
+          dto.paths.length,
+          (i) => '$bookId/preview/${i.toString().padLeft(7, '0')}.jpg',
         ),
       );
-      onStepProgress?.call(SaveStep.saveDatabase, 1, 1);
-
-      return Result.success(null);
-    } catch (e, st) {
+    } catch (e) {
       await compute(_deleteBookDirs, [bookDir]);
-      return Result.failure(
-        BusinessFailure(message: '保存书籍失败', details: e, stackTrace: st),
-      );
+      rethrow;
+    }
+  }
+
+  /// 步骤二：把已准备的书籍数据写入 DB。
+  Future<void> insertPreparedBook(PreparedBook book) async {
+    await _bookLocalDatasource.insertBook(
+      BookTableCompanion.insert(
+        uuid: book.uuid,
+        name: book.name,
+        localSubPaths: book.localSubPaths,
+        coverSubPath: Value(book.coverSubPath),
+        previewSubPaths: Value(book.previewSubPaths),
+      ),
+    );
+  }
+
+  /// 清理已准备但未插入的书籍目录（同步推送失败时回滚用）。
+  Future<void> discardPreparedBook(String uuid) async {
+    final dir = Directory('${GlobalConfig.booksDir.path}/$uuid');
+    if (await dir.exists()) {
+      await compute(_deleteBookDirs, [dir.path]);
     }
   }
 
@@ -173,6 +279,7 @@ class BookRepository {
   ) async {
     final createdDirs = <String>[];
     final bookData = <({
+      String uuid,
       String title,
       List<String> relPaths,
       String coverSubPath,
@@ -214,6 +321,7 @@ class BookRepository {
           (j) => '$bookId/preview/${j.toString().padLeft(7, '0')}.jpg',
         );
         bookData.add((
+          uuid: bookId,
           title: dto.title,
           relPaths: relPaths,
           coverSubPath: coverSubPath,
@@ -228,6 +336,7 @@ class BookRepository {
         for (final book in bookData) {
           await _bookLocalDatasource.insertBook(
             BookTableCompanion.insert(
+              uuid: book.uuid,
               name: book.title,
               localSubPaths: book.relPaths,
               coverSubPath: Value(book.coverSubPath),
@@ -275,12 +384,14 @@ class BookRepository {
       destDir: previewDir,
     );
 
-    // 更新数据库
+    // 更新数据库：以**最新行**为基础只回填图片字段（cover/preview），
+    // 保留期间可能发生的 name/localSubPaths 等新编辑（后台重建与保存并发安全）。
+    final latest = await _bookLocalDatasource.getById(book.id) ?? book;
     final previewSubPaths = List.generate(
       originalPaths.length,
       (i) => '$bookId/preview/${i.toString().padLeft(7, '0')}.jpg',
     );
-    final updatedBook = book.copyWith(
+    final updatedBook = latest.copyWith(
       coverSubPath: Value('$bookId/cover.jpg'),
       previewSubPaths: Value(previewSubPaths),
     );

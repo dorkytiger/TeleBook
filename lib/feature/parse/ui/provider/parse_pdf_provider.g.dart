@@ -122,7 +122,7 @@ final class ParsePdfSaveBookProvider
   ParsePdfSaveBook create() => ParsePdfSaveBook();
 }
 
-String _$parsePdfSaveBookHash() => r'2bb199c158dc082cd536e8a9bc71eb25994461fc';
+String _$parsePdfSaveBookHash() => r'2d19ab2b7ca2ce01d1b30813ef90c80076b512b5';
 
 abstract class _$ParsePdfSaveBook extends $AsyncNotifier<void> {
   FutureOr<void> build();

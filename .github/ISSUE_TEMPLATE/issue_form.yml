@@ -1,24 +1,311 @@
-name: 问题 / 需求 / 维护
-description: 提交 Bug 修复（fix）、新功能（feat）、维护（chore）等事项
-title: "[<type>]: 简述"
+name: Bug / 功能 / 性能 / 维护
+description: 按类型（fix / feat / perf / refactor / docs / test / chore）提交，表单会按类型显示对应字段
+title: "[feat]: 简述"
 labels: ["triage"]
 body:
+  # ── 第一步：类型选择（决定后续显示哪些字段） ──────────────
   - type: dropdown
     id: type
     attributes:
       label: 类型（Type）
-      description: 选择本条 issue 的类型
+      description: 选择本条 issue 的类型，后续表单将按类型显示对应字段
       options:
-        - fix - Bug 修复
         - feat - 新功能
-        - chore - 维护 / 杂项（依赖、配置等）
+        - fix - Bug 修复
+        - perf - 性能优化
         - refactor - 重构
         - docs - 文档
         - test - 测试
-        - perf - 性能优化
+        - chore - 维护 / 杂项（依赖、配置等）
         - other - 其他
     validations:
       required: true
+
+  # ════════════════ feat - 新功能 ════════════════
+  - type: markdown
+    id: feat_header
+    attributes:
+      value: |
+        ## 📦 新功能（feat）
+    if: type == 'feat - 新功能'
+  - type: textarea
+    id: feat_desc
+    attributes:
+      label: 功能描述（Description）
+      description: 希望实现什么功能，解决什么问题
+      placeholder: "例如：新增多设备同步，手机 A 的书库可同步到手机 B"
+    validations:
+      required: true
+    if: type == 'feat - 新功能'
+  - type: textarea
+    id: feat_reason
+    attributes:
+      label: 需求背景 / 动机（Motivation）
+      description: 为什么需要这个功能，当前的使用痛点是什么
+      placeholder: "例如：目前书籍只在单台设备，换设备后书库无法迁移"
+    if: type == 'feat - 新功能'
+  - type: textarea
+    id: feat_expected
+    attributes:
+      label: 期望行为（Expected）
+      description: 功能上线后用户应该能做什么
+      placeholder: "例如：连接同一服务器后，书库 / 进度 / 图片双向一致"
+    validations:
+      required: true
+    if: type == 'feat - 新功能'
+  - type: textarea
+    id: feat_acceptance
+    attributes:
+      label: 验收标准（Acceptance Criteria）
+      description: 可勾选的验收项（建议逐条列出）
+      placeholder: |
+        - [ ] 场景 1：...
+        - [ ] 场景 2：...
+        - [ ] 离线场景：...
+    if: type == 'feat - 新功能'
+  - type: textarea
+    id: feat_scope
+    attributes:
+      label: 影响范围（Scope）
+      description: 可能影响的模块 / 页面 / 数据结构（可选）
+      placeholder: "例如：涉及数据库 schema 升级、新增同步页面、底栏状态条"
+    if: type == 'feat - 新功能'
+
+  # ════════════════ fix - Bug 修复 ════════════════
+  - type: markdown
+    id: fix_header
+    attributes:
+      value: |
+        ## 🐛 Bug 修复（fix）
+    if: type == 'fix - Bug 修复'
+  - type: textarea
+    id: fix_desc
+    attributes:
+      label: 问题描述（Description）
+      description: 详细描述问题现象
+      placeholder: "发生了什么？例如：阅读顺序设置为从右到左后无效"
+    validations:
+      required: true
+    if: type == 'fix - Bug 修复'
+  - type: textarea
+    id: fix_reproduce
+    attributes:
+      label: 复现步骤（Steps to Reproduce）
+      description: 一步步描述如何触发该问题
+      placeholder: |
+        1. 打开...
+        2. 点击...
+        3. 观察到...
+    validations:
+      required: true
+    if: type == 'fix - Bug 修复'
+  - type: textarea
+    id: fix_expected
+    attributes:
+      label: 期望行为（Expected）
+      description: 正确情况下应该发生什么
+      placeholder: "例如：应按照设置的阅读方向翻页"
+    validations:
+      required: true
+    if: type == 'fix - Bug 修复'
+  - type: textarea
+    id: fix_actual
+    attributes:
+      label: 实际行为 / 日志（Actual / Logs）
+      description: 实际发生什么，如有报错日志请粘贴
+      render: shell
+    validations:
+      required: true
+    if: type == 'fix - Bug 修复'
+  - type: input
+    id: fix_first_seen
+    attributes:
+      label: 首次出现版本
+      description: 该问题从哪个版本开始出现（如不确定可留空）
+      placeholder: "例如: v3.1.4"
+    if: type == 'fix - Bug 修复'
+
+  # ════════════════ perf - 性能优化 ════════════════
+  - type: markdown
+    id: perf_header
+    attributes:
+      value: |
+        ## ⚡ 性能优化（perf）
+    if: type == 'perf - 性能优化'
+  - type: textarea
+    id: perf_desc
+    attributes:
+      label: 性能问题描述（Description）
+      description: 哪个操作 / 页面存在性能问题，当前表现如何
+      placeholder: "例如：导入 100 张图片的压缩包时 UI 卡顿 3 秒"
+    validations:
+      required: true
+    if: type == 'perf - 性能优化'
+  - type: textarea
+    id: perf_reproduce
+    attributes:
+      label: 复现方式（How to Reproduce）
+      description: 什么条件下出现性能问题（数据量、操作路径等）
+      placeholder: |
+        1. 准备 100+ 页的压缩包
+        2. 选择批量导入
+        3. 观察 UI 响应
+    if: type == 'perf - 性能优化'
+  - type: textarea
+    id: perf_baseline
+    attributes:
+      label: 当前表现（Baseline）
+      description: 现状的量化数据（耗时 / 内存 / FPS 等）
+      placeholder: "例如：导入耗时 3.2s，峰值内存 500MB"
+    validations:
+      required: true
+    if: type == 'perf - 性能优化'
+  - type: textarea
+    id: perf_target
+    attributes:
+      label: 优化目标（Target）
+      description: 期望达到的量化指标
+      placeholder: "例如：导入耗时 < 1s，峰值内存 < 300MB"
+    validations:
+      required: true
+    if: type == 'perf - 性能优化'
+  - type: textarea
+    id: perf_approach
+    attributes:
+      label: 建议方案（Approach，可选）
+      description: 你认为可行的优化方向（异步 / 缓存 / 复用等）
+    if: type == 'perf - 性能优化'
+
+  # ════════════════ refactor - 重构 ════════════════
+  - type: markdown
+    id: refactor_header
+    attributes:
+      value: |
+        ## 🔧 重构（refactor）
+    if: type == 'refactor - 重构'
+  - type: textarea
+    id: refactor_desc
+    attributes:
+      label: 重构目标（Description）
+      description: 重构哪个模块，希望改善什么（可维护性 / 可读性 / 结构）
+      placeholder: "例如：重构下载模块，抽离为独立 service"
+    validations:
+      required: true
+    if: type == 'refactor - 重构'
+  - type: textarea
+    id: refactor_reason
+    attributes:
+      label: 动机（Motivation）
+      description: 为什么现在需要重构（技术债 / 需求变化等）
+    if: type == 'refactor - 重构'
+  - type: textarea
+    id: refactor_scope
+    attributes:
+      label: 影响范围（Scope）
+      description: 涉及的文件 / 模块，行为是否发生变化
+      placeholder: "例如：仅内部结构调整，对外行为不变"
+    validations:
+      required: true
+    if: type == 'refactor - 重构'
+  - type: textarea
+    id: refactor_verify
+    attributes:
+      label: 验证方式（Verification）
+      description: 如何确认重构后功能正常（测试 / 手工路径）
+      placeholder: "例如：现有单测 + 导入/删除/导出全流程手工验证"
+    if: type == 'refactor - 重构'
+
+  # ════════════════ docs - 文档 ════════════════
+  - type: markdown
+    id: docs_header
+    attributes:
+      value: |
+        ## 📄 文档（docs）
+    if: type == 'docs - 文档'
+  - type: textarea
+    id: docs_desc
+    attributes:
+      label: 文档变更内容（Description）
+      description: 更新 / 新增哪些文档，为什么
+      placeholder: "例如：README 新增多设备同步配置章节"
+    validations:
+      required: true
+    if: type == 'docs - 文档'
+  - type: input
+    id: docs_files
+    attributes:
+      label: 涉及文档
+      description: 文档文件路径列表
+      placeholder: "例如: README.md, docs/api.md"
+    if: type == 'docs - 文档'
+
+  # ════════════════ test - 测试 ════════════════
+  - type: markdown
+    id: test_header
+    attributes:
+      value: |
+        ## 🧪 测试（test）
+    if: type == 'test - 测试'
+  - type: textarea
+    id: test_desc
+    attributes:
+      label: 测试内容（Description）
+      description: 补充 / 修改哪些测试，覆盖什么场景
+      placeholder: "例如：为同步队列新增单元测试，覆盖串行顺序与失败重试"
+    validations:
+      required: true
+    if: type == 'test - 测试'
+  - type: textarea
+    id: test_cases
+    attributes:
+      label: 用例说明（Test Cases）
+      description: 关键用例列表（可选）
+      placeholder: |
+        - [ ] 用例 1：...
+        - [ ] 用例 2：...
+    if: type == 'test - 测试'
+
+  # ════════════════ chore - 维护 / 杂项 ════════════════
+  - type: markdown
+    id: chore_header
+    attributes:
+      value: |
+        ## 🧹 维护 / 杂项（chore）
+    if: type == 'chore - 维护 / 杂项（依赖、配置等）'
+  - type: textarea
+    id: chore_desc
+    attributes:
+      label: 变更内容（Description）
+      description: 依赖升级 / 配置调整 / 清理等内容
+      placeholder: "例如：升级 file_picker 到 12.x 以消除 KGP 警告"
+    validations:
+      required: true
+    if: type == 'chore - 维护 / 杂项（依赖、配置等）'
+  - type: textarea
+    id: chore_risk
+    attributes:
+      label: 风险与验证（Risk & Verification）
+      description: 变更可能的影响，以及如何验证
+      placeholder: "例如：涉及构建链路，需验证 Android/iOS 构建通过"
+    if: type == 'chore - 维护 / 杂项（依赖、配置等）'
+
+  # ════════════════ other - 其他 ════════════════
+  - type: markdown
+    id: other_header
+    attributes:
+      value: |
+        ## 📝 其他（other）
+    if: type == 'other - 其他'
+  - type: textarea
+    id: other_desc
+    attributes:
+      label: 描述（Description）
+      placeholder: "请详细描述"
+    validations:
+      required: true
+    if: type == 'other - 其他'
+
+  # ── 通用：环境信息（所有类型） ────────────────────────────
   - type: markdown
     attributes:
       value: |
@@ -27,40 +314,15 @@ body:
     id: version
     attributes:
       label: 版本 / 平台 / 环境
-      description: 应用版本、操作系统、Flutter 版本等
-      placeholder: "例如: v3.1.6 / Windows 11 / Flutter 3.47.1"
+      description: 应用版本、操作系统、Flutter / Go 版本等
+      placeholder: "例如: v3.1.6 / Android 14 / Flutter 3.47.1"
     validations:
       required: true
-  - type: textarea
-    id: description
-    attributes:
-      label: 描述（Description）
-      description: 详细描述问题现象或功能需求
-      placeholder: "发生了什么 / 希望实现什么"
-    validations:
-      required: true
-  - type: textarea
-    id: reproduce
-    attributes:
-      label: 复现步骤（Steps to Reproduce）
-      description: fix / bug 类必填
-      placeholder: |
-        1. 打开...
-        2. 点击...
-        3. 观察到...
-  - type: textarea
-    id: expected
-    attributes:
-      label: 期望行为（Expected）
-      placeholder: "期望应该发生什么"
-  - type: textarea
-    id: actual
-    attributes:
-      label: 实际行为 / 日志（Actual / Logs）
-      description: 实际发生什么，如有报错日志请粘贴
-      render: shell
+
+  # ── 通用：附加信息 ────────────────────────────────────────
   - type: textarea
     id: extra
     attributes:
-      label: 其他信息
+      label: 其他信息 / 截图（Extra）
       description: 截图、相关代码、建议方案等（可选）
+      placeholder: "可拖拽图片到此处或粘贴代码"

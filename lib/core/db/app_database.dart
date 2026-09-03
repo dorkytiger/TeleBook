@@ -4,23 +4,54 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod/riverpod.dart';
+import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/book/datasource/local/book_local_datasource.dart';
 import 'package:tele_book/feature/book/model/table/book_table.dart';
 import 'package:tele_book/feature/collection/datasource/local/collection_book_local_datasource.dart';
 import 'package:tele_book/feature/collection/datasource/local/collection_local_datasource.dart';
 import 'package:tele_book/feature/collection/model/table/collection_book_table.dart';
 import 'package:tele_book/feature/collection/model/table/collection_table.dart';
+import 'package:tele_book/feature/setting/datasource/setting_local_datasource.dart';
+import 'package:tele_book/feature/setting/model/table/setting_table.dart';
+import 'package:tele_book/feature/sync/datasource/sync_down_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_op_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_task_local_datasource.dart';
+import 'package:tele_book/feature/sync/datasource/sync_upload_local_datasource.dart';
+import 'package:tele_book/feature/sync/model/table/entity_sync_state_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_down_file_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_down_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_op_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_task_table.dart';
+import 'package:tele_book/feature/sync/model/table/sync_upload_table.dart';
 
 import 'converter/string_list_converter.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [BookTable, CollectionTable, CollectionBookTable],
+  tables: [
+    BookTable,
+    CollectionTable,
+    CollectionBookTable,
+    SettingTable,
+    EntitySyncStateTable,
+    SyncTaskTable,
+    SyncOpTable,
+    SyncDownTable,
+    SyncDownFileTable,
+    SyncUploadTable,
+  ],
   daos: [
     BookLocalDatasource,
     CollectionLocalDatasource,
     CollectionBookLocalDatasource,
+    SettingLocalDatasource,
+    SyncStateLocalDatasource,
+    SyncTaskLocalDatasource,
+    SyncOpLocalDatasource,
+    SyncDownLocalDatasource,
+    SyncUploadLocalDatasource,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -28,22 +59,57 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super((executor ?? _openConnection()));
 
+  /// 数据库版本。main 分支当前为 v2（仅 book/collection/collection_book 三表，
+  /// 无 uuid 列、无任何同步表）；本分支 v3 在其上新增设置表与同步系列表，
+  /// 并给 book_table 加 uuid。每次 schema 变更 +1。
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (migrator, from, to) async {
-      // 破坏性更新：删除所有表并重建
-      await customStatement('PRAGMA foreign_keys = OFF');
-      final tableNames = allTables.map((t) => t.actualTableName).toList();
-      for (final name in tableNames) {
-        await customStatement('DROP TABLE IF EXISTS "$name"');
+      AppLog.w('数据库升级 v$from → v$to 开始', tag: 'DB');
+      if (from < 2) {
+        // v1 及更早：从未发布、结构不可考（main v2 自身也采用破坏性重建），
+        // 这里保持一致：删全部表后按当前定义重建。
+        await customStatement('PRAGMA foreign_keys = OFF');
+        for (final table in allTables) {
+          await customStatement(
+            'DROP TABLE IF EXISTS "${table.actualTableName}"',
+          );
+        }
+        await migrator.createAll();
+        await customStatement('PRAGMA foreign_keys = ON');
+      } else if (from < 3) {
+        AppLog.w('数据库 v$from→v$to：增量升级（保留数据）', tag: 'DB');
+        // v2（main）→ v3：**保留书库/收藏数据**，只做真实差异的增量升级：
+        //  ① book_table 加 uuid（SQLite 不支持 ALTER 直接加 NOT NULL UNIQUE 列
+        //     → 加可空列 → 回填 UUID → 建唯一索引，与 v3 定义一致）
+        //  ② 新增设置表 + 同步系列表（entity_sync_state/sync_task/sync_op/
+        //     sync_down/sync_down_file/sync_upload）
+        await customStatement('ALTER TABLE "book_table" ADD COLUMN "uuid" TEXT');
+        await customStatement('''
+          UPDATE "book_table" SET uuid =
+            lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' ||
+            lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' ||
+            lower(hex(randomblob(6)))
+          WHERE uuid IS NULL
+        ''');
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS "book_table_uuid_key" '
+          'ON "book_table" ("uuid")',
+        );
+        await migrator.createTable(settingTable);
+        await migrator.createTable(entitySyncStateTable);
+        await migrator.createTable(syncTaskTable);
+        await migrator.createTable(syncOpTable);
+        await migrator.createTable(syncDownTable);
+        await migrator.createTable(syncDownFileTable);
+        await migrator.createTable(syncUploadTable);
       }
-      await migrator.createAll();
-      await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -52,10 +118,10 @@ class AppDatabase extends _$AppDatabase {
         databaseDirectory: () async {
           if (Platform.isIOS || Platform.isAndroid) {
             final dbFolder = await getApplicationDocumentsDirectory();
-            print('Database path: ${dbFolder.path}');
+            AppLog.d('Database path: ${dbFolder.path}', tag: 'DB');
             return dbFolder.path;
           } else {
-            // For desktop platforms, use the current directory
+            AppLog.d('Database path: ${Directory.current.path}', tag: 'DB');
             return Directory.current.path;
           }
         },

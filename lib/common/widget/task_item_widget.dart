@@ -10,6 +10,9 @@ class TaskItemWidget extends StatelessWidget {
   final Function()? onTap;
   final Widget? trailing;
 
+  /// 自定义副标题；为空时默认显示「$status  xx.x%」。
+  final String? subtitle;
+
   const TaskItemWidget({
     super.key,
     required this.title,
@@ -18,6 +21,7 @@ class TaskItemWidget extends StatelessWidget {
     required this.progress,
     this.onTap,
     this.trailing,
+    this.subtitle,
   });
 
   @override
@@ -26,7 +30,9 @@ class TaskItemWidget extends StatelessWidget {
       onPress: onTap,
       prefix: NetworkImageWidget(imageUrl: coverUrl),
       title: Text(title, maxLines: 2),
-      subtitle: Text("$status  ${(progress * 100).toStringAsFixed(1)}%"),
+      subtitle: Text(
+        subtitle ?? "$status  ${(progress * 100).toStringAsFixed(1)}%",
+      ),
       suffix: trailing,
     );
   }

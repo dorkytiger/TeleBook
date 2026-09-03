@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,10 @@ import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/feature/book/ui/provider/book_page_provider.dart';
+import 'package:tele_book/feature/setting/enum/setting_key_value.dart';
+import 'package:tele_book/feature/setting/ui/provider/setting_provider.dart';
+import 'package:tele_book/feature/sync/service/optimistic_download_service.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 
 class BookPageView extends ConsumerStatefulWidget {
   final BookTableData book;
@@ -25,6 +30,18 @@ class _BookPageViewState extends ConsumerState<BookPageView> {
   /// 用户交互经 onChange 回写，不存在内部状态脱节的问题。
   int _currentPage = 0;
 
+  /// 书籍副本（initState 缓存；dispose 兜底保存时 provider 状态已不可靠）。
+  late BookTableData _book;
+
+  /// 同步服务（缓存引用：dispose 后 ref 不可用，兜底保存仍要写库）。
+  late final SyncMutationService _syncMutation;
+
+  /// 阅读进度防抖保存：翻页停止 [debounce] 后才落库 + 入队同步，
+  /// 避免高频翻页产生大量 outbox 任务（同书任务还会被合并）。
+  Timer? _saveTimer;
+  int _savedPage = -1;
+  static const _debounce = Duration(milliseconds: 800);
+
   @override
   void initState() {
     super.initState();
@@ -32,14 +49,33 @@ class _BookPageViewState extends ConsumerState<BookPageView> {
     final state = ref.read(bookPageProvider(widget.book.id));
     final initialPage = state.currentPage;
     _currentPage = initialPage;
+    _savedPage = initialPage; // 初始页视为已保存，避免无谓写入
+    _book = state.book;
+    _syncMutation = ref.read(syncMutationServiceProvider);
     _pageController = PageController(initialPage: initialPage);
     notifier.initController(_pageController);
   }
 
   @override
   void dispose() {
+    _saveTimer?.cancel();
+    unawaited(_saveProgress(_currentPage)); // 离开页面兜底保存最新进度
     _pageController.dispose();
     super.dispose();
+  }
+
+  /// 防抖保存阅读进度：本地立即更新 currentPage 并合并进同步任务。
+  Future<void> _saveProgress(int page) async {
+    if (page == _savedPage) return;
+    _savedPage = page;
+    await _syncMutation.enqueueBookProgress(
+      book: _book.copyWith(currentPage: page),
+    );
+  }
+
+  void _scheduleSave(int page) {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(_debounce, () => _saveProgress(page));
   }
 
   @override
@@ -47,6 +83,16 @@ class _BookPageViewState extends ConsumerState<BookPageView> {
     final state = ref.watch(bookPageProvider(widget.book.id));
     final notifier = ref.watch(bookPageProvider(widget.book.id).notifier);
     final totalPages = state.paths.length;
+
+    // 阅读方向：从左到右 / 从右到左（reverse 水平）/ 从上到下（垂直）
+    final direction =
+        ref.watch(readingDirectionSettingProvider).value ??
+        ReadingDirection.leftToRight;
+    final scrollDirection =
+        direction == ReadingDirection.topToBottom
+            ? Axis.vertical
+            : Axis.horizontal;
+    final reverse = direction == ReadingDirection.rightToLeft;
 
     return FScaffold(
       header: FHeader.nested(
@@ -95,19 +141,89 @@ class _BookPageViewState extends ConsumerState<BookPageView> {
             final page = _pageController.page!.round();
             setState(() => _currentPage = page);
             notifier.onPageChanged(page);
+            _scheduleSave(page); // 停止翻页 800ms 后落库 + 同步
             return true;
           }
           return false;
         },
         child: PageView.builder(
           controller: _pageController,
+          scrollDirection: scrollDirection,
+          reverse: reverse,
           itemCount: totalPages,
           itemBuilder: (context, index) {
             final page = state.paths[index];
-            return Image.file(File(page), fit: BoxFit.contain);
+            return _PageImage(
+              subPath: page,
+              bookUuid: state.book.uuid,
+            );
           },
         ),
       ),
     );
+  }
+}
+
+/// 阅读页单页渲染：三态（文件存在→图；下载中→进度条；等待→占位文案）。
+class _PageImage extends ConsumerWidget {
+  final String subPath; // 绝对路径
+  final String bookUuid;
+
+  const _PageImage({required this.subPath, required this.bookUuid});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 监听乐观下载状态（下载中 → 进度条；等待 → 占位；完成文件落盘 → 图）。
+    // 用 ValueListenableBuilder，进度更新/下载完成自动 rebuild。
+    return ValueListenableBuilder<Map<String, FileDownloadState>>(
+      valueListenable:
+          ref.read(optimisticDownloadServiceProvider).fileStates,
+      builder: (context, fileStates, _) {
+        final file = File(subPath);
+        // 文件已落盘 → 直接显图（下载完成/非下载场景）
+        if (file.existsSync()) {
+          return Image.file(file, fit: BoxFit.contain);
+        }
+        final state = fileStates['$bookUuid/${_relOf(subPath)}'];
+        if (state != null && state.status == 'syncing') {
+          // 下载中：进度条
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const FCircularProgress(),
+                  const SizedBox(height: 12),
+                  Text(
+                    '正在下载本页 ${(state.progress * 100).toStringAsFixed(0)}%',
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        // 等待中/未知（文件尚未下载完成）：占位文案
+        return Center(
+          child: Text(
+            state == null ? '等待下载…' : '正在下载本页…',
+            style: context.theme.typography.body.sm.copyWith(
+              color: context.theme.colors.mutedForeground,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 绝对路径 → 书内相对路径（如 original/0000000）。
+  String _relOf(String abs) {
+    final parts = abs.split('/');
+    // 去掉 .../books/<uuid>/ 前缀，保留 original/xxx 或 cover.jpg
+    final uuidIdx = parts.lastIndexOf(bookUuid);
+    if (uuidIdx >= 0 && uuidIdx + 1 < parts.length) {
+      return parts.sublist(uuidIdx + 1).join('/');
+    }
+    return parts.last;
   }
 }

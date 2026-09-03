@@ -58,7 +58,7 @@ final class ParseWebProvider
   }
 }
 
-String _$parseWebHash() => r'3f70fc70a1b6dbff9de825ecf6dd0f8d271c1a9a';
+String _$parseWebHash() => r'05d97ea883e940e4dcccec7f1c100b0bdaa2f346';
 
 final class ParseWebFamily extends $Family
     with

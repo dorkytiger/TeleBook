@@ -7,6 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:tele_book/feature/book/model/dto/save_as_book_dto.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/sync/service/sync_mutation_service.dart';
 import 'package:tele_book/feature/parse/service/parse_archive_service.dart';
 
 part 'parse_archive_provider.freezed.dart';
@@ -117,7 +118,6 @@ class ParseArchive extends _$ParseArchive {
 
 @riverpod
 class ParseArchiveSaveBook extends _$ParseArchiveSaveBook {
-  BookRepository get _bookRepository => ref.read(bookRepositoryProvider);
 
   @override
   FutureOr<void> build() => null;
@@ -133,25 +133,21 @@ class ParseArchiveSaveBook extends _$ParseArchiveSaveBook {
           total: param.tempPaths.length,
         );
 
-    final result = await _bookRepository.saveAsBook(
-      SaveAsBookDto(title: param.archiveName, paths: param.tempPaths),
-      onStepProgress: (step, current, total) {
-        ref.read(parseArchiveSaveBookProgressProvider.notifier).state =
-            ParseArchiveSaveBookProgress(
-              step: step,
-              current: current,
-              total: total,
-            );
-      },
-    );
-
-    result.fold(
-      onSuccess: (_) {
-        state = const AsyncData(null);
-      },
-      onError: (error) {
-        state = AsyncError(error.message, StackTrace.current);
-      },
-    );
+    try {
+      await ref.read(syncMutationServiceProvider).enqueueBookImport(
+        SaveAsBookDto(title: param.archiveName, paths: param.tempPaths),
+        onStepProgress: (step, current, total) {
+          ref.read(parseArchiveSaveBookProgressProvider.notifier).state =
+              ParseArchiveSaveBookProgress(
+                step: step,
+                current: current,
+                total: total,
+              );
+        },
+      );
+      state = const AsyncData(null);
+    } catch (e) {
+      state = AsyncError('$e', StackTrace.current);
+    }
   }
 }

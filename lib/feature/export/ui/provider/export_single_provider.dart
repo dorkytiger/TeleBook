@@ -56,7 +56,7 @@ class ExportSingle extends _$ExportSingle {
 
 
   Future<void> pickOutputDir() async {
-    final result = await FilePicker.platform.getDirectoryPath();
+    final result = await FilePicker.getDirectoryPath();
     if (result != null) {
       state.outputPathCrl.text = result;
     }
