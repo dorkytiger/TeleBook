@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/service/sync_native_service.dart';
+import 'package:tele_book/core/util/file_log.dart';
 import 'package:tele_book/feature/sync/datasource/sync_op_local_datasource.dart';
 
 /// 任务类型（组 = 一次用户操作）。
@@ -206,6 +207,7 @@ class SyncOpService {
     _running = true;
     draining.value = true;
     final hasWork = _pending.isNotEmpty;
+    FileLog.log('OPQ', 'drain start pending=$hasWork queue=${_pending.length}');
     if (hasWork) {
       await SyncNativeForeground.start('TeleBook 正在同步');
     }
@@ -213,6 +215,7 @@ class SyncOpService {
       while (_pending.isNotEmpty) {
         final op = _pending.removeAt(0);
         final taskId = op.id;
+        FileLog.log('OPQ', 'op start id=$taskId');
         _detail[taskId] = [];
         // 断点续传：执行前读该行已落库的进度（重跑/恢复时 doneBooks>0），
         // 注入 writer.resumeFrom，执行器据此从上次完成处继续（§8.1/§8.2）
@@ -244,9 +247,11 @@ class SyncOpService {
             writer,
           );
           await _ops.updateTask(taskId, status: SyncOpStatus.done);
+          FileLog.log('OPQ', 'op done id=$taskId');
           _work.remove(taskId); // 成功：执行器不再需要（重试只针对失败/中断）
           _detail.remove(taskId); // 成功：清理运行态明细
         } catch (e) {
+          FileLog.log('OPQ', 'op FAIL id=$taskId err=$e');
           await _ops.updateTask(taskId, status: SyncOpStatus.failed, error: '$e');
           // 失败：保留执行器供重试，也**保留明细**——弹层/详情页还能看到
           // 每本书/每张图片的失败状态与错误，并可就地重试（§0）
@@ -259,6 +264,7 @@ class SyncOpService {
       _running = false;
       draining.value = false;
       await SyncNativeForeground.stop();
+      FileLog.log('OPQ', 'drain end');
       _refreshView();
     }
   }

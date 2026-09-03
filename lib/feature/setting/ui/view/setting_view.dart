@@ -141,6 +141,22 @@ class _SettingViewState extends ConsumerState<SettingView> {
               ),
             ],
           ),
+
+          const SizedBox(height: 20),
+
+          // ── 调试（临时）──
+          _groupTitle('调试'),
+          FItemGroup(
+            children: [
+              FItem(
+                title: const Text('同步后台日志'),
+                subtitle: const Text('查看 sync_bg.log（熄屏后台调试用）'),
+                prefix: const Icon(FLucideIcons.fileText),
+                suffix: const Icon(FLucideIcons.chevronRight),
+                onPress: () => context.push(AppRoute.syncFileLog),
+              ),
+            ],
+          ),
         ],
       ),
     );

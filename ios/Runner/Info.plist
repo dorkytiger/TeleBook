@@ -28,6 +28,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+	</array>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>We need access to your documents folder to save and read files.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>

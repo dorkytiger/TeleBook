@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -5,9 +6,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/core/service/ios_bg_transfer.dart';
+import 'package:tele_book/core/util/file_log.dart';
 import 'package:tele_book/core/service/sync_service.dart';
 import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/book/repository/book_repository.dart';
+import 'package:tele_book/feature/setting/repository/setting_repository.dart';
 import 'package:tele_book/feature/sync/datasource/sync_down_local_datasource.dart';
 import 'package:tele_book/feature/sync/datasource/sync_state_local_datasource.dart';
 import 'package:tele_book/feature/sync/service/file_sync_service.dart';
@@ -35,6 +39,7 @@ class OptimisticDownloadService {
   final FileSyncService _fileSync;
   final SyncOpService _ops;
   final SyncStateLocalDatasource _syncState;
+  final SettingRepository _settings;
 
   /// 每文件下载状态（key = `uuid/relPath`），阅读页 watch 渲染三态。
   final ValueNotifier<Map<String, FileDownloadState>> fileStates =
@@ -46,13 +51,51 @@ class OptimisticDownloadService {
   /// 当前书进度（组任务进度上报用）。
   int _currentBook = 0;
 
+  /// iOS 后台下载等待表：hash → completer（App 挂起时 future 挂着，
+  /// 系统后台完成后回调完成；App 被杀则重启后由 reconcile 兜底标记）。
+  final Map<String, Completer<bool>> _bgCompleters = {};
+
+  /// iOS 整批下载状态（原生内部排队自动推进，Dart 只按完成事件逐张标记）。
+  String? _bgBatchUuid;
+  int _bgBatchRemaining = 0;
+  int _bgBatchFailed = 0;
+  int _bgBatchDone = 0;
+  int _bgBatchTotal = 0;
+  SyncOpProgressCallback? _bgBatchProgress;
+  Completer<bool>? _bgBatchCompleter;
+  void Function(bool ok, String uuid, String relPath, String? error)? _bgBatchOnFile;
+
   OptimisticDownloadService(
     this._books,
     this._syncDown,
     this._fileSync,
     this._ops,
     this._syncState,
-  );
+    this._settings,
+  ) {
+    // 平台后台下载完成 → 批量模式按书逐张标记；否则唤醒单文件等待
+    IosBgTransfer.onDownloaded = (ok, hash, uuid, relPath, destPath, error) {
+      if (_bgBatchUuid != null && uuid == _bgBatchUuid) {
+        _bgBatchRemaining--;
+        _bgBatchOnFile?.call(ok, uuid, relPath, error);
+        if (_bgBatchRemaining <= 0) {
+          final failed = _bgBatchFailed;
+          final completer = _bgBatchCompleter;
+          _bgBatchUuid = null;
+          _bgBatchCompleter = null;
+          _bgBatchOnFile = null;
+          if (completer != null && !completer.isCompleted) {
+            completer.complete(failed == 0);
+          }
+        }
+        return;
+      }
+      final completer = _bgCompleters.remove(hash);
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(ok);
+      }
+    };
+  }
 
   /// 下载一本书的清单：先建 book + 落 sync_down，再逐个文件下载。
   /// [opType]：组任务类型（init=初始化 / refresh=刷新同步，§2.2）。
@@ -253,9 +296,10 @@ class OptimisticDownloadService {
     await _syncDown.markFile(uuid, row.relPath, 'syncing');
     detail?.fileSyncing(uuid, row.relPath);
     try {
-      await _fileSync.downloadFile(
-        hash: row.hash,
-        destPath: dest,
+      // iOS 优先交给系统后台 URLSession（锁屏/挂起继续）；其余走前台 Dio
+      await _downloadFileTo(
+        row.hash,
+        dest,
         onProgress: (p) {
           _setState(key, 'syncing', p);
           detail?.fileSyncing(uuid, row.relPath, progress: p);
@@ -266,11 +310,101 @@ class OptimisticDownloadService {
       detail?.fileDone(uuid, row.relPath);
       return true;
     } catch (e) {
+      FileLog.log('BG_DL', 'fg file FAIL uuid=$uuid rel=${row.relPath} err=$e');
       _setState(key, 'pending', 0);
       await _syncDown.markFile(uuid, row.relPath, 'pending');
       detail?.fileFailed(uuid, row.relPath, error: '$e');
       return false;
     }
+  }
+
+  /// 下载单个文件到目标路径：
+  /// - iOS：先尝试系统后台 URLSession（返回后已由系统下载完成）；
+  /// - 其余平台 / 原生不可用：回退前台 Dio。
+  /// 失败抛出（由调用方 catch 标记 pending/失败）。
+  Future<void> _downloadFileTo(
+    String hash,
+    String destPath, {
+    void Function(double progress)? onProgress,
+  }) async {
+    final bg = await _backgroundDownload(hash, destPath);
+    if (bg == null) {
+      await _fileSync.downloadFile(
+        hash: hash,
+        destPath: destPath,
+        onProgress: onProgress,
+      );
+      return;
+    }
+    if (!bg) {
+      throw StateError('后台下载失败，可稍后重试');
+    }
+  }
+
+  /// iOS 后台 URLSession 下载；返回：
+  /// - null：原生不可用（调用方走 Dio）；
+  /// - true/false：后台任务成功/失败。
+  Future<bool?> _backgroundDownload(String hash, String destPath) async {
+    if (!IosBgTransfer.supported) return null;
+    final url = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    if (url == null || token == null) return null;
+    final completer = Completer<bool>();
+    _bgCompleters[hash] = completer;
+    final enq = await IosBgTransfer.enqueueDownload(
+      url: '$url/api/v1/files/download?hash=$hash',
+      headers: {'Authorization': 'Bearer $token'},
+      destPath: destPath,
+      hash: hash,
+      uuid: '',
+      relPath: '',
+    );
+    FileLog.log('BG_DL', 'single enqueue hash=$hash -> $enq');
+    if (!enq) {
+      _bgCompleters.remove(hash);
+      return null;
+    }
+    try {
+      final ok = await completer.future.timeout(
+        const Duration(minutes: 30),
+        onTimeout: () => false,
+      );
+      FileLog.log('BG_DL', 'single settle hash=$hash ok=$ok');
+      return ok;
+    } finally {
+      _bgCompleters.remove(hash);
+    }
+  }
+
+  /// App 启动兜底：iOS 后台下载在进程被杀时仍可能已完成文件——
+  /// 把 sync_down 里“syncing 但文件已存在且大小一致”的页标记为 done。
+  Future<void> reconcileBackgroundDownloads() async {
+    if (!IosBgTransfer.supported) return;
+    FileLog.log('BG_DL', 'reconcile start');
+    final books = await _syncDown.listAll();
+    for (final book in books) {
+      final files = await _syncDown.filesOf(book.uuid);
+      var changed = false;
+      for (final f in files) {
+        if (f.status != 'syncing') continue;
+        final file = File(
+          GlobalConfig.resolveBookPath('${book.uuid}/${f.relPath}'),
+        );
+        if (await file.exists() && file.lengthSync() == f.size) {
+          await _syncDown.markFile(book.uuid, f.relPath, 'done');
+          _setState('${book.uuid}/${f.relPath}', 'done', 1);
+          changed = true;
+        }
+      }
+      if (changed) {
+        await _syncDown.updateBook(book.uuid, doneFiles: await _doneCount(book.uuid));
+      }
+    }
+  }
+
+  Future<int> _doneCount(String uuid) async {
+    final files = await _syncDown.filesOf(uuid);
+    return files.where((f) => f.status == 'done').length;
   }
 
   /// ① 乐观建书：本地无此书则建，subPaths 用文件清单生成（文件可不在）。
@@ -312,6 +446,118 @@ class OptimisticDownloadService {
     );
   }
 
+
+  /// iOS 整批后台下载：把整本书所有文件一次性交给原生队列。
+  /// 原生内部并发有限、完成自动派发下一个 → App 挂起/被杀后整批持续推进。
+  /// 完成事件经 onDownloaded 逐张标记（sync_down/fileStates/detail/进度）。
+  /// 返回 false 表示原生不可用（调用方回退前台逐张下载）。
+  Future<bool> _startBackgroundBookBatch(
+    RemoteLibraryBook book,
+    SyncOpProgressCallback progress, [
+    SyncOpDetailWriter? detail,
+  ]) async {
+    final url0 = await _settings.getString(SyncSettings.serverUrl);
+    final token = await _settings.getString(SyncSettings.token);
+    if (url0 == null || token == null) return false;
+
+    final items = <BgDownloadItem>[];
+    for (final f in book.files) {
+      if (f.relPath.isEmpty || f.hash.isEmpty) continue;
+      final key = '${book.uuid}/${f.relPath}';
+      _setState(key, 'syncing', 0);
+      await _syncDown.markFile(book.uuid, f.relPath, 'syncing');
+      detail?.fileSyncing(book.uuid, f.relPath);
+      items.add(BgDownloadItem(
+        url: '$url0/api/v1/files/download?hash=${f.hash}',
+        headers: {'Authorization': 'Bearer $token'},
+        destPath: GlobalConfig.resolveBookPath(key),
+        hash: f.hash,
+        uuid: book.uuid,
+        relPath: f.relPath,
+      ));
+    }
+    if (items.isEmpty) return true;
+
+    FileLog.log('BG_DL', 'batch start uuid=${book.uuid} files=${items.length}');
+    final completer = Completer<bool>();
+    _bgBatchUuid = book.uuid;
+    _bgBatchRemaining = items.length;
+    _bgBatchFailed = 0;
+    _bgBatchDone = 0;
+    _bgBatchTotal = items.length;
+    _bgBatchProgress = progress;
+    _bgBatchCompleter = completer;
+    _bgBatchOnFile = (ok, uuid, relPath, error) {
+      unawaited(_applyBatchFile(ok, uuid, relPath, error, detail));
+    };
+
+    final enq = await IosBgTransfer.enqueueDownloadBatch(items: items);
+    FileLog.log('BG_DL', 'batch enqueued=$enq uuid=${book.uuid}');
+    if (!enq) {
+      // 原生未就绪：复位状态，回退前台逐张下载
+      _bgBatchUuid = null;
+      _bgBatchCompleter = null;
+      _bgBatchOnFile = null;
+      _bgBatchProgress = null;
+      for (final item in items) {
+        await _syncDown.markFile(item.uuid, item.relPath, 'pending');
+        _setState('${item.uuid}/${item.relPath}', 'pending', 0);
+      }
+      return false;
+    }
+    try {
+      final ok = await completer.future.timeout(
+        const Duration(minutes: 60),
+        onTimeout: () => false,
+      );
+      FileLog.log('BG_DL', 'batch done uuid=${book.uuid} ok=$ok done=$_bgBatchDone failed=$_bgBatchFailed total=$_bgBatchTotal');
+      return ok;
+    } finally {
+      _bgBatchUuid = null;
+      _bgBatchCompleter = null;
+      _bgBatchOnFile = null;
+      _bgBatchProgress = null;
+    }
+  }
+
+  Future<void> _applyBatchFile(
+    bool ok,
+    String uuid,
+    String relPath,
+    String? error, [
+    SyncOpDetailWriter? detail,
+  ]) async {
+    FileLog.log('BG_DL', 'file ${ok ? 'ok' : 'FAIL'} uuid=$uuid rel=$relPath err=$error');
+    final key = '$uuid/$relPath';
+    if (ok) {
+      _bgBatchDone++;
+      _setState(key, 'done', 1);
+      await _syncDown.markFile(uuid, relPath, 'done');
+      detail?.fileDone(uuid, relPath);
+    } else {
+      _bgBatchFailed++;
+      _setState(key, 'pending', 0);
+      await _syncDown.markFile(uuid, relPath, 'pending');
+      detail?.fileFailed(uuid, relPath, error: error);
+      AppLog.e('iOS 后台下载失败 $key: $error', tag: 'OPT_DL');
+      // 清理半截
+      final file = File(GlobalConfig.resolveBookPath(key));
+      if (await file.exists()) {
+        try {
+          await file.delete();
+        } catch (_) {}
+      }
+    }
+    final progress = _bgBatchProgress;
+    if (progress != null && _bgBatchTotal > 0) {
+      progress(SyncOpProgress(
+        currentBook: _currentBook,
+        currentPage: _bgBatchDone,
+        totalPages: _bgBatchTotal,
+      ));
+    }
+  }
+
   /// ③ 逐文件下载，更新每文件状态（三态）与 sync_down，并向组任务明细上报。
   Future<void> _downloadBookFiles(
     RemoteLibraryBook book,
@@ -320,6 +566,22 @@ class OptimisticDownloadService {
   ]) async {
     var done = 0;
     var hadFailure = false;
+    FileLog.log('BG_DL', 'book files start uuid=${book.uuid} name=${book.name} files=${book.files.length}');
+    if (IosBgTransfer.supported && book.files.any((f) => f.hash.isNotEmpty)) {
+      // iOS：整批交给原生后台队列（系统持续推进），完成事件逐张标记
+      final batchOk = await _startBackgroundBookBatch(book, progress, detail);
+      FileLog.log('BG_DL', 'book files batchOk=$batchOk uuid=${book.uuid}');
+      if (batchOk) {
+        await _syncDown.updateBook(
+          book.uuid,
+          status: 'done',
+          bookStatus: '已同步',
+          doneFiles: await _doneCount(book.uuid),
+        );
+        return; // 逐张状态由 onDownloaded 事件驱动更新
+      }
+      // 原生不可用：回退下面的前台逐张逻辑（_startBackgroundBookBatch 已把标记复位）
+    }
     for (final f in book.files) {
       if (f.relPath.isEmpty || f.hash.isEmpty) {
         done++;
@@ -347,9 +609,10 @@ class OptimisticDownloadService {
       await _syncDown.markFile(book.uuid, f.relPath, 'syncing');
       detail?.fileSyncing(book.uuid, f.relPath);
       try {
-        await _fileSync.downloadFile(
-          hash: f.hash,
-          destPath: dest,
+        // iOS 优先交给系统后台 URLSession（锁屏/挂起继续）；其余走前台 Dio
+        await _downloadFileTo(
+          f.hash,
+          dest,
           onProgress: (p) {
             _setState(key, 'syncing', p);
             detail?.fileSyncing(book.uuid, f.relPath, progress: p);
@@ -414,6 +677,7 @@ final optimisticDownloadServiceProvider = Provider<OptimisticDownloadService>((r
     ref.watch(fileSyncServiceProvider),
     ref.watch(syncOpServiceProvider),
     ref.watch(syncStateLocalDatasourceProvider),
+    ref.watch(settingRepositoryProvider),
   );
 });
 

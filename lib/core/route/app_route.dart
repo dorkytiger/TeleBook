@@ -17,6 +17,7 @@ import 'package:tele_book/feature/parse/ui/view/parse_form_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_image_folder_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_pdf_view.dart';
 import 'package:tele_book/feature/parse/ui/view/parse_web_view.dart';
+import 'package:tele_book/feature/setting/ui/view/sync_file_log_view.dart';
 import 'package:tele_book/feature/setting/ui/view/sync_server_view.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_history_detail_view.dart';
 import 'package:tele_book/feature/sync/ui/provider/sync_history_provider.dart';
@@ -62,6 +63,7 @@ class AppRoute {
   static const syncLogList = '/setting/sync_log';
   static const syncTasks = '/setting/sync_tasks';
   static const syncTaskDetail = '/setting/sync_task_detail';
+  static const syncFileLog = '/setting/sync_file_log';
 
   static final GoRouter router = GoRouter(
     initialLocation: main,
@@ -320,6 +322,12 @@ class AppRoute {
             return MaterialPage(child: ErrorRoutePage(message: '缺少同步任务参数'));
           }
           return MaterialPage(child: SyncTaskDetailView(op: op));
+        },
+      ),
+      GoRoute(
+        path: syncFileLog,
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncFileLogView());
         },
       ),
     ],

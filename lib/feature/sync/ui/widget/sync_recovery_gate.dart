@@ -44,6 +44,8 @@ class _SyncRecoveryGateState extends ConsumerState<SyncRecoveryGate> {
 
     final ops = ref.read(syncOpServiceProvider);
     final downloader = ref.read(optimisticDownloadServiceProvider);
+    // iOS 后台下载兜底：进程被杀时系统仍可能完成了下载 → 先标记为 done
+    await downloader.reconcileBackgroundDownloads();
     final downCount = (await downloader.unfinishedDownloads()).length;
     final uploadCount =
         (await ref.read(syncUploadLocalDatasourceProvider).listAll()).length;

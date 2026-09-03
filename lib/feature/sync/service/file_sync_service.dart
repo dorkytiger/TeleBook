@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tele_book/common/config/global_config.dart';
 import 'package:tele_book/core/db/app_database.dart';
 import 'package:tele_book/core/service/dio_provdier.dart';
+import 'package:tele_book/core/service/ios_bg_transfer.dart';
+import 'package:tele_book/core/util/file_log.dart';
 import 'package:tele_book/core/service/sync_service.dart';
 import 'package:tele_book/core/util/app_log.dart';
 import 'package:tele_book/feature/setting/repository/setting_repository.dart';
@@ -60,7 +62,18 @@ class FileSyncService {
   /// 图片文件在导入/编辑后不再变化，快照捕获（整库重算 hash）靠它秒出。
   final Map<String, _CachedHash> _hashCache = {};
 
-  FileSyncService(this._settings, this._dio);
+  /// iOS 后台直传等待表：hash → completer（App 挂起时 future 挂着，系统后台完成回调）。
+  final Map<String, Completer<bool>> _uploadCompleters = {};
+
+  FileSyncService(this._settings, this._dio) {
+    IosBgTransfer.onUploaded = (ok, hash, error) {
+      FileLog.log('BG_UP', 'event ok=$ok hash=$hash err=$error');
+      final completer = _uploadCompleters.remove(hash);
+      if (completer != null && !completer.isCompleted) {
+        completer.complete(ok);
+      }
+    };
+  }
 
   Future<Options> _authOptions() async {
     final token = await _settings.getString(SyncSettings.token);
@@ -138,6 +151,47 @@ class FileSyncService {
     final realSize = await File(path).length();
     if (realSize <= 0) return;
     size = realSize;
+
+    // iOS：整文件交给系统后台 URLSession uploadTask 直传（方案 B）。
+    // 已在服务器（内容寻址/断点）→ 直接跳过；原生不可用 → 回退分片上传。
+    if (IosBgTransfer.supported) {
+      final serverUrl = await _settings.getString(SyncSettings.serverUrl);
+      final token = await _settings.getString(SyncSettings.token);
+      if (serverUrl != null && token != null) {
+        final stillMissing = await checkMissing([hash]);
+        if (stillMissing.isEmpty) {
+          onProgress?.call(1);
+          return; // 已在服务器，无需上传
+        }
+        final enq = await IosBgTransfer.uploadFileDirect(
+          url: '$serverUrl/api/v1/files/upload/direct?hash=$hash&size=$size',
+          headers: {'Authorization': 'Bearer $token'},
+          filePath: path,
+          hash: hash,
+        );
+        if (enq) {
+          FileLog.log('BG_UP', 'direct enqueued hash=$hash size=$size path=$path');
+          final completer = Completer<bool>();
+          _uploadCompleters[hash] = completer;
+          try {
+            final ok = await completer.future.timeout(
+              const Duration(minutes: 30),
+              onTimeout: () => false,
+            );
+            FileLog.log('BG_UP', 'direct settle hash=$hash ok=$ok');
+            if (ok) {
+              onProgress?.call(1);
+              return;
+            }
+            throw StateError('后台直传失败，可重试');
+          } finally {
+            _uploadCompleters.remove(hash);
+          }
+        }
+        FileLog.log('BG_UP', 'direct not enqueued (native busy) hash=$hash -> fallback chunked');
+        // enq=false（原生未就绪）：回退分片上传
+      }
+    }
 
     // 视觉平滑进度：Dio 对 MultipartFile 上传往往没有中间 onSendProgress
     // 回调（只在完成时给一次），慢速上传时进度条会一直 0。
