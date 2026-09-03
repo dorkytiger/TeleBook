@@ -77,6 +77,15 @@ class OptimisticDownloadService {
       executor: (progress, detail) async {
         downloading.value = true;
         _currentBook = 0;
+        // 预注册整批书（等待中），让明细/页面先看到"待下载"清单（§0）
+        for (final book in books) {
+          detail.book(
+            book.uuid,
+            book.name,
+            [for (final f in book.files) f.relPath],
+            direction: 'download',
+          );
+        }
         var failedBooks = 0;
         for (final book in books) {
           final ok = await downloadBook(book, progress, detail);
@@ -107,7 +116,13 @@ class OptimisticDownloadService {
     await _createBookOptimistic(book);
     // ② 落 sync_down（文件元数据，pending）
     await _seedSyncDown(book);
-    detail?.book(book.uuid, book.name, [for (final f in book.files) f.relPath]);
+    detail?.book(
+      book.uuid,
+      book.name,
+      [for (final f in book.files) f.relPath],
+      direction: 'download',
+    );
+    detail?.bookSyncing(book.uuid);
     // ③ 逐文件下载（fileStates 累积到全局 map，key=uuid/relPath）
     progress(SyncOpProgress(
       currentBook: _currentBook,
@@ -185,7 +200,13 @@ class OptimisticDownloadService {
       await _syncDown.deleteBook(uuid);
       return 0;
     }
-    detail?.book(uuid, book.name, [for (final f in files) f.relPath]);
+    detail?.book(
+      uuid,
+      book.name,
+      [for (final f in files) f.relPath],
+      direction: 'download',
+    );
+    detail?.bookSyncing(uuid);
     progress(SyncOpProgress(currentBook: 1, totalPages: files.length));
     var failed = 0;
     var pageNo = 0;

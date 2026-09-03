@@ -63,6 +63,8 @@ class ConflictResolverService {
           throw StateError('下载不完整，有页下载失败，可重试');
         }
         _conflicts.resolve(conflict.uuid);
+        // 冲突已解决：清理同类冲突的失败/中断历史行，避免底栏提示残留
+        await _ops.discardFailedOfType(SyncOpType.conflict);
       },
     );
     await _ops.waitUntilSettled(id);
@@ -83,6 +85,8 @@ class ConflictResolverService {
         if (book == null) {
           // 本地书已不存在 → 没有"本地版本"可保留，冲突自然消除（服务器版保留）
           _conflicts.resolve(conflict.uuid);
+        // 冲突已解决：清理同类冲突的失败/中断历史行，避免底栏提示残留
+        await _ops.discardFailedOfType(SyncOpType.conflict);
           return;
         }
         final files = await _fileSync.buildBookFiles(book);
@@ -119,6 +123,8 @@ class ConflictResolverService {
           totalPages: files.length,
         ));
         _conflicts.resolve(conflict.uuid);
+        // 冲突已解决：清理同类冲突的失败/中断历史行，避免底栏提示残留
+        await _ops.discardFailedOfType(SyncOpType.conflict);
       },
     );
     await _ops.waitUntilSettled(id);

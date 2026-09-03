@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:forui/forui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tele_book/core/db/app_database.dart';
+import 'package:tele_book/feature/sync/datasource/sync_op_local_datasource.dart';
 import 'package:tele_book/feature/sync/service/sync_op_service.dart';
 
 /// 本地同步记录（§2.5）：所有同步操作都是队列里的组任务，
@@ -46,14 +47,28 @@ class SyncLogListView extends ConsumerWidget {
                             ? const FCircularProgress(size: .sm)
                             : op.status == SyncOpStatus.failed ||
                                     op.status == SyncOpStatus.interrupted
-                                ? FButton.icon(
-                                    variant: .ghost,
-                                    size: .sm,
-                                    onPress: () => _retry(context, ref, op),
-                                    child: const Icon(
-                                      FLucideIcons.refreshCw,
-                                      size: 16,
-                                    ),
+                                ? Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FButton.icon(
+                                        variant: .ghost,
+                                        size: .sm,
+                                        onPress: () => _retry(context, ref, op),
+                                        child: const Icon(
+                                          FLucideIcons.refreshCw,
+                                          size: 16,
+                                        ),
+                                      ),
+                                      FButton.icon(
+                                        variant: .ghost,
+                                        size: .sm,
+                                        onPress: () => _dismiss(context, ref, op),
+                                        child: const Icon(
+                                          FLucideIcons.x,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ],
                                   )
                                 : op.status == SyncOpStatus.waiting
                                     ? FButton.icon(
@@ -132,6 +147,17 @@ class SyncLogListView extends ConsumerWidget {
       context: context,
       title: Text(ok ? '已取消「${op.title}」' : '该任务已开始执行，无法取消'),
     );
+  }
+
+  /// 移除一条失败/中断记录（不再提示，本地记录中也删除该行）。
+  Future<void> _dismiss(
+    BuildContext context,
+    WidgetRef ref,
+    SyncOpTableData op,
+  ) async {
+    await ref.read(syncOpLocalDatasourceProvider).deleteTask(op.id);
+    if (!context.mounted) return;
+    showFToast(context: context, title: const Text('已移除该记录'));
   }
 
   IconData _statusIcon(String status) => switch (status) {

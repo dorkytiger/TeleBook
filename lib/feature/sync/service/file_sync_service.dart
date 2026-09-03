@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
@@ -65,6 +67,15 @@ class FileSyncService {
     return Options(headers: {'Authorization': 'Bearer $token'});
   }
 
+  /// 上传专用 auth options：放大超时（慢上行/慢 VPS 下 8MB 分片可能 15s+，
+  /// 默认 15s 会掐断上传造成服务器 500）。
+  Future<Options> _uploadAuthOptions() async {
+    return (await _authOptions()).copyWith(
+      sendTimeout: const Duration(minutes: 5),
+      receiveTimeout: const Duration(minutes: 5),
+    );
+  }
+
   /// 流式计算文件 SHA-256（内存安全，不整文件载入）。
   static Future<String> hashFile(String path) async {
     final file = File(path);
@@ -128,29 +139,57 @@ class FileSyncService {
     if (realSize <= 0) return;
     size = realSize;
 
+    // 视觉平滑进度：Dio 对 MultipartFile 上传往往没有中间 onSendProgress
+    // 回调（只在完成时给一次），慢速上传时进度条会一直 0。
+    // 这里用时间推进补一条"封顶 95%"的平滑曲线，真实进度一旦到位即覆盖；
+    // 上传完成时统一置 100%。
+    var reported = 0.0; // 真实上报的最大进度
+    var paced = 0.0; // 时间推进的伪进度
+    Timer? ticker;
+    void emit() {
+      final v = math.min(0.95, math.max(reported, paced));
+      onProgress?.call(v);
+    }
+
+    void reportReal(double p) {
+      reported = math.max(reported, p.clamp(0.0, 1.0));
+      emit();
+    }
+
+    ticker = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      paced = math.min(0.95, paced + 0.012); // 约 20s 爬到 95%
+      emit();
+    });
+
     Object? lastError;
-    for (var attempt = 1; attempt <= _uploadRetries; attempt++) {
-      try {
-        await _uploadFileOnce(
-          url: url,
-          path: path,
-          hash: hash,
-          size: size,
-          onProgress: onProgress,
-        );
-        return;
-      } catch (e) {
-        lastError = e;
-        if (attempt < _uploadRetries) {
-          AppLog.w(
-            '上传失败($hash) 第 $attempt 次，重试中: $e',
-            tag: 'UPLOAD',
+    try {
+      for (var attempt = 1; attempt <= _uploadRetries; attempt++) {
+        try {
+          await _uploadFileOnce(
+            url: url,
+            path: path,
+            hash: hash,
+            size: size,
+            onProgress: reportReal,
           );
-          await Future<void>.delayed(Duration(seconds: 1 << (attempt - 1)));
+          ticker.cancel();
+          onProgress?.call(1);
+          return;
+        } catch (e) {
+          lastError = e;
+          if (attempt < _uploadRetries) {
+            AppLog.w(
+              '上传失败($hash) 第 $attempt 次，重试中: $e',
+              tag: 'UPLOAD',
+            );
+            await Future<void>.delayed(Duration(seconds: 1 << (attempt - 1)));
+          }
         }
       }
+      throw lastError ?? StateError('上传失败: $hash');
+    } finally {
+      ticker.cancel();
     }
-    throw lastError ?? StateError('上传失败: $hash');
   }
 
   /// 单次上传尝试：init（文件已存在 → complete=true 幂等跳过）→ 分片 → complete。
@@ -165,7 +204,7 @@ class FileSyncService {
     final init = await _dio.post<Map<String, dynamic>>(
       '$url/api/v1/files/upload/init',
       data: FileInitUploadRequest(hash: hash, size: size).toJson(),
-      options: await _authOptions(),
+      options: await _uploadAuthOptions(),
     );
     final initResp = FileInitUploadResponse.fromJson(init.data ?? {});
     if (initResp.complete) {
@@ -202,10 +241,13 @@ class FileSyncService {
         final res = await _dio.post<Map<String, dynamic>>(
           '$url/api/v1/files/upload',
           data: form,
-          options: await _authOptions(),
+          options: await _uploadAuthOptions(),
           onSendProgress: (sentNow, _) {
-            final partSent = sent + (sentNow == 0 ? 0 : bytes.length);
-            onProgress?.call((partSent / size).clamp(0.0, 1.0));
+            // sentNow = 本次分片已发送字节（Dio 多次回调）；sent = 之前分片已发字节
+            // → 累计已发送 / 文件大小，让进度随实际上传推进（避免误判整块完成）
+            onProgress?.call(
+              ((sent + sentNow) / size).clamp(0.0, 1.0),
+            );
           },
         );
         // 服务器可能返回"文件已存在"（并发场景）→ 视为该文件已完成
@@ -238,7 +280,7 @@ class FileSyncService {
           totalParts: totalParts,
           parts: parts,
         ).toJson(),
-        options: await _authOptions(),
+        options: await _uploadAuthOptions(),
       );
     }
     onProgress?.call(1);
@@ -474,7 +516,24 @@ class FileSyncService {
     required String name,
     required List<BookFileItem> files,
   }) async {
-    detail.book(uuid, name, [for (final f in files) f.relPath]);
+    detail.book(
+      uuid,
+      name,
+      [for (final f in files) f.relPath],
+      direction: 'upload',
+    );
+    // 预置每张图状态，保证弹层里"每条恒有进度条"：
+    //   · 已在服务器（内容寻址，跨设备已传）→ 直接标 100%（done）
+    //   · 需上传的 → 先置 0%（syncing），随后 onFileProgress 推进、完成标 100%
+    final missing =
+        await checkMissing(files.map((f) => f.hash).toList());
+    for (final f in files) {
+      if (missing.contains(f.hash) && File(f.absPath).existsSync()) {
+        detail.fileSyncing(uuid, f.relPath, progress: 0);
+      } else {
+        detail.fileDone(uuid, f.relPath); // 已在服务器 / 本地缺失 → 视为完成
+      }
+    }
     final indexByRelPath = {
       for (var i = 0; i < files.length; i++) files[i].relPath: i,
     };

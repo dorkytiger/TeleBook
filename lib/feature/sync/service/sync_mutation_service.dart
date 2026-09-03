@@ -204,22 +204,49 @@ class SyncMutationService {
     final start = detail.resumeFrom.clamp(0, total);
     var pushedAny = false;
 
-    for (var idx = 0; idx < total; idx++) {
-      final item = items[idx];
+    // ① 预注册整批书为「等待中（上传）」，让页面先看到完整清单（§0）；
+    //    同时取书/文件清单备用（文件可能已被改/删 → 以当前为准）。
+    final entries = <({PushBookItem item, BookTableData? book, List<BookFileItem> files})>[];
+    for (final item in items) {
+      if (item.op == 'delete') {
+        entries.add((item: item, book: null, files: const []));
+        continue;
+      }
+      final book = await _books.getBookByUuid(item.uuid);
+      final files = book == null
+          ? const <BookFileItem>[]
+          : await _fileSync.buildBookFiles(book);
+      if (book != null) {
+        detail.book(
+          book.uuid,
+          book.name,
+          [for (final f in files) f.relPath],
+          direction: 'upload',
+        );
+      }
+      entries.add((item: item, book: book, files: files));
+    }
+
+    // ② 断点续传：上次已完成的书直接标记完成（不重复上传/push）
+    for (var idx = 0; idx < start && idx < entries.length; idx++) {
+      final book = entries[idx].book;
+      if (book != null) {
+        detail.finishBook(book.uuid, ok: true);
+      }
+    }
+
+    // ③ 逐本处理（从 resumeFrom 续传）
+    for (var idx = start; idx < total; idx++) {
+      final e = entries[idx];
+      final item = e.item;
+      final book = e.book;
+      final files = e.files;
       final done = idx + 1; // 绝对序号（第几本，1-based）
       progress(SyncOpProgress(
         currentBook: done,
         totalBooks: total,
         totalPages: 1,
       ));
-      if (idx < start) {
-        // 上次已完成的书：仅回填明细为 done，跳过（不重复上传/push）
-        if (item.op == 'upsert' && item.name != null) {
-          detail.book(item.uuid, item.name!, const []);
-          detail.finishBook(item.uuid, ok: true);
-        }
-        continue;
-      }
       if (item.op == 'delete') {
         await _pushTombstone(item.uuid);
         pushedAny = true;
@@ -231,15 +258,8 @@ class SyncMutationService {
         ));
         continue;
       }
-      // upsert：运行时取书（文件可能已被改/删 → 以当前为准）
-      final book = await _books.getBookByUuid(item.uuid);
-      if (book == null) continue; // 已不存在（用户又删了）→ 跳过
-      final files = await _fileSync.buildBookFiles(book);
-      detail.book(
-        book.uuid,
-        book.name,
-        [for (final f in files) f.relPath],
-      );
+      if (book == null) continue; // 本地书已不存在（用户又删了）→ 跳过
+      detail.bookSyncing(book.uuid);
       progress(SyncOpProgress(
         currentBook: done,
         totalBooks: total,

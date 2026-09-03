@@ -77,16 +77,20 @@ class SyncOpFileDetail {
 }
 
 /// 组内一本书的运行态（§0 明细面板：任务 → 书列表 → 每页）。
+/// [direction]：该书当前/预定的同步方向（upload=上传 / download=下载）；
+/// [status]=pending 表示还没轮到（等待中）。
 class SyncOpBookDetail {
   final String uuid;
   final String name;
-  final String status; // syncing / done / failed
+  final String status; // pending(等待中) / syncing / done / failed
+  final String? direction; // upload / download
   final List<SyncOpFileDetail> files;
 
   const SyncOpBookDetail({
     required this.uuid,
     required this.name,
     required this.status,
+    this.direction,
     this.files = const [],
   });
 
@@ -241,11 +245,12 @@ class SyncOpService {
           );
           await _ops.updateTask(taskId, status: SyncOpStatus.done);
           _work.remove(taskId); // 成功：执行器不再需要（重试只针对失败/中断）
+          _detail.remove(taskId); // 成功：清理运行态明细
         } catch (e) {
           await _ops.updateTask(taskId, status: SyncOpStatus.failed, error: '$e');
-          // 失败：保留执行器供重试
+          // 失败：保留执行器供重试，也**保留明细**——弹层/详情页还能看到
+          // 每本书/每张图片的失败状态与错误，并可就地重试（§0）
         } finally {
-          _detail.remove(taskId); // 终态：清理运行态明细
           opDetailRevision.value++;
         }
         _refreshView();
@@ -351,6 +356,28 @@ class SyncOpService {
     return true;
   }
 
+  /// 丢弃某类型下所有 failed/interrupted 的历史行（如冲突已成功解决后，
+  /// 清理针对同一冲突的失败尝试，避免底栏"失败/中断"入口残留提示）。
+  Future<void> discardFailedOfType(String type) async {
+    final rows = await _ops.listAll();
+    var changed = false;
+    for (final row in rows) {
+      if (row.type == type &&
+          (row.status == SyncOpStatus.failed ||
+              row.status == SyncOpStatus.interrupted)) {
+        _pending.removeWhere((o) => o.id == row.id);
+        _work.remove(row.id);
+        _detail.remove(row.id);
+        await _ops.deleteTask(row.id);
+        changed = true;
+      }
+    }
+    if (changed) {
+      opDetailRevision.value++;
+      _refreshView();
+    }
+  }
+
   /// 当前运行任务 + 队列，供显示。
   void _refreshView() {
     unawaited(_loadView());
@@ -400,20 +427,71 @@ class SyncOpDetailWriter {
     this.resumeFrom = 0,
   });
 
-  /// 注册一本书（文件列表置 pending）。
-  void book(String uuid, String name, List<String> relPaths) {
+  /// 注册一本书（文件列表置 pending，书状态=等待中）。
+  /// [direction]：upload/download；同 uuid 已注册则原地更新（保持列表顺序、
+  /// 不重置书状态），供"预注册整批书再逐本处理"的场景。
+  void book(
+    String uuid,
+    String name,
+    List<String> relPaths, {
+    String? direction,
+  }) {
     final books = List<SyncOpBookDetail>.of(store[taskId] ?? const []);
-    books.removeWhere((b) => b.uuid == uuid);
+    final idx = books.indexWhere((b) => b.uuid == uuid);
+    if (idx >= 0) {
+      final prev = books[idx];
+      // 状态不变则仅更新方向/文件占位（等待中的书保持 pending 直到开始处理）
+      final files = [
+        for (final rel in relPaths)
+          prev.files.firstWhere(
+            (f) => f.relPath == rel,
+            orElse: () => SyncOpFileDetail(relPath: rel, status: 'pending'),
+          ),
+      ];
+      books[idx] = SyncOpBookDetail(
+        uuid: uuid,
+        name: name,
+        status: prev.status,
+        direction: direction ?? prev.direction,
+        files: files,
+      );
+      store[taskId] = books;
+      revision.value++;
+      return;
+    }
     books.add(SyncOpBookDetail(
       uuid: uuid,
       name: name,
-      status: 'syncing',
+      status: 'pending',
+      direction: direction,
       files: [
         for (final rel in relPaths)
           SyncOpFileDetail(relPath: rel, status: 'pending'),
       ],
     ));
     store[taskId] = books;
+    revision.value++;
+  }
+
+  /// 某本书开始处理（等待中 → 同步中）。
+  void bookSyncing(String uuid) {
+    final books = store[taskId];
+    if (books == null) return;
+    final idx = books.indexWhere((b) => b.uuid == uuid);
+    if (idx < 0) return;
+    final book = books[idx];
+    if (book.status == 'syncing' || book.status == 'failed' || book.status == 'done') {
+      return;
+    }
+    final updated = List<SyncOpBookDetail>.of(books);
+    updated[idx] = SyncOpBookDetail(
+      uuid: book.uuid,
+      name: book.name,
+      status: 'syncing',
+      direction: book.direction,
+      files: book.files,
+    );
+    store[taskId] = updated;
     revision.value++;
   }
 
@@ -452,6 +530,7 @@ class SyncOpDetailWriter {
       uuid: book.uuid,
       name: book.name,
       status: ok ? 'done' : 'failed',
+      direction: book.direction,
       files: files,
     );
     store[taskId] = updated;
@@ -490,6 +569,7 @@ class SyncOpDetailWriter {
       uuid: book.uuid,
       name: book.name,
       status: hasFailed ? 'failed' : (allDone ? 'done' : 'syncing'),
+      direction: book.direction,
       files: files,
     );
     store[taskId] = updated;

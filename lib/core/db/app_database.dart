@@ -107,6 +107,7 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
+
   static QueryExecutor _openConnection() {
     return driftDatabase(
       name: 'tele_book',
@@ -117,7 +118,7 @@ class AppDatabase extends _$AppDatabase {
             print('Database path: ${dbFolder.path}');
             return dbFolder.path;
           } else {
-            // For desktop platforms, use the current directory
+            print('Database path: ${Directory.current.path}');
             return Directory.current.path;
           }
         },

@@ -13,7 +13,6 @@ import 'package:tele_book/feature/setting/ui/view/setting_view.dart';
 import 'package:tele_book/feature/sync/service/local_conflict_service.dart';
 import 'package:tele_book/feature/sync/service/sync_op_service.dart';
 import 'package:tele_book/feature/sync/ui/view/local_conflict_list_sheet.dart';
-import 'package:tele_book/feature/sync/ui/view/sync_op_sheet.dart';
 import 'package:tele_book/feature/sync/ui/widget/sync_recovery_gate.dart';
 
 class MainView extends ConsumerWidget {
@@ -75,11 +74,12 @@ class MainView extends ConsumerWidget {
 ///
 /// 展示优先级：
 /// 1. 当前运行/等待的**组任务** —— 文案「上传中/同步中 第X/共N本 · 页a/b」，
-///    点击弹出组内书/页明细（§0 明细面板）。
-/// 2. 待解决**本地冲突**（§7）—— 点击进入冲突列表 bottomsheet 逐个选择保留。
-/// 3. 有失败/中断任务 —— 点击进入「本地同步记录」查看错误并重试。
+///    右侧「查看」进入同步任务中心。
+/// 2. 待解决**本地冲突**（§7）—— 「查看」进入冲突列表 bottomsheet。
+/// 3. 有失败/中断任务 —— 「查看」进入同步任务中心查看错误并重试。
 ///
 /// 阅读进度等静默推送不在通知区出现（§5 决策）；同步服务器未配置时不显示。
+/// 文字可换行（最多 2 行），右侧统一「查看」按钮作为入口（不点整条文字）。
 class _SyncStatusStrip extends ConsumerWidget {
   const _SyncStatusStrip();
 
@@ -95,7 +95,7 @@ class _SyncStatusStrip extends ConsumerWidget {
       return _strip(context,
         leading: const FCircularProgress(size: .sm),
         text: _opNoticeText(current),
-        onTap: () => showSyncOpSheet(context),
+        onTap: () => context.push(AppRoute.syncTasks),
       );
     }
 
@@ -111,12 +111,12 @@ class _SyncStatusStrip extends ConsumerWidget {
               size: 16,
               color: context.theme.colors.destructive,
             ),
-            text: '存在冲突 ${conflicts.length} 项，点击选择保留哪一版',
+            text: '存在冲突 ${conflicts.length} 项待处理',
             color: context.theme.colors.destructive,
             onTap: () => showLocalConflictSheet(context),
           );
         }
-        // ③ 失败/中断任务 → 本地同步记录（可查看错误与重试）
+        // ③ 失败/中断任务 → 任务中心（可查看错误与重试）
         final failed = queue
             .where((t) =>
                 t.status == SyncOpStatus.failed ||
@@ -129,9 +129,9 @@ class _SyncStatusStrip extends ConsumerWidget {
               size: 16,
               color: context.theme.colors.destructive,
             ),
-            text: '有 $failed 个同步任务失败/中断，点击查看',
+            text: '有 $failed 个同步任务失败/中断',
             color: context.theme.colors.destructive,
-            onTap: () => context.push(AppRoute.syncLogList),
+            onTap: () => context.push(AppRoute.syncTasks),
           );
         }
         return const SizedBox.shrink();
@@ -139,41 +139,47 @@ class _SyncStatusStrip extends ConsumerWidget {
     );
   }
 
+  /// 全局通知条：左侧图标 + 中间文字（可换行，最多 2 行）+ 右侧统一「查看」按钮。
   Widget _strip(
     BuildContext context, {
     required Widget leading,
     required String text,
     Color? color,
-    VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        color: context.theme.colors.background,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            leading,
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.theme.typography.body.sm.copyWith(
-                  color: color ?? context.theme.colors.foreground,
-                ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      color: context.theme.colors.background,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          leading,
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.theme.typography.body.sm.copyWith(
+                color: color ?? context.theme.colors.foreground,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          FButton(
+            variant: .outline,
+            size: .sm,
+            onPress: onTap,
+            child: const Text('查看'),
+          ),
+        ],
       ),
     );
   }
 
   /// 组装全局通知文案（§0）：`上传中/同步中 第X/共N本 · 当前 页a/页b`。
+  /// X = doneBooks（已完成/已处理到的本序号，1-based，不额外 +1）。
   String _opNoticeText(SyncOpTableData op) {
     final verb = switch (op.type) {
       SyncOpType.push => '上传中',
@@ -183,12 +189,12 @@ class _SyncStatusStrip extends ConsumerWidget {
       _ => '同步中',
     };
     final bookPart = op.totalBooks > 0
-        ? ' 第${op.doneBooks + 1}/共${op.totalBooks}本'
+        ? ' 第${op.doneBooks.clamp(1, op.totalBooks)}/共${op.totalBooks}本'
         : '';
     final pagePart = op.totalPages > 0
         ? ' · 当前 ${op.currentPage}/${op.totalPages}页'
         : '';
-    return '$verb$bookPart$pagePart · 点击查看';
+    return '$verb$bookPart$pagePart';
   }
 
   /// 当前执行的任务：running 优先，否则队列头 waiting。

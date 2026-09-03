@@ -35,6 +35,18 @@ class LocalConflictService {
     pending.value =
         pending.value.where((c) => c.uuid != uuid).toList();
   }
+
+  /// 收敛：只保留仍在 [uuids] 里的冲突（§2.1.4 双向匹配收尾用——
+  /// 以最新一次匹配为准，已被处理/两侧已一致的旧冲突自动消失，
+  /// 避免底栏残留"存在冲突"提示）。
+  void retainOnly(Set<String> uuids) {
+    final next = pending.value.where((c) => uuids.contains(c.uuid)).toList();
+    if (next.length == pending.value.length &&
+        pending.value.every((c) => uuids.contains(c.uuid))) {
+      return; // 无变化不触发通知
+    }
+    pending.value = next;
+  }
 }
 
 final localConflictServiceProvider =

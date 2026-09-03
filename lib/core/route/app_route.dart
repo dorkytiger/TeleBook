@@ -22,6 +22,7 @@ import 'package:tele_book/feature/sync/ui/view/sync_history_detail_view.dart';
 import 'package:tele_book/feature/sync/ui/provider/sync_history_provider.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_history_view.dart';
 import 'package:tele_book/feature/sync/ui/view/sync_log_list_view.dart';
+import 'package:tele_book/feature/sync/ui/view/sync_tasks_view.dart';
 
 class AppRoute {
   // 主页面
@@ -59,6 +60,8 @@ class AppRoute {
   static const syncHistory = '/setting/sync_history';
   static const syncHistoryDetail = '/setting/sync_history/detail';
   static const syncLogList = '/setting/sync_log';
+  static const syncTasks = '/setting/sync_tasks';
+  static const syncTaskDetail = '/setting/sync_task_detail';
 
   static final GoRouter router = GoRouter(
     initialLocation: main,
@@ -301,6 +304,22 @@ class AppRoute {
         path: syncLogList,
         pageBuilder: (context, state) {
           return MaterialPage(child: SyncLogListView());
+        },
+      ),
+      GoRoute(
+        path: syncTasks,
+        pageBuilder: (context, state) {
+          return const MaterialPage(child: SyncTasksView());
+        },
+      ),
+      GoRoute(
+        path: syncTaskDetail,
+        pageBuilder: (context, state) {
+          final op = state.extra;
+          if (op is! SyncOpTableData) {
+            return MaterialPage(child: ErrorRoutePage(message: '缺少同步任务参数'));
+          }
+          return MaterialPage(child: SyncTaskDetailView(op: op));
         },
       ),
     ],

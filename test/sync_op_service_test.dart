@@ -79,6 +79,7 @@ void main() {
       executor: (cb, detail) async {
         order.add('after-fail');
       },
+
     );
     await Future<void>.delayed(const Duration(milliseconds: 300));
 
@@ -236,6 +237,16 @@ void main() {
     var books = svc.detailOf(9);
     expect(books.length, 1);
     expect(books.single.files.length, 3);
+    // 新注册的书默认「等待中」(pending)，开始处理后才变 syncing
+    expect(books.single.status, 'pending');
+    w.bookSyncing('u1');
+    expect(svc.detailOf(9).single.status, 'syncing');
+
+    // 预注册幂等：同 uuid 再注册保持位置与状态、只更新方向/文件占位
+    w.book('u1', '书A', ['cover.jpg', 'original/0000000.jpg', 'original/0000001.jpg'],
+        direction: 'upload');
+    books = svc.detailOf(9);
+    expect(books.single.direction, 'upload');
     expect(books.single.status, 'syncing');
 
     // 逐文件推进：done / syncing / failed

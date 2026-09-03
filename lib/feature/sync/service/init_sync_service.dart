@@ -121,6 +121,17 @@ class InitSyncService {
           targets.addAll(allLocal); // 全新上传
         }
 
+        // 预注册整批书（等待中），让页面先看到"待上传"清单（§0）
+        for (final book in targets) {
+          final files = await _fileSync.buildBookFiles(book);
+          detail.book(
+            book.uuid,
+            book.name,
+            [for (final f in files) f.relPath],
+            direction: 'upload',
+          );
+        }
+
         var i = 0;
         var failed = 0;
         for (final book in targets) {
@@ -230,6 +241,26 @@ class InitSyncService {
         final total = plan.toDownload.length + plan.toUploadUuids.length + plan.conflicts.length;
         var done = 0;
 
+        // 预注册整批待同步书（等待中），让页面先看到完整清单（§0）
+        for (final r in plan.toDownload) {
+          detail.book(
+            r.uuid,
+            r.name,
+            [for (final f in r.files) f.relPath],
+            direction: 'download',
+          );
+        }
+        for (final uuid in plan.toUploadUuids) {
+          final book = localBooks.firstWhere((b) => b.uuid == uuid);
+          final files = await _fileSync.buildBookFiles(book);
+          detail.book(
+            book.uuid,
+            book.name,
+            [for (final f in files) f.relPath],
+            direction: 'upload',
+          );
+        }
+
         // ① 下载远程有本地无的
         var failedBooks = 0;
         for (final r in plan.toDownload) {
@@ -264,7 +295,9 @@ class InitSyncService {
           }
         }
 
-        // ③ 冲突：收集到 LocalConflictService，UI 弹层逐个处理（§7）
+        // ③ 冲突：收集到 LocalConflictService，UI 弹层逐个处理（§7）。
+        //    以本轮匹配为准收敛：仍冲突的加入/保留；已不再冲突的旧冲突
+        //    （被解决、任一侧已一致、书已删除）自动移除 → 底栏提示随之消失。
         for (final c in plan.conflicts) {
           _localConflicts.add(LocalConflict(
             uuid: c.uuid,
@@ -273,6 +306,7 @@ class InitSyncService {
           ));
           AppLog.w('双向同步发现冲突: ${c.name}(${c.uuid})', tag: 'BIDIR');
         }
+        _localConflicts.retainOnly({for (final c in plan.conflicts) c.uuid});
 
         // ④ 双方一致的书（跳过）：回填服务器 revision，保证后续编辑的乐观锁基准
         //    与服务器一致（仅在本地内容 == 服务器内容时回填，冲突书不动）
